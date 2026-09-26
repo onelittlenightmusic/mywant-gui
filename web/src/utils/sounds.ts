@@ -17,7 +17,7 @@ let _ctx: AudioContext | null = null;
 // De-duplicates concurrent resume() calls so we only call it once at a time.
 let _resumeInFlight: Promise<void> | null = null;
 
-import { SOUND_CATALOG, type SoundEvent } from './soundCatalog';
+import { SOUND_CATALOG, type CatalogSound, type SoundDef } from './soundCatalog';
 
 // ── iOS silent-WAV session upgrade ───────────────────────────────────────────
 // Playing a silent <audio> element inside a gesture upgrades the audio session
@@ -155,7 +155,33 @@ _setupListeners();
  * nothing reaches. This file is only concerned with whether a sound plays at
  * all: the audio session, the mute flag, the de-duplication, the haptics.
  */
-export type { SoundEvent } from './soundCatalog';
+/**
+ * Sounds an extension adds, by name — declared by the extension, which merges
+ * its names into this interface (`declare module '@/utils/sounds'`) and hands
+ * the sounds themselves to registerSounds. Empty in this app: every sound it
+ * plays is in its catalogue.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface ExtensionSounds {}
+
+/** Every sound that can be played: the catalogue's, and the extensions'. */
+export type SoundEvent = CatalogSound | keyof ExtensionSounds;
+
+const _extensionSounds = new Map<string, SoundDef>();
+
+/**
+ * Add sounds, for an extension whose moments this app does not have — the
+ * canvas's footsteps, say. A name the catalogue already has is not replaced.
+ */
+export function registerSounds(defs: Record<string, SoundDef>): void {
+  for (const [name, def] of Object.entries(defs)) {
+    if (!(name in SOUND_CATALOG)) _extensionSounds.set(name, def);
+  }
+}
+
+function soundDef(event: SoundEvent): SoundDef | undefined {
+  return (SOUND_CATALOG as Record<string, SoundDef>)[event] ?? _extensionSounds.get(event);
+}
 
 let _soundEnabled = true;
 
@@ -212,6 +238,9 @@ export function audioLatencyMs(): number {
 
 export function playSound(event: SoundEvent): void {
   if (!_soundEnabled) return;
+  // A name nobody registered — an extension that is not installed — is silence.
+  const def = soundDef(event);
+  if (!def) return;
   // One press, one sound.
   //
   // Some presses are legitimately handled by two layers at once — B while a
@@ -250,7 +279,7 @@ export function playSound(event: SoundEvent): void {
   // character set off was heard as they arrived.
   if (_ctx && _ctx.state === 'running') {
     try {
-      SOUND_CATALOG[event].play(_ctx);
+      def.play(_ctx);
       window.dispatchEvent(new CustomEvent('mywant:sound', { detail: event }));
     } catch {
       /* silently ignore audio errors */
@@ -262,7 +291,7 @@ export function playSound(event: SoundEvent): void {
     .then((c) => {
       if (!c) return;
       try {
-        SOUND_CATALOG[event].play(c);
+        def.play(c);
         // Say what was played, for anything that needs to observe it.
         //
         // Sound is the one part of this UI that leaves no trace to assert on,
