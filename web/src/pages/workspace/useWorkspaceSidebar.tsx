@@ -266,10 +266,18 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
       setExpandedChain([]);
     },
     // Directional swap when walking between want cards with the sidebar open.
+    //
+    // Keyed by what is SHOWN, in the same order of precedence as `content`
+    // below. The thing forms used to fall through to the want/thing under the
+    // cursor, so the stick walking the board changed the key while Add Thing
+    // was on screen — and the swap remounted the form, back to its Add tab at
+    // the top of its list, with whatever had been typed gone.
     contentKey: sidebar.showGlobal ? 'global'
+      : addingThing ? 'add-thing'
+      : editingThing ? `edit-thing:${editingThing.id}`
       : cursorGroup ? `group:${cursorGroup.name}`
       : ((selectedWant?.metadata?.id || selectedWant?.id) ?? cursorThingRecord?.id ?? ''),
-    contentOrder: sidebar.showGlobal || !selectedWant || cursorGroup
+    contentOrder: sidebar.showGlobal || addingThing || editingThing || !selectedWant || cursorGroup
       ? undefined
       : (() => {
           const id = selectedWant.metadata?.id || selectedWant.id;
