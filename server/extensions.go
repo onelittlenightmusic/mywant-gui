@@ -15,8 +15,8 @@ import (
 
 // GUI extensions: parts of the GUI installed beside it rather than built in.
 //
-// Each is a directory under ~/.mywant/gui-extensions (or
-// $MYWANT_GUI_EXTENSIONS_DIR) holding a gui-extension.json, the script and
+// Each is a directory under one of the extension directories (see
+// ExtensionsDirs) holding a gui-extension.json, the script and
 // stylesheets it names, and optionally a public/ directory whose files are
 // served at the site root (an extension's own top-level URLs — the
 // bookmarklet's overlay, say).
@@ -37,6 +37,8 @@ type extensionManifest struct {
 	Styles   []string `json:"styles,omitempty"`
 	// Public is a directory, relative to the extension, served at the site root.
 	Public string `json:"public,omitempty"`
+
+	dir string // where it is installed
 }
 
 // extensionEntry is what the frontend is given for one extension.
@@ -47,13 +49,36 @@ type extensionEntry struct {
 	Styles  []string `json:"styles,omitempty"`
 }
 
-// ExtensionsDir is where GUI extensions are installed.
-func ExtensionsDir() string {
+// ExtensionsDirs are where GUI extensions are looked for, first match of a
+// name winning:
+//
+//   - $MYWANT_GUI_EXTENSIONS_DIR, when set, and nothing else;
+//   - ~/.mywant/gui-extensions — what `<extension> install` writes, and what a
+//     developer's build replaces;
+//   - share/mywant/gui-extensions under a package manager's prefix — where a
+//     Homebrew formula puts an extension, since installing one may not write
+//     to the home directory. Found beside this binary, or at Homebrew's
+//     standard prefixes when the binary was reached through a link.
+func ExtensionsDirs() []string {
 	if d := os.Getenv("MYWANT_GUI_EXTENSIONS_DIR"); d != "" {
-		return d
+		return []string{d}
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".mywant", "gui-extensions")
+	dirs := []string{filepath.Join(home, ".mywant", "gui-extensions")}
+	var prefixes []string
+	if exe, err := os.Executable(); err == nil {
+		prefixes = append(prefixes, filepath.Dir(filepath.Dir(exe)))
+	}
+	prefixes = append(prefixes, "/opt/homebrew", "/usr/local", "/home/linuxbrew/.linuxbrew")
+	seen := map[string]bool{}
+	for _, p := range prefixes {
+		d := filepath.Join(p, "share", "mywant", "gui-extensions")
+		if !seen[d] {
+			seen[d] = true
+			dirs = append(dirs, d)
+		}
+	}
+	return dirs
 }
 
 // A release version: v1.2.3 with nothing after it. Anything else — "dev", a
@@ -82,26 +107,32 @@ func compatible(requires, running string) (bool, string) {
 // installedExtensions reads every extension directory that has a manifest.
 func installedExtensions() map[string]extensionManifest {
 	out := map[string]extensionManifest{}
-	entries, err := os.ReadDir(ExtensionsDir())
-	if err != nil {
-		return out
-	}
-	for _, e := range entries {
-		dir := filepath.Join(ExtensionsDir(), e.Name())
-		if info, err := os.Stat(dir); err != nil || !info.IsDir() {
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join(dir, "gui-extension.json"))
+	for _, base := range ExtensionsDirs() {
+		entries, err := os.ReadDir(base)
 		if err != nil {
 			continue
 		}
-		var m extensionManifest
-		if err := json.Unmarshal(data, &m); err != nil || m.Script == "" {
-			log.Printf("[gui-extensions] %s: unreadable gui-extension.json: %v", e.Name(), err)
-			continue
+		for _, e := range entries {
+			if _, taken := out[e.Name()]; taken {
+				continue
+			}
+			dir := filepath.Join(base, e.Name())
+			if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+				continue
+			}
+			data, err := os.ReadFile(filepath.Join(dir, "gui-extension.json"))
+			if err != nil {
+				continue
+			}
+			var m extensionManifest
+			if err := json.Unmarshal(data, &m); err != nil || m.Script == "" {
+				log.Printf("[gui-extensions] %s: unreadable gui-extension.json: %v", dir, err)
+				continue
+			}
+			m.Name = e.Name() // the directory is the name the URLs use
+			m.dir = dir
+			out[e.Name()] = m
 		}
-		m.Name = e.Name() // the directory is the name the URLs use
-		out[e.Name()] = m
 	}
 	return out
 }
@@ -163,11 +194,12 @@ func (s *Server) handleExtensionFile(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if _, loadable := loadableExtensions(false)[name]; !loadable {
+	m, loadable := loadableExtensions(false)[name]
+	if !loadable {
 		http.NotFound(w, r)
 		return
 	}
-	full, ok := safeJoin(filepath.Join(ExtensionsDir(), name), file)
+	full, ok := safeJoin(m.dir, file)
 	if !ok {
 		http.NotFound(w, r)
 		return
@@ -187,11 +219,11 @@ func (s *Server) serveExtensionPublic(w http.ResponseWriter, r *http.Request) bo
 	if r.URL.Path == "/" || strings.HasPrefix(r.URL.Path, "/assets/") {
 		return false
 	}
-	for name, m := range loadableExtensions(false) {
+	for _, m := range loadableExtensions(false) {
 		if m.Public == "" {
 			continue
 		}
-		root, ok := safeJoin(filepath.Join(ExtensionsDir(), name), m.Public)
+		root, ok := safeJoin(m.dir, m.Public)
 		if !ok {
 			continue
 		}

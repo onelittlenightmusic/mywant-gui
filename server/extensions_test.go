@@ -1,6 +1,10 @@
 package server
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestCompatible(t *testing.T) {
 	cases := []struct {
@@ -29,5 +33,26 @@ func TestSafeJoin(t *testing.T) {
 	}
 	if p, ok := safeJoin("/x/ext", "a/b.js"); !ok || p != "/x/ext/a/b.js" {
 		t.Fatalf("safeJoin = %q %v", p, ok)
+	}
+}
+
+func TestInstalledExtensions(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("MYWANT_GUI_EXTENSIONS_DIR", dir)
+	ext := filepath.Join(dir, "guiex")
+	if err := os.MkdirAll(ext, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(ext, "gui-extension.json"),
+		[]byte(`{"name":"ignored","version":"v1","requires":"v0.6.106","script":"guiex.js","public":"public"}`), 0o644)
+	os.MkdirAll(filepath.Join(dir, "no-manifest"), 0o755)
+
+	got := installedExtensions()
+	m, ok := got["guiex"]
+	if !ok || len(got) != 1 {
+		t.Fatalf("installedExtensions = %v", got)
+	}
+	if m.Name != "guiex" || m.dir != ext || m.Requires != "v0.6.106" {
+		t.Fatalf("manifest = %+v", m)
 	}
 }
