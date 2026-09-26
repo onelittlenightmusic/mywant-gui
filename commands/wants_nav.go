@@ -2,12 +2,11 @@ package commands
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 	"mywant-gui/client"
+	"mywant-gui/clikit"
 )
 
 // wantsCmd groups want-card navigation commands with robot cursor support.
@@ -261,9 +260,7 @@ Example:
 }
 
 // robotNonce returns a unique nonce for robot commands.
-func robotNonce() int64 {
-	return time.Now().UnixMilli()*1000 + rand.Int63n(1000)
-}
+func robotNonce() int64 { return clikit.RobotNonce() }
 
 func init() {
 	wantsOpenCmd.Flags().String("tab", "results", "Sidebar tab to open (settings|results|logs|agents|chat)")

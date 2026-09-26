@@ -7,6 +7,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './styles/index.css'
 import { registerWantCardPlugin } from './components/dashboard/WantCard/plugins/registry'
+import { loadRuntimeExtensions } from './extensions/runtime'
 
 // Expose globals for dynamically loaded external plugins
 window.React = React
@@ -57,12 +58,16 @@ window.__mywant = {
 // (webext/build-standalone-overlay.js).
 window.name = 'mywant-gui';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+// Extensions installed beside the app register before the first render, as the
+// built-in ones above already have. See extensions/runtime.
+void loadRuntimeExtensions().finally(() => {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  )
 
-// Keeps the sidebar-focus flag a reading of real DOM focus. See the store.
-installSidebarFocusTracking();
-installCardOverlaySounds();
+  // Keeps the sidebar-focus flag a reading of real DOM focus. See the store.
+  installSidebarFocusTracking();
+  installCardOverlaySounds();
+})

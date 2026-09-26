@@ -92,6 +92,12 @@ func New(config Config) *Server {
 		fmt.Fprintln(w, `{"status":"ok"}`)
 	})
 
+	// Extensions installed beside the app — see extensions.go. The list is
+	// served here, not proxied: they are installed with this process, not with
+	// the backend.
+	s.mux.HandleFunc("/api/v1/gui-extensions", s.handleExtensionList)
+	s.mux.HandleFunc("/gui-extensions/", s.handleExtensionFile)
+
 	// Per-want home-screen icon: the SPA renders the want's real tile icon and
 	// PUTs the PNG; we serve it back at a stable URL. See want_home_icon.go.
 	s.mux.HandleFunc("/w-home-icon/", s.handleWantHomeIcon)
@@ -110,6 +116,10 @@ func New(config Config) *Server {
 		// /w/<id> gets the SPA shell with its home-screen head tags already
 		// rewritten for that want — see want_home.go.
 		if s.serveWantHome(w, r) {
+			return
+		}
+		// An extension's own top-level files (public/ in its directory).
+		if s.serveExtensionPublic(w, r) {
 			return
 		}
 

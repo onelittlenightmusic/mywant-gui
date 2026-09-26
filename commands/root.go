@@ -3,9 +3,9 @@ package commands
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"mywant-gui/buildinfo"
+	"mywant-gui/clikit"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -48,39 +48,7 @@ func init() {
 	viper.BindPFlag("backend", rootCmd.PersistentFlags().Lookup("backend"))
 }
 
-func initConfig() {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(myWantDir())
-	viper.SetEnvPrefix("MYWANT")
-	viper.AutomaticEnv()
-
-	// Defaults
-	viper.SetDefault("server_port", 8080)
-	viper.SetDefault("server_host", "localhost")
-	viper.SetDefault("gui_port", 8081)
-
-	_ = viper.ReadInConfig()
-}
-
-func myWantDir() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".mywant")
-}
-
-// authUser is the Basic auth username, read from MYWANT_AUTH_USER (or
-// auth_user in config.yaml). Defaults to "mywant" so only the password needs
-// configuring.
-func authUser() string {
-	if u := viper.GetString("auth_user"); u != "" {
-		return u
-	}
-	return "mywant"
-}
-
-func backendURL() string {
-	if b := viper.GetString("backend"); b != "" {
-		return b
-	}
-	return fmt.Sprintf("http://%s:%d", viper.GetString("server_host"), viper.GetInt("server_port"))
-}
+func initConfig()        { clikit.InitConfig() }
+func myWantDir() string  { return clikit.MyWantDir() }
+func authUser() string   { return clikit.AuthUser() }
+func backendURL() string { return clikit.BackendURL() }
