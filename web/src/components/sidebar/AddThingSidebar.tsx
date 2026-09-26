@@ -53,6 +53,12 @@ interface AddMemoSidebarProps {
  * panel used to invite — the only thing it offered was a name field, so the
  * shortest route to "put my station on the board" was to type it again.
  */
+/**
+ * The drag data a thing carries out of the Pin tab: its id, for a board to pin
+ * it where it is dropped. Only a board reads it; this app has none of its own.
+ */
+export const THING_PIN_DRAG_TYPE = 'application/mywant-thing-pin';
+
 export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCancel, getPinPosition, record }) => {
   const dataTypes = useThingStore(s => s.dataTypes);
   const addRecord = useThingStore(s => s.addRecord);
@@ -162,7 +168,7 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
             />
           </div>
           <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
-            Pinned things stand on the board where your character is. Already-pinned
+            Pinned things stand on the board where your character is, or where you drop them. Already-pinned
             ones are ticked.
           </p>
         </div>
@@ -189,7 +195,16 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
                     type="button"
                     disabled={already || !!pinning}
                     onClick={() => void pin(r)}
-                    title={already ? `"${r.value}" is already on the canvas` : `Pin "${r.value}" where your character is`}
+                    // Or dragged to where it should stand — as a want type is
+                    // dragged out of Add Want. The board takes it by this type
+                    // (THING_PIN_DRAG_TYPE) and pins it on the cell it is
+                    // dropped on.
+                    draggable={!already && !pinning}
+                    onDragStart={e => {
+                      e.dataTransfer.effectAllowed = 'copy';
+                      e.dataTransfer.setData(THING_PIN_DRAG_TYPE, r.id);
+                    }}
+                    title={already ? `"${r.value}" is already on the canvas` : `Pin "${r.value}" where your character is — or drag it onto the canvas`}
                     className={classNames(
                       // Same card, a size down: flatter, so more of the list
                       // is in view without changing anything about how a thing
