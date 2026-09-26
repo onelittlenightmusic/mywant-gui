@@ -1,0 +1,55 @@
+name: Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+
+      # web/dist is gitignored and produced by Vite, but web/assets.go embeds it
+      # with //go:embed, so the package will not compile without it. A stub is
+      # enough for the Go unit tests; the real frontend is built in image.yml.
+      - name: Stub embedded frontend
+        run: |
+          mkdir -p web/dist
+          printf '<!doctype html><title>stub</title>\n' > web/dist/index.html
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./server/... ./commands/...
+
+      - name: Test
+        run: go test ./...
+
+      # The extension's background worker holds the rule that keeps the server
+      # password off third-party origins, and it ships as plain JS with no
+      # compiler to catch a regression — so it gets its own test. Needs the
+      # build first: the test loads dist/, not the sources.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test browser extension
+        working-directory: webext
+        run: |
+          npm ci
+          npm run build
+          npm test

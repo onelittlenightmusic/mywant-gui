@@ -1,0 +1,1121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Prevent iOS Safari from showing the native image/link context menu on long press.
+   Applied globally so background-image elements inside cards are also covered. */
+* {
+  -webkit-touch-callout: none;
+}
+
+/* ── Motion tokens ────────────────────────────────────────────────────────── */
+/* Single source of truth for transition timing so every surface (sidebars,
+   modals, grids, route changes) shares one motion language.
+   fast  : micro feedback (hovers, small fades)
+   base  : structural moves (panels, cards, view swaps)
+   settle: the shared "Nintendo" curve — fast start, soft landing
+   pop   : slight overshoot for playful entrances */
+:root {
+  --motion-fast: 180ms;
+  --motion-base: 280ms;
+  --ease-settle: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Shape tokens ─────────────────────────────────────────────────────────── */
+/* One corner radius per KIND of surface, so a thing and the frame drawn around
+   it can't disagree about what shape it is. The board had four answers at once
+   — a tile at 0, its focus outline at 6, the select overlay covering it at 10,
+   a child tile at 4 — which reads as a rounded frame floating over a square
+   object rather than as one solid being marked.
+
+   tile   : anything ON the board. Square, and not a taste call: a cubic tile's
+            side walls are polygons that meet its face at the exact corner
+            (design/cubic/CubicWalls.tsx), so a radius here opens a sliver of
+            board at every corner of every block. Whatever frames, rings or
+            covers a tile takes this too.
+   control: buttons, inputs, checkboxes. Same 6px .mw-inner-focus-ring already
+            draws itself at, below.
+   card   : panels and cards that float ABOVE the board. Equals Tailwind's
+            rounded-lg, which is what the card shell (CARD_SHELL_BASE) and most
+            of the app already use — the token names that convention so a new
+            panel stops picking 10 or 12 by hand.
+   pill   : badges, chips, toggles. */
+:root {
+  --r-tile: 0px;
+  --r-control: 6px;
+  --r-card: 8px;
+  --r-pill: 9999px;
+}
+
+/* ── Card ink ─────────────────────────────────────────────────────────────── */
+/* A card's name/label takes the card's own colour instead of a flat grey. The
+   card root sets --card-ink (see cardInkVars); labels opt in with .card-ink and
+   fall back to the neutral greys when a card sets no colour. Values are left
+   alone on purpose — their colours carry meaning. */
+.card-ink {
+  color: var(--card-ink, rgb(75 85 99));
+}
+:is(.dark) .card-ink {
+  color: var(--card-ink, rgb(209 213 219));
+}
+
+/* ── Hover ring ───────────────────────────────────────────────────────────── */
+/* The same affordance the browser extension's CursorMan draws over whatever it
+   is pointing at (.mwc-highlight in webext/cursorOverlayCore.ts): a frame in
+   the character's own colour that snaps on. Here it rides a ::after layer
+   rather than the element's border, so hovering never changes the border width
+   and never reflows the card — and it is independent of the focus ring, which
+   is a real border, so the focused card keeps its ring while another card is
+   hovered (and shows both when it is itself hovered).
+   Colours come from --mw-ring* set inline by each card (character colour). */
+.mw-hover-ring {
+  position: relative;
+}
+.mw-hover-ring::after {
+  content: '';
+  position: absolute;
+  /* Starts slightly inside and settles flush, so the frame reads as landing
+     on the card the way the extension's box flies onto its target. */
+  inset: 3px;
+  border-radius: inherit;
+  /* A blur, not a bordered frame: the card is lit from its edge rather than
+     fenced. Bleeds INWARD — an outward glow on an embedded card escapes
+     whatever clips it and reads as a coloured bar laid on top; an inset one
+     stays on the card. */
+  border: none;
+  box-shadow:
+    inset 0 0 4px var(--mw-ring, transparent),
+    inset 0 0 12px var(--mw-ring-soft, transparent),
+    inset 0 0 24px var(--mw-ring-faint, transparent);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 20;
+  transition: opacity var(--motion-fast) ease-out,
+              inset var(--motion-fast) var(--ease-settle);
+}
+/* Two ways to be the card in question, one way to look it.
+ *
+ * The pointer hovering it and the character standing on it are the same
+ * statement — "this one" — and answering them with two different mechanisms is
+ * how they came to disagree: the character's ring was an inset box-shadow on
+ * the card ROOT, which the card's own fill layer is painted over, so it was
+ * invisible while the hover ring (an overlay above that fill) was not.
+ *
+ * Outside the hover media query on purpose. A device with no pointer still has
+ * a character, and the ring it stands in is exactly the case that block would
+ * have excluded. */
+.mw-hover-ring.mw-ring-on::after {
+  opacity: 1;
+  inset: 0;
+}
+
+@media (hover: hover) {
+  .mw-hover-ring:hover::after {
+    opacity: 1;
+    inset: 0;
+  }
+}
+
+/* ── Inner-focus ring ─────────────────────────────────────────────────────── */
+/* Which control inside an operated card the keys are on. Walking the ring with
+   Tab or the arrows moved the caret and nothing on screen said so; the only way
+   to find out which button you were about to press was to press it.
+
+   Same colour and same idea as the hover ring above — the character's own
+   --mw-ring, published by the card root — but a real :focus-driven frame rather
+   than a hover one, and NOT inside the (hover: hover) query: this is how the
+   ring reads on a touch device and a gamepad too, where hover never happens.
+
+   Drawn as a ring via box-shadow rather than a border, so it costs no layout on
+   controls of any shape, and offset outward so it frames the control instead of
+   biting into its label. Plugins opt in by wearing the class beside
+   data-inner-focus; see useInnerFocusRing. */
+.mw-inner-focus-ring {
+  border-radius: 6px;
+  transition: box-shadow var(--motion-fast) ease-out;
+}
+/* !important, reluctantly: the base layer clears the focus ring from every
+   button, [role=button] and [tabindex] with `box-shadow: none !important`, so
+   this frame — the one case that exists precisely to be seen — cannot win the
+   cascade any other way. Scoped to a class nothing else wears. */
+.mw-inner-focus-ring:focus,
+.mw-inner-focus-ring:focus-visible {
+  outline: none !important;
+  /* A blur, not a hard 2px ring — the same treatment every highlight frame in
+     the app is being tried as. */
+  box-shadow:
+    0 0 3px var(--mw-ring, #38bdf8),
+    0 0 11px var(--mw-ring-soft, transparent),
+    0 0 22px var(--mw-ring-faint, transparent) !important;
+}
+
+/* ── RecipeSlideDeck slide animations ─────────────────────────────────────── */
+/* Exit: slide out with fade to prevent ghost content bleed.
+   Enter: translateX only — no opacity so internal content animations
+   (slide-down, fadeIn, etc.) are always clipped by overflow:hidden on the
+   slide wrapper and don't peek through during the transition. */
+@keyframes slideExitLeft {
+  from { transform: translateX(0);     opacity: 1; }
+  to   { transform: translateX(-100%); opacity: 0; }
+}
+@keyframes slideExitRight {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
+}
+@keyframes slideEnterRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes slideEnterLeft {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+.animate-slide-exit-left   { animation: slideExitLeft   0.22s ease-in  forwards; will-change: transform; }
+.animate-slide-exit-right  { animation: slideExitRight  0.22s ease-in  forwards; will-change: transform; }
+.animate-slide-enter-right { animation: slideEnterRight 0.22s ease-out forwards; will-change: transform; }
+.animate-slide-enter-left  { animation: slideEnterLeft  0.22s ease-out forwards; will-change: transform; }
+
+@keyframes canvasChildPop {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@layer base {
+  /* Focus: no border ring — use background highlight instead */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):focus,
+  textarea:focus,
+  select:focus {
+    --tw-ring-shadow: 0 0 0 0 transparent !important;
+    --tw-ring-offset-shadow: 0 0 0 0 transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-color: rgb(209 213 219) !important; /* gray-300 — unchanged */
+    background-color: rgb(219 234 254) !important; /* blue-100 */
+    transition: background-color 0.1s ease;
+  }
+  .dark input:not([type=checkbox]):not([type=radio]):not([type=range]):focus,
+  .dark textarea:focus,
+  .dark select:focus {
+    border-color: rgb(75 85 99) !important; /* gray-600 */
+    background-color: rgb(30 58 138 / 0.30) !important; /* blue-900/30 */
+  }
+
+  /* Remove focus ring from buttons and other interactive controls */
+  button:focus-visible,
+  [role=button]:focus-visible,
+  [tabindex]:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Override for elements that explicitly need a focus ring (sidebar form actions) */
+  .sidebar-focus-ring:focus,
+  .sidebar-focus-ring:focus-visible {
+    outline: 3px solid #38bdf8 !important; /* sky-400 */
+    outline-offset: -3px !important;
+    box-shadow: none !important;
+  }
+
+  /* Inventory slot focus ring — box-shadow avoids the Chromium overflow:hidden+border-radius outline clip bug */
+  /* The picker's slots answer the keys the way every other card does — the
+     inward glow, not a band around the edge. See .mw-card-focus. */
+  .inventory-slot-focus:focus,
+  .inventory-slot-focus:focus-visible {
+    outline: none !important;
+  }
+  .inventory-slot-focus {
+    position: relative;
+  }
+  .inventory-slot-focus:focus::after,
+  .inventory-slot-focus:focus-visible::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 20;
+    /* One ::after per element, shared with .mw-hover-ring — see .mw-card-focus. */
+    opacity: 1;
+    box-shadow:
+      inset 0 0 4px var(--mw-ring, var(--mw-focus-color, #38bdf8)),
+      inset 0 0 12px var(--mw-ring-soft, color-mix(in srgb, var(--mw-focus-color, #38bdf8) 60%, transparent)),
+      inset 0 0 24px var(--mw-ring-faint, color-mix(in srgb, var(--mw-focus-color, #38bdf8) 33%, transparent));
+  }
+
+  /* Section header buttons: light blue background on keyboard focus */
+  .sidebar-section-btn:focus,
+  .sidebar-section-btn:focus-visible {
+    background-color: rgb(219 234 254) !important; /* blue-100 */
+  }
+  .dark .sidebar-section-btn:focus,
+  .dark .sidebar-section-btn:focus-visible {
+    background-color: rgb(30 58 138 / 0.25) !important; /* blue-900/25 */
+  }
+
+  /* Compact sidebar content: tighter line-height for all descendants */
+  .sidebar-compact * {
+    line-height: 1.25 !important;
+  }
+
+
+  :root {
+    --progress-base:     #f1f5f9;
+    --progress-bg-light: rgba(255, 255, 255, 0.5);
+    --progress-bg-dark:  rgba(0, 0, 0, 0.2);
+    --canvas-bg: #f8f0e2;
+    --canvas-grid: rgba(140, 100, 40, 0.15);
+    --canvas-dot:  rgba(140, 100, 40, 0.50);
+    /* A grid dot is a stud standing on the ground, not a mark printed on it:
+       a shadow cast down-right (the board's light comes from top-left, the
+       same direction the tiles are lit from) and a highlight on the side that
+       faces the light. See CubicBackground. */
+    --canvas-dot-shadow: rgba(90, 60, 20, 0.28);
+    --canvas-dot-hi:     rgba(255, 248, 230, 0.75);
+  }
+
+  .dark {
+    --progress-base:     #1e293b;
+    --progress-bg-light: rgba(255, 255, 255, 0.15);
+    --progress-bg-dark:  rgba(0, 0, 0, 0.4);
+    --canvas-bg: #2a1e0e;
+    --canvas-grid: rgba(180, 140, 60, 0.12);
+    --canvas-dot:  rgba(180, 140, 60, 0.35);
+    --canvas-dot-shadow: rgba(0, 0, 0, 0.45);
+    --canvas-dot-hi:     rgba(255, 235, 190, 0.45);
+  }
+
+  html {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    -webkit-text-size-adjust: auto;
+    -ms-text-size-adjust: auto;
+    /* Allow the body to handle background for safe areas */
+    background-color: #000;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 min-h-screen;
+    /* Optional: can help with Dynamic Type in some contexts */
+    font: -apple-system-body;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    
+    /* Ensure the app content is within safe areas */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700 overflow-hidden;
+  }
+
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 focus:ring-primary-500 focus:ring-offset-2 text-white font-medium py-1.5 px-3 sm:py-2 sm:px-4 rounded-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm sm:text-base dark:focus:ring-offset-gray-900;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-600 hover:bg-gray-700 focus:ring-gray-500 focus:ring-offset-2 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 dark:bg-gray-500 dark:hover:bg-gray-400 dark:focus:ring-offset-gray-900;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 focus:ring-red-500 focus:ring-offset-2 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900;
+  }
+
+  .input {
+    @apply block w-full rounded-md border-gray-300 shadow-sm text-base sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100;
+  }
+
+  /* Target all inputs to prevent iOS zoom */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+  @media (min-width: 640px) {
+    input, textarea, select {
+      font-size: inherit !important;
+    }
+  }
+
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300;
+  }
+}
+
+/* Global scrollbar - light mode */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Global scrollbar - dark mode */
+.dark ::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+.dark * {
+  scrollbar-color: #4b5563 #1f2937;
+}
+
+/* Hide scrollbars in the SPA main content area (the Layout content wrapper).
+   A visible scrollbar takes ~6px and appears only on tall pages, so it shifted
+   the layout slightly between routes. Scoped to .app-scroll-hide's descendants,
+   so the app-root sidebar/header (Layout-root siblings, outside this wrapper)
+   keep their scrollbars. Scrolling still works — only the bar is hidden. */
+.app-scroll-hide ::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+.app-scroll-hide * {
+  scrollbar-width: none !important;
+}
+
+/* Page-level scrollbar (body/html/#root). The want dashboard can grow past the
+   viewport and produce a full-height body scrollbar that runs behind the fixed
+   header — .app-scroll-hide only covers the content wrapper's descendants, not
+   these ancestors, so hide them explicitly too. Scroll still works. */
+html,
+body,
+#root {
+  scrollbar-width: none !important;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+/* Custom scrollbar (kept for backward compat) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Button glow animation - high frequency external blur effect */
+@keyframes button-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.5), 0 0 30px rgba(37, 99, 235, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(37, 99, 235, 0.9), 0 0 50px rgba(37, 99, 235, 0.4);
+  }
+}
+
+.glow-button {
+  animation: button-glow 0.6s ease-in-out infinite;
+}
+
+/* Aura "active" blink — a fluorescent pulse in the aura's own color, via
+   filter (not box-shadow) so it works identically on HTML divs
+   (AuraCanvasLayer) and SVG rects (WantMinimap). Callers set
+   --aura-glow-color inline to the cell's own color. */
+@keyframes aura-blink {
+  0%, 100% {
+    opacity: 0.55;
+    filter: brightness(1) saturate(1) drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.7) saturate(2.2) drop-shadow(0 0 6px var(--aura-glow-color, #fff));
+  }
+}
+.aura-cell-active {
+  animation: aura-blink 1.1s ease-in-out infinite;
+}
+
+.focus-glow:focus {
+  /* Use outline for the thick blue border to avoid box-shadow conflicts */
+  outline: 3px solid #2563eb !important;
+  outline-offset: 1px;
+  /* Glow animation using box-shadow */
+  animation: button-glow 1.5s ease-in-out infinite !important;
+}
+/* ChildWantsBottomBar slide-up animation */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.2s ease-out forwards;
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.2s ease-out forwards;
+}
+
+@keyframes fieldMatchDash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+.animate-field-match-dash {
+  animation: fieldMatchDash 0.5s linear infinite;
+}
+
+/* ── Fliction ──────────────────────────────────────────────────────────────
+   The board's feedback that a connection just actually happened, spawned by
+   FlictionLayer.tsx at the connection's own centre. Want-want: a ripple,
+   spreading outward from the seam. Thing-thing: a spark, scattering rather
+   than spreading — the two pairings don't feel alike, so neither does their
+   effect. */
+@keyframes fliction-ripple {
+  0%   { transform: translate(-50%, -50%) scale(0.15); opacity: 0.85; border-width: 3px; }
+  100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; border-width: 1px; }
+}
+.fliction-ripple {
+  position: fixed;
+  border-radius: 50%;
+  border: 3px solid #60a5fa;
+  box-shadow: 0 0 12px 2px rgba(96, 165, 250, 0.5);
+  animation: fliction-ripple 0.65s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+@keyframes fliction-spark-particle {
+  0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.2); opacity: 0; }
+}
+.fliction-spark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 36px 6px rgba(251, 191, 36, 0.8);
+  animation: fliction-spark-particle var(--dur, 0.4s) cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+}
+
+/* ── Aura place markers on the location card ───────────────────────────────
+   A named place someone aura-marked: the same dot a remembered value wears on
+   the canvas, sitting on the coordinate, with its name floating above. Sizes
+   are fixed px on purpose: this is a map annotation layer, not card body text,
+   and Leaflet already imposes its own 12px base inside .leaflet-container.
+
+   The dot itself is built by thingDotHtml (ThingDot.tsx) — inline styles,
+   because Leaflet's divIcon takes an HTML string and no React node. */
+.apm-wrap {
+  position: absolute;
+  /* Bottom edge on the coordinate, then half the dot back down, so it is the
+     dot's CENTRE that marks the spot. Nothing points at anything any more.
+     Half of the dot's 18px, so this follows thingDotHtml's size. */
+  transform: translate(-50%, calc(-100% + 9px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* The place's name, above the dot. Reads on the map without a filled pill:
+   the dot below it is what carries the character's colour now. */
+.apm-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1e293b;
+  text-shadow:
+    0 0 3px rgba(255, 255, 255, 0.95),
+    0 0 2px rgba(255, 255, 255, 0.95),
+    0 1px 2px rgba(255, 255, 255, 0.95);
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The "you are here" ring, in the colour of whoever is at the controls.
+   Tailwind's ring reads --tw-ring-color, and the character's colour arrives as
+   --mw-focus-ring (see FocusRingColor). The fallback is the sky blue these
+   rings used to be pinned to, for the instant before the variable is set and
+   for anything rendered outside the app. */
+.mw-focus-ring {
+  --tw-ring-color: var(--mw-focus-ring, #38bdf8);
+}
+
+/* ── WantCard responsive auto-layout (CSS container queries) ───────────────── */
+/* Container for .wc-frame — placed on its PARENT, not on it.
+   CSS container queries cannot style the container element itself (self-reference is
+   forbidden), so the container-type must live on an ancestor. */
+.wc-ct {
+  container-type: size;
+  container-name: wc;
+}
+
+/* ── WantCard body text size ───────────────────────────────────────────────
+   One size for all want-type card content; plugins inherit it and must not set
+   their own (emoji, icons and SVG <text> are the exceptions — see
+   CARD_CONTENT_SIZE in hooks/useSystemFontSize.ts).
+
+   Two inputs decide the size:
+     1. the System Font setting  -> .wc-font-{small,medium,large} picks the ramp
+     2. the card's own size      -> the @container steps below pick the rung
+
+   (2) is why this is not a Tailwind `sm:` class. Maximizing a card leaves the
+   viewport untouched, so a viewport breakpoint would keep the text at its tile
+   size in the expanded portal — the exact bug this replaces. .wc-body is a
+   child of .wc-ct because a container cannot be styled by its own query.
+
+   The breakpoints are the same ones the layout already switches on, so text and
+   layout change rung together instead of at two unrelated widths. */
+.wc-body {
+  font-size: var(--wc-fs-1);
+}
+
+@container wc (min-width: 340px) {
+  .wc-body { font-size: var(--wc-fs-2); }
+}
+
+/* Maximized / large cards */
+@container wc (min-width: 480px) and (min-height: 300px) {
+  .wc-body { font-size: var(--wc-fs-3); }
+}
+
+.wc-font-small  { --wc-fs-1: 0.75rem;  --wc-fs-2: 0.875rem; --wc-fs-3: 1rem;     }
+.wc-font-medium { --wc-fs-1: 0.875rem; --wc-fs-2: 1.125rem; --wc-fs-3: 1.375rem; }
+.wc-font-large  { --wc-fs-1: 1.125rem; --wc-fs-2: 1.5rem;   --wc-fs-3: 1.875rem; }
+
+/* Album art sizing for the Spotify plugin, which lives outside this repo and
+   is styled by class name. Its card is built from .wc-frame like every other;
+   this one rule is the part the frame cannot know about. */
+@container wc (min-width: 480px) and (min-height: 300px) {
+  .wc-sp-art-container {
+    max-width: 100% !important;
+    max-height: 100% !important;
+  }
+}
+
+/* ── Want card frame: eyecatch + detail ─────────────────────────────────────
+   The shape most want cards want. One thing to look at (a state badge, an icon,
+   a photograph) and a few words worth reading, laid out so the eye lands on the
+   first and the second stays legible.
+
+   The eyecatch leads: side by side it is on the LEFT, and when the card is
+   maximised it moves to the TOP with the detail beneath. A card read
+   controls-first (a music player, where the sleeve is decoration until there is
+   room) reverses the side-by-side half with .wc-frame-detail-first below.
+
+   By default the eyecatch never disappears at narrow widths: for these
+   cards it IS the answer ("booked / not booked"), and hiding it would leave the
+   card saying nothing at a glance. It only gets narrower. */
+.wc-frame {
+  display: grid;
+  grid-template-areas: "eye detail";
+  grid-template-columns: minmax(0, 38%) 1fr;
+  grid-template-rows: 1fr;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 8px;
+  padding: 6px 8px;
+}
+
+.wc-eye {
+  grid-area: eye;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wc-detail {
+  grid-area: detail;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+/* An image eyecatch fills its half and is clipped, rather than letterboxed. */
+.wc-eye-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+}
+
+/* Opt-in: the detail leads and the eyecatch trails.
+   For cards read controls-first — a music player, where the transport is the
+   point and the sleeve is decoration until there is room for it. Maximised it
+   still restacks eyecatch-above-detail, because by then there IS room and the
+   picture should have it. */
+.wc-frame-detail-first {
+  grid-template-areas: "detail eye";
+  grid-template-columns: 1fr minmax(0, 50%);
+}
+
+/* Opt-in: drop the EYECATCH while narrow (the mirror of the rule below, for
+   detail-first cards — a player keeps its controls and loses the sleeve). */
+@container wc (max-width: 339px) {
+  .wc-frame-collapse-eye {
+    grid-template-areas: "detail";
+    grid-template-columns: 1fr;
+  }
+  .wc-frame-collapse-eye > .wc-eye {
+    display: none;
+  }
+}
+
+/* Opt-in: drop the detail half while the card is narrow.
+   Most cards must keep both (a booking's store and time are the answer, and
+   hiding them leaves the card saying nothing), but a few have a detail side
+   that is unusable when squeezed — a calendar, a set of time selects. Those
+   show the eyecatch alone until there is room. The grid this replaced did that
+   for every card; here it is a choice rather than the rule. */
+@container wc (max-width: 339px) {
+  .wc-frame-collapse {
+    grid-template-areas: "eye";
+    grid-template-columns: 1fr;
+  }
+  .wc-frame-collapse > .wc-detail {
+    display: none;
+  }
+}
+
+/* Maximised: eyecatch on top, detail beneath — the same rearrangement the
+   Spotify card makes, at the same breakpoint, so the two feel like one system. */
+@container wc (min-width: 480px) and (min-height: 300px) {
+  .wc-frame {
+    grid-template-areas: "eye" "detail";
+    grid-template-columns: 1fr;
+    /* The eyecatch is guaranteed most of the height, not merely "whatever is
+       left". Plain `1fr auto` gave the detail its natural height first, and a
+       detail that is tall by nature — a month calendar, a stack of selects —
+       ate the lot: the clock ended up 76px inside a 503px card, which is the
+       opposite of what maximising is for. minmax floors the picture and lets
+       the detail have the rest. */
+    grid-template-rows: minmax(45%, 1fr) auto;
+    gap: 12px;
+    padding: 12px;
+  }
+  .wc-detail {
+    justify-content: flex-start;
+    /* Now that the detail can be squeezed by the floor above, anything longer
+       than its share scrolls instead of being clipped. */
+    overflow: auto;
+  }
+  .wc-eye-img {
+    border-radius: 14px;
+  }
+}
+
+/* Lifts the selected card out of the focus dimming (see HandoverScrim). The
+   canvas does the same thing with z-layers it owns outright; the grids are
+   built by a dozen different components, so the card is raised by class instead
+   of by threading another prop through every one of them. Both sit below the
+   sidebar (z-40), so the panel stays on top of everything. */
+.mw-focus-lift {
+  position: relative;
+  z-index: 35;
+}
+
+/* ── Sidebar card focus ─────────────────────────────────────────────────────
+   "The cursor is on this one", for the embedded card and the field cards
+   alike. Drawn as a ring rather than a border so it never changes the card's
+   size, and thick enough to be seen at a glance — the old 2px blue read as a
+   hover tint next to the state colours the cards already carry.
+
+   The colour is the character's own, handed down from the panel as
+   --mw-focus-color (RightSidebar), so the sidebar's frame, the canvas frame
+   and the card under the cursor are all the same colour. The fallback keeps
+   grids that live outside a sidebar working unchanged. */
+/* The cursor is on this card.
+ *
+ * The same statement the pointer makes by hovering, so the same picture: an
+ * inward glow above the card's own fill, not a hard band around its edge. Two
+ * ways of saying "this one" that looked like two different things was the
+ * complaint, and a card that answers both the same way is one thing to learn.
+ *
+ * An ::after rather than a box-shadow on the element, for the reason the hover
+ * ring is one: a card paints its own surface over its root, so a shadow on the
+ * root ends up behind the card. Inset also cannot be clipped away by whatever
+ * scrolls around it, which an outward ring on an embedded card can.
+ *
+ * Colour: the card's own --mw-ring when it publishes one (every card that
+ * carries the hover ring does), else the focus colour these cards were using. */
+.mw-card-focus {
+  position: relative;
+}
+.mw-card-focus::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 20;
+  /* An element has ONE ::after, and these cards also carry .mw-hover-ring —
+     whose ::after is hidden until hover. Same pseudo-element, so the two rule
+     sets merge and the hidden state carries over unless this one says
+     otherwise. Which is why the glow was there, correct, and invisible. */
+  opacity: 1;
+  box-shadow:
+    inset 0 0 4px var(--mw-ring, var(--mw-focus-color, #38bdf8)),
+    inset 0 0 12px var(--mw-ring-soft, color-mix(in srgb, var(--mw-focus-color, #38bdf8) 60%, transparent)),
+    inset 0 0 24px var(--mw-ring-faint, color-mix(in srgb, var(--mw-focus-color, #38bdf8) 33%, transparent));
+}
+
+/* The embedded card is a bigger surface and the first thing focus lands on, so
+   it states it a little harder. */
+.mw-card-focus-strong {
+  position: relative;
+}
+.mw-card-focus-strong::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 1;
+  box-shadow:
+    inset 0 0 6px var(--mw-ring, var(--mw-focus-color, #38bdf8)),
+    inset 0 0 18px var(--mw-ring-soft, color-mix(in srgb, var(--mw-focus-color, #38bdf8) 60%, transparent)),
+    inset 0 0 34px var(--mw-ring-faint, color-mix(in srgb, var(--mw-focus-color, #38bdf8) 33%, transparent));
+}
+
+/* ── Hamburger menu cards ───────────────────────────────────────────────────
+   Each entry is its own inline-size container, so the icon and the label are
+   sized against the CARD rather than the viewport. Three cards across a menu
+   that is itself capped to the viewport means the cell width is not knowable
+   ahead of time — cqw is, and it is the same trick .wc-body uses to step card
+   text up with the card. */
+.nav-card {
+  container-type: inline-size;
+}
+
+.nav-card-icon {
+  /* Deliberately large — the icon is what the entry is recognised by, and at a
+     glance it is doing more work than the word beside it. */
+  width: clamp(20px, 26cqw, 32px);
+  height: clamp(20px, 26cqw, 32px);
+}
+
+/* The fitted label.
+   --fit-chars is how many characters must survive on one line (set by NavCard
+   from the label's longest word). A character is about 0.55em wide, and the
+   text has roughly 55% of the card to live in once the icon and padding are
+   paid for, so the size at which it stops fitting is ~(100 / chars) cqw.
+   The clamp keeps it readable when that lands too small and stops short labels
+   from ballooning; --fit-min/--fit-max carry the user's font-size preference. */
+.nav-card-label {
+  font-size: clamp(
+    var(--fit-min, 9px),
+    calc(100cqw / var(--fit-chars, 8)),
+    var(--fit-max, 15px)
+  );
+}
+
+/* FinalResultDisplay — URL/QR responsive layout */
+.wc-result {
+  container-type: size;
+  container-name: wc-result;
+  width: 100%;
+  height: 100%;
+}
+
+.wc-url {
+  display: flex;
+  /* QR pinned to the right, fitted to the card height (Spotify-style); the URL
+     label takes the remaining space on the left. */
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.wc-url > .wc-qr { align-self: center; display: flex; align-items: center; }
+/* QR at its JS-driven pixel size (bigger on the normal card), capped to the
+   card height so it never overflows. */
+.wc-url > .wc-qr svg { height: auto; width: auto; max-height: 100%; }
+
+.wc-url-actions { display: none; }
+
+@container wc-result (min-height: 160px) {
+  .wc-url {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 1.5rem 1rem;
+    gap: 1rem;
+  }
+  /* Back to the JS-sized, centered QR when the card is expanded. */
+  .wc-url > .wc-qr { align-self: center; }
+  .wc-url > .wc-qr svg { height: auto; width: auto; }
+  .wc-url-actions { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+}
+
+/* X-press effect animations (heart / fireworks / chime, …) now live in the
+   shared framework web/src/shared/effects.ts (.mw-*-effect / .mw-fireworks-*)
+   so the extension overlay renders identical animations; injected at runtime by
+   SharedEffectsCanvasPlugins (dashboard) and cursorOverlayCore (overlay). */
+
+@keyframes chime-sparkle {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+  25%  { transform: translate(-50%, -70%) scale(1.4); opacity: 1; }
+  100% { transform: translate(-50%, -110%) scale(0.6); opacity: 0; }
+}
+
+.chime-effect {
+  position: absolute;
+  pointer-events: none;
+  animation: chime-sparkle 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+  color: #f59e0b;
+}
+
+@keyframes fireworks-particle {
+  0%   { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  60%  { opacity: 0.8; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.2); opacity: 0; }
+}
+
+.fireworks-particle {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  animation: fireworks-particle var(--duration) cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+}
+
+/* ── Breathing ─────────────────────────────────────────────────────────────
+   A star that pulses, and anything else that fades in and out forever.
+
+   These used to be SVG <animate> elements. SMIL runs on the main thread and
+   invalidates style every frame: eighteen of them on a canvas accounted for
+   every style recalculation the page did while sitting still, and half of its
+   idle main-thread time. A CSS keyframe animation on opacity costs none of
+   that.
+
+   The range and pace are per element, through custom properties, because the
+   same breath serves a pale constellation star and a belt-coloured kata halo. */
+@keyframes mw-breathe {
+  0%, 100% { opacity: var(--breathe-min, 0.35); }
+  50%      { opacity: var(--breathe-max, 0.7); }
+}
+
+.mw-breathe {
+  animation: mw-breathe var(--breathe-dur, 3s) ease-in-out infinite;
+  will-change: opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mw-breathe { animation: none; opacity: var(--breathe-max, 0.7); }
+}
+
+/* A planted flag catching the wind. The shape already ripples; this only
+   breathes it, pivoting at the point where the cloth meets the pole so the
+   attachment never slides. */
+@keyframes mw-flag-wave {
+  0%, 100% { transform: rotate(0deg)   scaleX(1);    }
+  35%      { transform: rotate(2.2deg) scaleX(0.95); }
+  70%      { transform: rotate(-1.6deg) scaleX(0.99); }
+}
+.mw-flag-wave {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  animation: mw-flag-wave 2.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mw-flag-wave { animation: none; }
+}
+
+/* A character mid-hop draws itself frame by frame (see animateCursorManTravel),
+   and its own `transition: transform` — right for single-cell walking, where a
+   step is one write — would re-smooth every one of those frames into the last.
+   The beats of a hop are short, and smoothing is what took them out.
+
+   An attribute rather than an inline style: the transition is set through
+   React's style prop, so a re-render during the animation put it straight
+   back. */
+[data-cursor-jumping="1"] {
+  transition: none !important;
+}
+
+/* ── Dealing a want card off the stack ────────────────────────────────────────
+   A want card is a small stack of answers (useResultPages), and going back a
+   page has been two wrong things in a row. A plain swap read as a slideshow —
+   the same card showing different words. A Y-axis flip read as the card turning
+   OVER, which says the other side of this card, not the next card.
+
+   A deck of cards is handled the other way: you push the top card off and the
+   one underneath is already lying there. So that is the movement — the face
+   slides out sideways with the slight pivot a card takes when it is pushed off
+   a deck, and the revealed answer rises into place from just behind and below,
+   the way the second card sits until the first is gone.
+
+   Two animations rather than one because only one answer is ever mounted: a
+   real deal needs both cards on screen, and for a want card a face is a live
+   plugin tree (a note's textarea, a slider's value). The page is swapped in the
+   gap, which is also where the outgoing card is already out of frame.
+
+   Which way is which follows the BUTTON, not the clock. Right advances, and
+   advancing is the deal: the card you are leaving goes off to the left and the
+   one under it rises. Left retreats, which is the same motion run backwards —
+   the current card sinks into the deck and the one you came from slides back
+   on from the left. That the right-hand button walks you toward the NEWEST
+   answer is a fact about this deck's order; it does not change which direction
+   a card is dealt, and tying the motion to the clock instead made pressing
+   right look like the deck was being assembled rather than gone through.
+
+   No `perspective` and no rotateY anywhere: a card being dealt stays flat on
+   the table. The old flip needed depth; this needs none, which is also why it
+   survives being clipped by the card's own overflow — the face sliding out of
+   the frame is exactly what it should look like. */
+/* Straight across, not around.
+   The card used to pivot as it left — a small rotation about a point below it,
+   meant to read as the far corner catching on the deck. Over the travel it
+   actually has, that pivot is an ARC: the card dips as it goes, which reads as
+   being swept off a table rather than dealt off a deck. A dealt card slides
+   flat, so it slides flat. */
+@keyframes mw-card-deal-away {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(-72%); opacity: 0; }
+}
+@keyframes mw-card-deal-onto {
+  from { transform: translateX(-72%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+/* The card underneath, coming up to the top of the deck. It lifts rather than
+   slides, because it was already lying there — and it carries an edge while it
+   does (see .mw-card-turn-*-in), since the one thing a moving card must have is
+   a boundary. */
+@keyframes mw-card-deal-rise {
+  from { transform: translateY(7px) scale(0.93); opacity: 0.45; }
+  to   { transform: translateY(0)   scale(1);    opacity: 1; }
+}
+@keyframes mw-card-deal-sink {
+  from { transform: translateY(0)   scale(1);    opacity: 1; }
+  to   { transform: translateY(7px) scale(0.93); opacity: 0.35; }
+}
+.mw-card-turn {
+  will-change: transform, opacity;
+}
+/* The pivot sits below the card, so the small rotation reads as the far corner
+   catching on the deck rather than as the whole card spinning. */
+/* An edge, for as long as anything is moving.
+   A card mid-deal had no boundary of its own: the face is the card's contents,
+   drawn edge to edge, so two of them sliding past each other read as one
+   surface whose text was being replaced. A rounded outline and a shadow
+   underneath is the whole fix — it says "this is a card, and it is on top of
+   another one", which is what the movement was trying to say and could not.
+   Inset, so it is drawn inside the face rather than growing it. */
+.mw-card-turn-next-out,
+.mw-card-turn-next-in,
+.mw-card-turn-prev-out,
+.mw-card-turn-prev-in {
+  border-radius: 0.5rem;
+  box-shadow:
+    inset 0 0 0 1px rgba(15, 23, 42, 0.28),
+    0 6px 16px -4px rgba(15, 23, 42, 0.45);
+}
+:root:not([data-theme="light"]) .mw-card-turn-next-out,
+:root:not([data-theme="light"]) .mw-card-turn-next-in,
+:root:not([data-theme="light"]) .mw-card-turn-prev-out,
+:root:not([data-theme="light"]) .mw-card-turn-prev-in {
+  box-shadow:
+    inset 0 0 0 1px rgba(226, 232, 240, 0.35),
+    0 6px 16px -4px rgba(0, 0, 0, 0.6);
+}
+
+.mw-card-turn-next-out {
+  animation: mw-card-deal-away 150ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+.mw-card-turn-next-in {
+  animation: mw-card-deal-rise 170ms cubic-bezier(0.2, 0, 0.2, 1) forwards;
+}
+.mw-card-turn-prev-out {
+  animation: mw-card-deal-sink 150ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+.mw-card-turn-prev-in {
+  animation: mw-card-deal-onto 170ms cubic-bezier(0.2, 0, 0.2, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mw-card-turn-next-out, .mw-card-turn-next-in,
+  .mw-card-turn-prev-out, .mw-card-turn-prev-in { animation: none; }
+}
+
+/* The control pill's Save button breathing — the same blink webext pill.js
+   draws on other sites, used where the GUI shows that button (the Web Want
+   setup panel's next step). */
+@keyframes mwblink {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); opacity: 1; }
+  50% { box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.35); opacity: 0.75; }
+}

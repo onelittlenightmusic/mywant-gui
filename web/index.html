@@ -1,0 +1,54 @@
+<!doctype html>
+<!--
+  data-mywant-gui identifies this page to webext/webext-src/bridge.js — the
+  browser extension's content_scripts match every http(s) page (host_permissions
+  already covers http(s)://*/*), but bridge.js only actually does anything on a
+  page bearing this marker. mywant-gui gets served from whatever origin the
+  user reaches it through (localhost:8081 directly, the Caddy https proxy,
+  a LAN address, a Cloudflare/ngrok tunnel, ...) — anchoring to page content
+  instead of a fixed list of origins means bridge.js keeps working across all
+  of them without a manifest.json match-pattern update (and extension rebuild)
+  every time the access URL changes.
+-->
+<html lang="en" data-mywant-gui="true">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="MyWant" />
+    <link rel="apple-touch-icon" href="resources/agent.png" />
+    <title>MyWant Dashboard</title>
+    <!--
+      Set background color before JS executes to prevent white flash on first paint.
+      color_mode is stored in the server config (not localStorage), so we fall back
+      to prefers-color-scheme — which is also the 'system' default.
+      bg-gray-950 = #030712 (dark), bg-gray-100 = #f3f4f6 (light)
+    -->
+    <style>
+      /* Prevent white flash before React renders.
+         bg-gray-100 (#f3f4f6) for light, bg-gray-950 (#030712) for dark.
+         Using CSS media query so the colour is applied as the HTML is parsed,
+         before any JavaScript executes. */
+      html, body { margin: 0; background-color: #f3f4f6; }
+      @media (prefers-color-scheme: dark) {
+        html, body { background-color: #030712; color: #f9fafb; }
+      }
+    </style>
+    <script>
+      /* Also add the Tailwind 'dark' class immediately so components that
+         check classList.contains('dark') get the right value on first render. */
+      (function(){
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

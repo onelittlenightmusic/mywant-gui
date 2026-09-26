@@ -1,0 +1,77 @@
+version: 2
+
+project_name: mywant-gui
+
+before:
+  hooks:
+    - sh -c "cd web && npm ci && npm run build"
+
+builds:
+  - id: mywant-gui
+    main: ./cmd/mywant-gui
+    binary: mywant-gui
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      # .Tag, not .Version: .Version drops the leading "v", which would make a
+      # release report "1.2.3" while a local build (git describe) reports "v1.2.3".
+      - -s -w -X main.version={{.Tag}}
+
+archives:
+  - id: mywant-gui
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    files:
+      - none*
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  # Lets a retried/rerun release overwrite artifacts a previous partial run
+  # already uploaded (e.g. after the homebrew formula push lost the tap race
+  # with a concurrent mywant/mywant-guiex release), instead of failing with
+  # 422 "already_exists" on the tarballs/checksums.
+  replace_existing_artifacts: true
+
+brews:
+  - name: mywant-gui
+    repository:
+      owner: onelittlenightmusic
+      name: homebrew-mywant
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    homepage: https://github.com/onelittlenightmusic/mywant-gui
+    description: "MyWant GUI server — serves the web frontend and proxies API requests to the MyWant backend"
+    license: "MIT"
+    dependencies:
+      - name: mywant
+    install: |
+      bin.install "mywant-gui"
+    service: |
+      run [opt_bin/"mywant-gui", "start"]
+      keep_alive true
+      log_path var/"log/mywant-gui.log"
+      error_log_path var/"log/mywant-gui.log"
+    test: |
+      system "#{bin}/mywant-gui", "--help"

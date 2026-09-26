@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          install-only: true
+
+      - name: Run GoReleaser
+        # mywant / mywant-gui / mywant-guiex / mywant-rpg all push their Homebrew formula to
+        # the same onelittlenightmusic/homebrew-mywant tap. If two releases
+        # land around the same time, whichever pushes second can lose an
+        # optimistic-lock race on the tap repo (409) even though the GitHub
+        # release itself published fine. Retry a few times with backoff so
+        # the second attempt runs after the other release's tap commit has
+        # landed. replace_existing_artifacts (.goreleaser.yaml) makes re-runs
+        # safe even though the previous attempt already uploaded assets.
+        run: |
+          for attempt in 1 2 3; do
+            if goreleaser release --clean; then
+              exit 0
+            fi
+            echo "GoReleaser failed (attempt $attempt/3), retrying after backoff..."
+            sleep $((attempt * 20))
+          done
+          exit 1
+        env:
+          # The release goes on this repo, which the default token can write.
+          # The formula goes to the tap, which it cannot: that is the PAT.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}

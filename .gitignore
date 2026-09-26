@@ -1,0 +1,16 @@
+# Build output
+bin/
+
+# Node dependencies (web/ has its own .gitignore)
+node_modules/
+
+# Scratch scripts dropped at the repo root during a session (anchored to
+# root only — dev-scripts/*.mjs are checked-in on purpose, not scratch).
+/test_*.mjs
+/debug_*.mjs
+
+# Local agent instructions — not part of the project's shared history
+/CLAUDE.md
+
+# OS
+.DS_Store

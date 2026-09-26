@@ -1,0 +1,17 @@
+{
+  "name": "MyWant",
+  "short_name": "MyWant",
+  "description": "MyWant — AI-powered goal management dashboard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "/resources/agent.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
