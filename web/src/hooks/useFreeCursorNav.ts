@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { getControllerState } from '@/lib/controllerHub';
 import { setStickNavSuppressed, setStickOwnerProbe, getOptionArrowVector, isCanvasCursorActive, isSpaceHeld } from './useInputActions';
 import { isStickWithPanel } from '@/stores/stickOwner';
@@ -35,6 +35,38 @@ function findScrollableAncestor(el: Element | null): Element | null {
     node = node.parentElement;
   }
   return document.scrollingElement;
+}
+
+/**
+ * Scroll whatever scrollable box is under (x, y) when the point is near that
+ * box's own top or bottom edge — see the stick drag, which is where this is
+ * explained. `minY`/`maxY` bound the edge to what the cursor can reach, and
+ * `scopeEl`, when given, is the only surface allowed to scroll.
+ */
+function edgeScroll(nx: number, ny: number, minY: number, maxY: number, scopeEl: HTMLElement | null): void {
+  const under = document.elementFromPoint(nx, ny);
+  // The last way out: only the surface holding the keys may scroll.
+  // Even clamped, the cursor rides its own boundary, and the element
+  // under a point exactly on that edge can belong to what is behind —
+  // which would scroll the board out from under a panel being read.
+  if (scopeEl && !(under && scopeEl.contains(under))) return;
+  const box = findScrollableAncestor(under);
+  if (!box) return;
+  const r = box === document.scrollingElement
+    ? { top: 0, bottom: window.innerHeight }
+    : box.getBoundingClientRect();
+  const top = Math.max(r.top, minY);
+  const bottom = Math.min(r.bottom, maxY);
+  // A short box gets a proportionally narrower edge, so its middle
+  // still reads rather than scrolls.
+  const margin = Math.min(EDGE_SCROLL_MARGIN, (bottom - top) / 3);
+  let scrollDelta = 0;
+  if (margin > 0 && ny < top + margin) {
+    scrollDelta = -EDGE_SCROLL_SPEED * (1 - (ny - top) / margin);
+  } else if (margin > 0 && ny > bottom - margin) {
+    scrollDelta = EDGE_SCROLL_SPEED * (1 - (bottom - ny) / margin);
+  }
+  if (scrollDelta !== 0) box.scrollBy(0, scrollDelta);
 }
 
 /**
@@ -162,6 +194,154 @@ let _pendingWarpEl: HTMLElement | null = null;
  */
 export function warpFreeCursorToElement(el: HTMLElement): void {
   _pendingWarpEl = el;
+}
+
+/**
+ * A target the cursor lands on without pressing.
+ *
+ * Landing clicks, and for most targets the click is the pick — a card is
+ * selected by being clicked. A target whose click is an ACT (Pin, in Add
+ * Thing's Pin tab, puts a thing on the board) would be acted on just by the
+ * cursor passing over it and stopping, so it wears this beside
+ * FREE_CURSOR_ITEM_ATTR and is only focused; A then presses it.
+ */
+export const FREE_CURSOR_FOCUS_ONLY_ATTR = 'data-free-cursor-focus-only';
+
+// ── Carry ────────────────────────────────────────────────────────────────────
+//
+// The pad's drag-and-drop. A `draggable` element is picked up (a long A/Enter
+// on it — see its caller), the cursor takes it out of the panel it lives in and
+// across the page, and A puts it down wherever the cursor is.
+//
+// Put down through the same HTML5 drag events a mouse drag fires, carrying the
+// same DataTransfer the element's own onDragStart filled in. So whatever a
+// mouse drop onto that spot does, this does — the board's handler for a thing
+// out of the Pin tab, say — and nobody who accepts a drop has to learn about a
+// second way of being dropped on.
+
+interface Carry {
+  source: HTMLElement;
+  data: DataTransfer;
+  /** A copy of the source that rides under the cursor. */
+  ghost: HTMLElement;
+  /** Where the cursor is, in viewport px. */
+  x: number;
+  y: number;
+  /** What the last dragover was sent to, so it is sent once per move. */
+  overAt: string;
+  /** The press that picked this up ends with a release that is not a drop. */
+  skipConfirm: boolean;
+}
+
+let _carry: Carry | null = null;
+const _carryListeners = new Set<() => void>();
+const notifyCarry = () => _carryListeners.forEach(fn => fn());
+
+/** Is something being carried right now? */
+export function isFreeCursorCarrying(): boolean {
+  return _carry !== null;
+}
+
+/** The same answer, for a component that renders from it. */
+export function useFreeCursorCarrying(): boolean {
+  return useSyncExternalStore(
+    (fn) => { _carryListeners.add(fn); return () => { _carryListeners.delete(fn); }; },
+    isFreeCursorCarrying,
+  );
+}
+
+function dragEventAt(type: string, target: Element, x: number, y: number, data: DataTransfer): DragEvent {
+  const ev = new DragEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, dataTransfer: data });
+  target.dispatchEvent(ev);
+  return ev;
+}
+
+/**
+ * Pick `source` up. Returns whether anything was picked up — nothing is, when
+ * the element puts nothing in the drag (not draggable right now, say).
+ *
+ * `skipConfirm` is for a pick-up made with a key that is still down: Enter's
+ * release is a confirm, and the release of the very press that picked the thing
+ * up must not also put it down.
+ */
+export function beginFreeCursorCarry(source: HTMLElement, opts: { skipConfirm?: boolean } = {}): boolean {
+  if (_carry) return false;
+  const r = source.getBoundingClientRect();
+  const x = r.left + r.width / 2, y = r.top + r.height / 2;
+  const data = new DataTransfer();
+  dragEventAt('dragstart', source, x, y, data);
+  if (data.types.length === 0) return false;
+
+  const ghost = source.cloneNode(true) as HTMLElement;
+  ghost.removeAttribute('id');
+  ghost.removeAttribute(FREE_CURSOR_ITEM_ATTR);
+  ghost.setAttribute('aria-hidden', 'true');
+  Object.assign(ghost.style, {
+    position: 'fixed', left: '0px', top: '0px', margin: '0',
+    width: `${r.width}px`, height: `${r.height}px`,
+    zIndex: '199', pointerEvents: 'none', opacity: '0.85',
+    boxShadow: '0 8px 20px rgba(0,0,0,0.35)',
+    transform: `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(-3deg)`,
+  });
+  document.body.appendChild(ghost);
+
+  _carry = { source, data, ghost, x, y, overAt: '', skipConfirm: !!opts.skipConfirm };
+  notifyCarry();
+  return true;
+}
+
+function endCarry(): void {
+  const c = _carry;
+  if (!c) return;
+  c.ghost.remove();
+  _carry = null;
+  setStickNavSuppressed(false);
+  // Back to where it was picked up from: the cursor is held inside the panel
+  // again from the next frame, and the card it came from is where the keys are.
+  if (c.source.isConnected) _pendingWarpEl = c.source;
+  notifyCarry();
+}
+
+/**
+ * Put it down where the cursor is. Returns whether anything there took it.
+ *
+ * Asked the way the browser asks: a dragover first, and only an element that
+ * cancels it gets the drop. Put down over nothing that wants it, it goes back.
+ */
+export function dropFreeCursorCarry(): boolean {
+  const c = _carry;
+  if (!c) return false;
+  const under = document.elementFromPoint(c.x, c.y);
+  let taken = false;
+  if (under && !c.source.contains(under)) {
+    taken = dragEventAt('dragover', under, c.x, c.y, c.data).defaultPrevented;
+    if (taken) dragEventAt('drop', under, c.x, c.y, c.data);
+  }
+  // What the source's dragend reads to know whether it went anywhere, as it
+  // would after a mouse drop.
+  c.data.dropEffect = taken ? (c.data.effectAllowed === 'move' ? 'move' : 'copy') : 'none';
+  dragEventAt('dragend', c.source, c.x, c.y, c.data);
+  endCarry();
+  return taken;
+}
+
+/** Give up the carry; nothing is dropped anywhere. */
+export function cancelFreeCursorCarry(): void {
+  const c = _carry;
+  if (!c) return;
+  c.data.dropEffect = 'none';
+  dragEventAt('dragend', c.source, c.x, c.y, c.data);
+  endCarry();
+}
+
+/**
+ * A confirm arrived while carrying — the release of the press that began it,
+ * or a real press. Returns whether it was the former (and so is spent).
+ */
+export function consumeCarrySkipConfirm(): boolean {
+  if (!_carry?.skipConfirm) return false;
+  _carry.skipConfirm = false;
+  return true;
 }
 
 export interface UseGlobalFreeCursorResult {
@@ -308,6 +488,35 @@ export function useGlobalFreeCursor(): UseGlobalFreeCursorResult {
       const bHeld = (ctrl?.buttons[1] ?? false) || isSpaceHeld();
       const mag = Math.hypot(lx, ly);
 
+      // Carrying: the cursor holds what was picked up and goes anywhere on the
+      // page — out of the panel it came from, which is the point — with A still
+      // held or not (the long A that picked it up is usually still down). The
+      // thing rides under it and whatever is beneath is told it is being
+      // dragged over, as a mouse drag would tell it. Nothing is landed on or
+      // clicked; A puts it down (see GlobalFreeCursor).
+      if (_carry) {
+        const c = _carry;
+        if (posRef.current) { posRef.current = null; engagedOnRef.current = null; showHighlight(null); }
+        setStickNavSuppressed(true);
+        setVisible(true);
+        if (mag > DRAG_THRESHOLD) {
+          const speed = DRAG_SPEED_PX * mag;
+          c.x = Math.max(0, Math.min(window.innerWidth, c.x + (lx / mag) * speed));
+          c.y = Math.max(0, Math.min(window.innerHeight, c.y + (ly / mag) * speed));
+          edgeScroll(c.x, c.y, 0, window.innerHeight, null);
+        }
+        renderAt(c.x, c.y);
+        c.ghost.style.transform = `translate(${c.x}px, ${c.y}px) translate(-50%, -50%) rotate(-3deg)`;
+        const at = `${Math.round(c.x)},${Math.round(c.y)}`;
+        if (at !== c.overAt) {
+          c.overAt = at;
+          const under = document.elementFromPoint(c.x, c.y);
+          if (under && !c.source.contains(under)) dragEventAt('dragover', under, c.x, c.y, c.data);
+        }
+        restPosRef.current = { x: c.x, y: c.y };
+        return;
+      }
+
       if (!aHeld && mag > DRAG_THRESHOLD) {
         if (!posRef.current) {
           // Engage: resume from wherever the cursor last parked; otherwise
@@ -346,26 +555,18 @@ export function useGlobalFreeCursor(): UseGlobalFreeCursorResult {
         renderAt(nx, ny);
 
         // Edge auto-scroll: the cursor itself is viewport-fixed, so approaching
-        // the top/bottom edge on its own would just stop there — scroll the
-        // page (or whichever scrollable container sits under the cursor)
-        // instead, so continued stick pressure keeps revealing more content.
-        let scrollDelta = 0;
-        if (ny < EDGE_SCROLL_MARGIN) {
-          scrollDelta = -EDGE_SCROLL_SPEED * (1 - ny / EDGE_SCROLL_MARGIN);
-        } else if (ny > window.innerHeight - EDGE_SCROLL_MARGIN) {
-          scrollDelta = EDGE_SCROLL_SPEED * (1 - (window.innerHeight - ny) / EDGE_SCROLL_MARGIN);
-        }
-        if (scrollDelta !== 0) {
-          const under = document.elementFromPoint(nx, ny);
-          // The last way out: only the surface holding the keys may scroll.
-          // Even clamped, the cursor rides its own boundary, and the element
-          // under a point exactly on that edge can belong to what is behind —
-          // which would scroll the board out from under a panel being read.
-          const scopeEl = keyHoldingSurface();
-          if (!scopeEl || (under && scopeEl.contains(under))) {
-            findScrollableAncestor(under)?.scrollBy(0, scrollDelta);
-          }
-        }
+        // an edge on its own would just stop there — scroll whichever
+        // scrollable container sits under the cursor instead, so continued
+        // stick pressure keeps revealing more content.
+        //
+        // The edge is that container's own, not the screen's. The cursor is
+        // held inside the surface with the keys, and a list in a panel ends
+        // wherever the panel's layout ends it — a category grid partway down,
+        // a list above an action bar — so a cursor that had to reach the
+        // bottom of the SCREEN to scroll could not scroll those at all. For
+        // the page itself the container is the screen, so nothing changes
+        // there.
+        edgeScroll(nx, ny, minY, maxY, keyHoldingSurface());
 
         const now = performance.now();
         if (now - lastHighlightAtRef.current >= HIGHLIGHT_THROTTLE_MS) {
@@ -402,7 +603,10 @@ export function useGlobalFreeCursor(): UseGlobalFreeCursorResult {
           // asked for, which is what "moving between cards sometimes opens or
           // closes the detail" was. A drag that ends where it began now does
           // what it looks like it does: nothing.
-          if (!isSameSpot(from, nearest)) clickTarget(nearest);
+          //
+          // Nor is landing on a target whose press is an act — see
+          // FREE_CURSOR_FOCUS_ONLY_ATTR. It has the focus now; A presses it.
+          if (!isSameSpot(from, nearest) && !nearest.hasAttribute(FREE_CURSOR_FOCUS_ONLY_ATTR)) clickTarget(nearest);
           const r = nearest.getBoundingClientRect();
           restPosRef.current = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
         } else {
@@ -445,6 +649,7 @@ export function useGlobalFreeCursor(): UseGlobalFreeCursorResult {
     // probe is what makes the two polls agree regardless of callback order.
     // See setStickOwnerProbe for the full account.
     setStickOwnerProbe((lx, ly, aHeld) => {
+      if (_carry) return true;                  // carrying: the stick is ours, A held or not
       if (aHeld) return false;                  // A+stick is the move/warp chord, not ours
       const optArrow = getOptionArrowVector();
       const deflected = Math.hypot(lx + optArrow.x, ly + optArrow.y) > DRAG_THRESHOLD;
@@ -467,7 +672,7 @@ export function useGlobalFreeCursor(): UseGlobalFreeCursorResult {
     // drag (posRef set) and to the canvas's own CursorMan; parks at the pointer
     // when the mouse goes idle (restPosRef so a later stick drag resumes there).
     const onMouseMove = (e: MouseEvent) => {
-      if (posRef.current) return;          // a stick drag owns the position
+      if (posRef.current || _carry) return;  // a stick drag, or a carry, owns the position
       if (isCanvasCursorActive() || isMinimapFocused()) return;  // the canvas owns movement here
       const dom = cursorRef.current;
       if (dom) dom.style.transition = ''; // instant snap — cancel any warp easing

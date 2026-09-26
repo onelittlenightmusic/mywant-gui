@@ -13,6 +13,14 @@ import { playSound } from '@/utils/sounds';
 import { SidebarTabBar } from '@/components/common/SidebarTabBar';
 import { usePanelTabs } from '@/hooks/usePanelTabs';
 import { useSidebarFocusStore } from '@/stores/sidebarFocusStore';
+import { useInputActions } from '@/hooks/useInputActions';
+import {
+  FREE_CURSOR_ITEM_ATTR, FREE_CURSOR_FOCUS_ONLY_ATTR,
+  beginFreeCursorCarry, useFreeCursorCarrying,
+} from '@/hooks/useFreeCursorNav';
+
+/** How long A or Enter is held on a Pin card before it is picked up — A's own long press. */
+const PICK_UP_HOLD_MS = 250;
 
 interface AddMemoSidebarProps {
   /** Called with the new record's id once it is remembered. */
@@ -61,6 +69,29 @@ interface AddMemoSidebarProps {
  * it where it is dropped. Only a board reads it; this app has none of its own.
  */
 export const THING_PIN_DRAG_TYPE = 'application/mywant-thing-pin';
+
+/**
+ * The drag data a category card carries out of the Add tab: the category, and
+ * the name typed above it if there is one — JSON, `{ typeName, value }`. A board
+ * names a thing of that kind (see defaultThingName for when nothing was typed)
+ * and stands it where it is dropped.
+ */
+export const THING_TYPE_DRAG_TYPE = 'application/mywant-thing-type';
+
+/**
+ * What a thing is called when it was made without being named: its category,
+ * numbered once that is taken ("station", "station 2", …). A name is still
+ * required of every thing — it is what a want is handed — but asking for it
+ * before the thing can exist is what made putting a station on the board a
+ * typing exercise.
+ */
+export function defaultThingName(typeName: string): string {
+  const { records, dataTypes } = useThingStore.getState();
+  const key = dataTypes[typeName]?.memoKey;
+  const taken = new Set(records.filter(r => r.catalogKey === key).map(r => r.value));
+  if (!taken.has(typeName)) return typeName;
+  for (let n = 2; ; n++) if (!taken.has(`${typeName} ${n}`)) return `${typeName} ${n}`;
+}
 
 export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCancel, getPinPosition, record }) => {
   const dataTypes = useThingStore(s => s.dataTypes);
@@ -112,7 +143,8 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
     [dataTypes, filter]
   );
 
-  const canSave = !!category && !!value.trim() && !saving
+  // The name may be left empty — see defaultThingName.
+  const canSave = !!category && !saving
     && (!editing || category !== record!.typeName);
 
   // ── Pin tab ────────────────────────────────────────────────────────────────
@@ -127,6 +159,9 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
   // without a mark the card sits unchanged long enough to be pressed twice.
   const [pinning, setPinning] = useState<string | null>(null);
 
+  // Things on either tab: the Add tab numbers an unnamed thing past the ones
+  // already called that (see defaultThingName).
+  useEffect(() => { ensureThings(); }, [ensureThings]);
   useEffect(() => {
     if (tab !== 'pin') return;
     ensureThings();
@@ -157,12 +192,79 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
     setPinning(null);
   };
 
+  // A card has the keys — the cursor landed on it, or Tab reached it. Drawn,
+  // because the cursor lands on these without pressing them (a press pins), so
+  // the ring is the only sign of where A will go.
+  const [focusedPin, setFocusedPin] = useState<string | null>(null);
+  const pinGridRef = useRef<HTMLDivElement>(null);
+  const carrying = useFreeCursorCarrying();
+  const typeGridRef = useRef<HTMLDivElement>(null);
+  /** The card the keys are on — a thing in the Pin tab or a category in the Add tab — if either. */
+  const focusedCard = () => {
+    const ae = document.activeElement as HTMLElement | null;
+    if (!ae) return null;
+    if (pinGridRef.current?.contains(ae) && ae.dataset.thingId) return ae;
+    if (typeGridRef.current?.contains(ae) && ae.dataset.thingType) return ae;
+    return null;
+  };
+  // Held, a card is picked up and carried out to the board on the cursor —
+  // the pad's version of dragging it there (see beginFreeCursorCarry). It is
+  // the card's own drag that is carried, so it lands wherever a mouse drop
+  // of it would.
+  const pickUp = (el: HTMLElement, skipConfirm: boolean) => {
+    if (beginFreeCursorCarry(el, { skipConfirm })) playSound('buttonPress');
+  };
+  // Enter has no long press of its own, so the card times it: down starts the
+  // clock, and a release before it runs out is an ordinary press.
+  const enterHold = useRef<{ timer: ReturnType<typeof setTimeout> | null; fired: boolean }>({ timer: null, fired: false });
+  useEffect(() => () => { if (enterHold.current.timer) clearTimeout(enterHold.current.timer); }, []);
+  /** The key half of "hold to pick up", for a card that can be carried. */
+  const enterHoldProps = {
+    onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => {
+      if (e.key !== 'Enter' || e.altKey || e.shiftKey || e.metaKey || e.ctrlKey) return;
+      // Not the button's own click on Enter: the press is resolved on release
+      // (onConfirm below), or becomes a pick-up if it is held.
+      e.preventDefault();
+      if (e.repeat) return;
+      const el = e.currentTarget;
+      enterHold.current.fired = false;
+      if (enterHold.current.timer) clearTimeout(enterHold.current.timer);
+      enterHold.current.timer = setTimeout(() => {
+        enterHold.current.timer = null;
+        enterHold.current.fired = true;
+        pickUp(el, true);
+      }, PICK_UP_HOLD_MS);
+    },
+    onKeyUp: (e: React.KeyboardEvent<HTMLElement>) => {
+      if (e.key !== 'Enter' || !enterHold.current.timer) return;
+      clearTimeout(enterHold.current.timer);
+      enterHold.current.timer = null;
+    },
+  };
+
+  useInputActions({
+    enabled: !editing && !carrying,
+    ignoreWhenInSidebar: false,
+    onConfirm: () => {
+      // The release of an Enter that was held long enough to pick up.
+      if (enterHold.current.fired) { enterHold.current.fired = false; return; }
+      const el = focusedCard();
+      if (el?.dataset.thingType) { setCategory(el.dataset.thingType); return; }
+      const r = el && records.find(x => x.id === el.dataset.thingId);
+      if (r) void pin(r);
+    },
+    onConfirmLong: () => {
+      const el = focusedCard();
+      if (el) pickUp(el, false);
+    },
+  });
+
   const save = async () => {
     if (!canSave) return;
     setSaving(true);
     const id = editing
       ? await recategorize(record!, category)
-      : await addRecord(category, value);
+      : await addRecord(category, value.trim() || defaultThingName(category));
     setSaving(false);
     if (id) {
       if (!editing) setValue('');
@@ -201,7 +303,7 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
               {records.length === 0 ? 'Nothing remembered yet.' : `No results for "${pinFilter}"`}
             </p>
           ) : (
-            <div className="grid grid-cols-2 gap-1.5">
+            <div ref={pinGridRef} className="grid grid-cols-2 gap-1.5">
               {pinnable.map(r => {
                 const Icon = resolveLucideIcon(r.icon) ?? Type;
                 const already = onCanvas.has(r.id);
@@ -215,8 +317,15 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
                   <button
                     key={r.id}
                     type="button"
+                    data-thing-id={r.id}
+                    // The cursor lands here and stops; A pins. See
+                    // FREE_CURSOR_FOCUS_ONLY_ATTR.
+                    {...(!already ? { [FREE_CURSOR_ITEM_ATTR]: '', [FREE_CURSOR_FOCUS_ONLY_ATTR]: '' } : {})}
                     disabled={already || !!pinning}
                     onClick={() => void pin(r)}
+                    onFocus={() => setFocusedPin(r.id)}
+                    onBlur={() => setFocusedPin(p => (p === r.id ? null : p))}
+                    {...enterHoldProps}
                     // Or dragged to where it should stand — as a want type is
                     // dragged out of Add Want. The board takes it by this type
                     // (THING_PIN_DRAG_TYPE) and pins it on the cell it is
@@ -231,11 +340,12 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
                       // Same card, a size down: flatter, so more of the list
                       // is in view without changing anything about how a thing
                       // is drawn on it.
-                      'relative w-full aspect-[2.6/1] rounded-lg overflow-hidden border shadow-sm transition-all',
+                      'relative w-full aspect-[2.6/1] rounded-lg overflow-hidden border shadow-sm transition-all focus:outline-none',
                       already
                         ? 'border-gray-200 dark:border-gray-700 opacity-55 cursor-not-allowed'
                         : 'border-gray-300/80 dark:border-black/60 hover:shadow-md hover:outline hover:outline-2 hover:outline-amber-400 hover:z-10',
                       busy && 'animate-pulse',
+                      focusedPin === r.id && !already && 'ring-2 ring-amber-400 ring-offset-1 ring-offset-white dark:ring-offset-gray-900 z-10 scale-[1.03]',
                     )}
                     style={{ background: `${r.color}${isDark ? '26' : '1f'}` }}
                   >
@@ -291,11 +401,14 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
   }
 
   return (
-    <div ref={panelRef} className="h-full overflow-y-auto">
+    // A column: the name and the category heading stay put, and the category
+    // cards take the rest of the panel's height, down to its bottom edge —
+    // they were a box of fixed height that stopped partway down the screen.
+    <div ref={panelRef} className="h-full flex flex-col">
       {!editing && <ThingPanelTabs tab={tab} onChange={setTab} />}
-      <div className="p-4 space-y-4">
+      <div className="p-4 flex-1 min-h-0 flex flex-col gap-4">
       {/* The name itself — first, because it is what the user came to write. */}
-      <div>
+      <div className="flex-shrink-0">
         <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
           Name
         </label>
@@ -309,7 +422,7 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
             if (e.key === 'Enter') save();
             if (e.key === 'Escape') onCancel?.();
           }}
-          placeholder="The name of this value"
+          placeholder={editing ? undefined : 'Optional — the category, if left empty'}
           className={classNames(
             'w-full px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-400',
             editing
@@ -320,8 +433,8 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
       </div>
 
       {/* Category picker */}
-      <div>
-        <div className="flex items-center gap-2 mb-1.5">
+      <div className="flex-1 min-h-0 flex flex-col">
+        <div className="flex items-center gap-2 mb-1.5 flex-shrink-0">
           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             Category
           </label>
@@ -337,7 +450,7 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-1.5 max-h-[22rem] overflow-y-auto pr-0.5">
+        <div ref={typeGridRef} className="flex-1 min-h-0 grid grid-cols-3 content-start gap-1.5 overflow-y-auto pr-0.5">
           {categories.map(c => {
             const Icon = resolveLucideIcon(c.icon) ?? Type;
             const selected = category === c.name;
@@ -353,7 +466,28 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
               <button
                 key={c.name}
                 type="button"
+                data-thing-type={c.name}
                 onClick={() => setCategory(c.name)}
+                // Or taken to the board: dragged, or held (A / Enter) and
+                // carried on the cursor. It becomes a thing of this kind where
+                // it is put down, named by what is typed above — or after its
+                // kind, when nothing is. The editor has none of this: it is
+                // re-filing one thing, not making another.
+                {...(!editing ? {
+                  [FREE_CURSOR_ITEM_ATTR]: '',
+                  ...enterHoldProps,
+                  draggable: true,
+                  onDragStart: (e: React.DragEvent) => {
+                    setCategory(c.name);
+                    e.dataTransfer.effectAllowed = 'copy';
+                    e.dataTransfer.setData(THING_TYPE_DRAG_TYPE, JSON.stringify({ typeName: c.name, value: value.trim() }));
+                  },
+                  // Taken: the name was spent on it, so the field is ready for
+                  // the next one.
+                  onDragEnd: (e: React.DragEvent) => {
+                    if (e.dataTransfer.dropEffect !== 'none') setValue('');
+                  },
+                } : {})}
                 className={classNames(
                   'relative flex flex-col items-center gap-1 px-1.5 py-2 rounded-lg border transition-colors overflow-hidden',
                   selected

@@ -1,5 +1,10 @@
 import React from 'react';
-import { useGlobalFreeCursor } from '@/hooks/useFreeCursorNav';
+import {
+  useGlobalFreeCursor, useFreeCursorCarrying,
+  dropFreeCursorCarry, cancelFreeCursorCarry, consumeCarrySkipConfirm,
+} from '@/hooks/useFreeCursorNav';
+import { useInputActions } from '@/hooks/useInputActions';
+import { playSound } from '@/utils/sounds';
 import { FreeCursorOverlay } from './FreeCursorOverlay';
 
 /**
@@ -10,5 +15,26 @@ import { FreeCursorOverlay } from './FreeCursorOverlay';
  */
 export const GlobalFreeCursor: React.FC = () => {
   const { cursorRef, highlightRef, active } = useGlobalFreeCursor();
+
+  // While something is carried, A/Enter put it down and B/Escape give it up —
+  // and nothing else hears either. Claimed rather than broadcast: the panel the
+  // thing came from still has the focus, and its own B would hand the keys to
+  // the board, which takes the stick, which is the cursor the carry rides on.
+  const carrying = useFreeCursorCarrying();
+  useInputActions({
+    enabled: carrying,
+    captureInput: true,
+    ignoreWhenInSidebar: false,
+    ignoreWhenInputFocused: false,
+    onConfirm: () => {
+      if (consumeCarrySkipConfirm()) return;
+      if (!dropFreeCursorCarry()) playSound('cardClose');
+    },
+    onCancel: () => {
+      cancelFreeCursorCarry();
+      playSound('cardClose');
+    },
+  });
+
   return <FreeCursorOverlay cursorRef={cursorRef} highlightRef={highlightRef} active={active} />;
 };
