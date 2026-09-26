@@ -65,5 +65,13 @@ proxying `/api` to the MyWant server on :8080.
 
 The frontend declares the places it can be extended — pages, menu entries,
 named slots in the header, settings and panels, hooks run at the root — in
-`web/src/extensions/registry.ts`. An extension registers itself from
-`web/src/extensions/installed.ts`, which is empty here.
+`web/src/extensions/registry.ts`.
+
+An extension can be built into the app (`web/src/extensions/installed.ts`,
+empty here) or installed beside it: `mywant-gui` loads, before the first
+render, every extension it finds under `~/.mywant/gui-extensions/<name>/` (or
+`<prefix>/share/mywant/gui-extensions/`) — a `gui-extension.json` naming a
+script and stylesheets, and an optional `public/` served at the site root.
+The script registers itself with the registry, and reaches this app's modules
+and React through `window.__mywantModules` (see `web/src/extensions/modules.ts`),
+so it is built against one version of mywant-gui and loaded only by that one.
