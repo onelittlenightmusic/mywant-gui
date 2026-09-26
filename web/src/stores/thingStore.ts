@@ -57,6 +57,8 @@ interface ThingStore {
    * already holds that value rather than silently merging two records.
    */
   recategorizeRecord: (record: ThingRecord, typeName: string) => Promise<string | null>;
+  /** Call a thing something else. Same id; null (and `error`) when the name is taken in its catalog or the write fails. */
+  renameRecord: (record: ThingRecord, value: string) => Promise<string | null>;
   /** Persist a manual drag/keyboard reorder: move `id` between the two
    *  neighbours and save the resulting full order to gui_state. */
   reorderRecord: (id: string, previousId?: string, nextId?: string) => Promise<void>;
@@ -272,6 +274,34 @@ export const useThingStore = create<ThingStore>()(
         set({
           records: prev,
           error: error instanceof Error ? error.message : 'Failed to change category',
+        });
+        return null;
+      }
+    },
+
+    renameRecord: async (record: ThingRecord, value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      if (trimmed === record.value) return record.id;
+      // Two things of one kind with one name would be one thing to anyone
+      // asking by name — which is how a want is handed one.
+      if (get().records.some(r => r.id !== record.id && r.catalogKey === record.catalogKey && r.value === trimmed)) {
+        set({ error: `「${trimmed}」は ${record.typeName} に既にあります` });
+        return null;
+      }
+
+      const prev = get().records;
+      // The id is the server's and means nothing, so a name is just a field —
+      // where the thing stands and what it is grouped with are keyed by the id
+      // and do not notice. See recategorizeRecord, which is the same move.
+      set({ records: prev.map(r => r.id === record.id ? { ...r, value: trimmed } : r) });
+      try {
+        await apiClient.patchThing(record.id, { value: trimmed });
+        return record.id;
+      } catch (error) {
+        set({
+          records: prev,
+          error: error instanceof Error ? error.message : 'Failed to rename',
         });
         return null;
       }

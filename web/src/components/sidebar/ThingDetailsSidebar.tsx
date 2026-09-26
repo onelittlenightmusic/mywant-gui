@@ -34,6 +34,75 @@ interface MemoDetailsSidebarProps {
   onArranged?: React.ComponentProps<typeof ThemeOrderSection>['onArranged'];
 }
 
+/**
+ * The thing's name, and where it is changed.
+ *
+ * A thing's id is the server's and means nothing, so its name is just a field
+ * — renaming it moves nothing on the board and breaks nothing that points at
+ * it. It matters now that a thing can be made without one: dropped out of Add
+ * Thing unnamed, it is called after its kind until it is told otherwise, and
+ * this is where it is told.
+ *
+ * Committed on Enter or on leaving the field; Escape puts the old name back.
+ */
+const ThingNameField: React.FC<{ record: ThingRecord }> = ({ record }) => {
+  const renameRecord = useThingStore((s) => s.renameRecord);
+  const [draft, setDraft] = useState(record.value);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  // Escape leaves by blurring, and the blur must not save what it is leaving.
+  const abandon = useRef(false);
+  // Another thing, or this one renamed from somewhere else.
+  useEffect(() => { setDraft(record.value); setProblem(null); }, [record.id, record.value]);
+
+  const commit = async () => {
+    if (abandon.current) { abandon.current = false; return; }
+    const next = draft.trim();
+    if (!next) { setDraft(record.value); setProblem(null); return; }
+    if (next === record.value) { setProblem(null); return; }
+    setSaving(true);
+    const id = await renameRecord(record, next);
+    setSaving(false);
+    if (id) { setProblem(null); return; }
+    setProblem(useThingStore.getState().error ?? 'Could not rename');
+  };
+
+  return (
+    <div className="text-xs sm:text-sm">
+      <div className="flex items-center justify-between gap-3">
+        <label htmlFor={`thing-name-${record.id}`} className="flex-shrink-0 text-gray-600 dark:text-gray-400">Name:</label>
+        <input
+          id={`thing-name-${record.id}`}
+          type="text"
+          value={draft}
+          disabled={saving}
+          onChange={(e) => { setDraft(e.target.value); setProblem(null); }}
+          onBlur={() => { void commit(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+            if (e.key === 'Escape') {
+              // Put it back rather than close the panel: the press was about
+              // the field.
+              e.preventDefault();
+              e.stopPropagation();
+              abandon.current = true;
+              setDraft(record.value);
+              setProblem(null);
+              e.currentTarget.blur();
+            }
+          }}
+          className={classNames(
+            'min-w-0 flex-1 text-right font-medium px-2 py-1 rounded-md border bg-transparent',
+            'text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:text-left',
+            problem ? 'border-red-400' : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-gray-300 dark:focus:border-gray-600',
+          )}
+        />
+      </div>
+      {problem && <p className="mt-1 text-right text-[11px] text-red-500">{problem}</p>}
+    </div>
+  );
+};
+
 /** Icon per event source. */
 function sourceIcon(source: string) {
   switch (source) {
@@ -232,6 +301,7 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
             {/* No "Details" box: three rows under a heading in a tab already
                 named Settings is a compartment around nothing. */}
             <div className="space-y-2 sm:space-y-3">
+              <ThingNameField record={record} />
               <InfoRow label="Type" value={record.typeName} />
               <InfoRow label="Catalog" value={<span className="font-mono">{record.catalogKey}</span>} />
               <InfoRow label="Firings" value={events ? events.length : '…'} />
