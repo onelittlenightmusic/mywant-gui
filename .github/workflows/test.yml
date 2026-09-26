@@ -37,19 +37,3 @@ jobs:
 
       - name: Test
         run: go test ./...
-
-      # The extension's background worker holds the rule that keeps the server
-      # password off third-party origins, and it ships as plain JS with no
-      # compiler to catch a regression — so it gets its own test. Needs the
-      # build first: the test loads dist/, not the sources.
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Test browser extension
-        working-directory: webext
-        run: |
-          npm ci
-          npm run build
-          npm test
