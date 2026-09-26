@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bookmark, Check, Pin, Save, Search, Type } from 'lucide-react';
 import { useThingStore } from '@/stores/thingStore';
 import { useThingTileStore } from '@/stores/thingTileStore';
@@ -10,6 +10,9 @@ import { vividIconColor, iconEmbossFilter } from '@/components/dashboard/WantCar
 import { thingBackgroundSrc, kindBackgroundSrc, THING_BACKGROUND_SCRIM } from '@/utils/thingBackground';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { playSound } from '@/utils/sounds';
+import { SidebarTabBar } from '@/components/common/SidebarTabBar';
+import { usePanelTabs } from '@/hooks/usePanelTabs';
+import { useSidebarFocusStore } from '@/stores/sidebarFocusStore';
 
 interface AddMemoSidebarProps {
   /** Called with the new record's id once it is remembered. */
@@ -66,6 +69,25 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
   const editing = !!record;
 
   const [tab, setTab] = useState<'add' | 'pin'>('add');
+
+  // Add and Pin are walked like any detail panel's tabs — L1/R1 on a gamepad,
+  // Tab / Shift+Tab on a keyboard — from the same hook, with the same "who has
+  // the keys" flag, so the first bumper press from outside brings the keys in
+  // rather than silently skipping a tab. The editor has no tabs.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const sidebarFocused = useSidebarFocusStore(s => s.focused);
+  const setSidebarFocused = useSidebarFocusStore(s => s.setFocused);
+  usePanelTabs({
+    tabs: THING_PANEL_TABS,
+    activeTab: tab,
+    onTabChange: (id) => setTab(id as 'add' | 'pin'),
+    enabled: !editing,
+    scope: () => panelRef.current,
+    focus: {
+      hasFocus: () => sidebarFocused,
+      takeFocus: () => setSidebarFocused(true),
+    },
+  });
   const [category, setCategory] = useState<string>(record?.typeName ?? '');
   const [value, setValue] = useState(record?.value ?? '');
   const [filter, setFilter] = useState('');
@@ -152,7 +174,7 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
   // had: no tabs, no list of everything else.
   if (!editing && tab === 'pin') {
     return (
-      <div className="h-full flex flex-col">
+      <div ref={panelRef} className="h-full flex flex-col">
         <ThingPanelTabs tab={tab} onChange={setTab} />
         <div className="p-4 pb-2 flex-shrink-0">
           <div className="relative">
@@ -269,7 +291,7 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div ref={panelRef} className="h-full overflow-y-auto">
       {!editing && <ThingPanelTabs tab={tab} onChange={setTab} />}
       <div className="p-4 space-y-4">
       {/* The name itself — first, because it is what the user came to write. */}
@@ -460,37 +482,20 @@ const ThingActions: React.FC<{
   );
 };
 
+/** The two ways onto the board, in the order L1/R1 walk them. */
+const THING_PANEL_TABS = [
+  { id: 'add' as const, label: 'Add Thing', icon: Bookmark },
+  { id: 'pin' as const, label: 'Pin Thing', icon: Pin },
+];
+
 /**
- * The two ways onto the board, side by side. Local to this panel: FormTabBar is
- * the want form's own tab set (Params, Labels, Schedule …) and its tab names are
- * that form's type, not a bar anything can borrow.
+ * The two ways onto the board, side by side — on the tab bar every detail
+ * panel wears (SidebarTabBar), so it looks and walks like theirs.
  */
 const ThingPanelTabs: React.FC<{ tab: 'add' | 'pin'; onChange: (t: 'add' | 'pin') => void }> = ({ tab, onChange }) => (
-  <div className="flex flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
-    {([
-      { id: 'add' as const, label: 'Add Thing', icon: Bookmark },
-      { id: 'pin' as const, label: 'Pin Thing', icon: Pin },
-    ]).map(({ id, label, icon: Icon }) => {
-      const active = tab === id;
-      return (
-        <button
-          key={id}
-          type="button"
-          onClick={() => onChange(id)}
-          data-robot-target="thing_panel_tab"
-          data-robot-id={id}
-          className={classNames(
-            'flex-1 flex items-center justify-center gap-1.5 py-2 px-1 relative transition-colors min-w-0',
-            active
-              ? 'text-amber-600 dark:text-amber-400 bg-white dark:bg-gray-800'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-800/30',
-          )}
-        >
-          <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="text-[11px] font-bold uppercase tracking-tight truncate">{label}</span>
-          {active && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500 dark:bg-amber-400" />}
-        </button>
-      );
-    })}
-  </div>
+  <SidebarTabBar
+    tabs={THING_PANEL_TABS}
+    activeTab={tab}
+    onTabChange={(id) => onChange(id as 'add' | 'pin')}
+  />
 );
