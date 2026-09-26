@@ -106,18 +106,23 @@ func installedExtensions() map[string]extensionManifest {
 	return out
 }
 
-// loadableExtensions is installedExtensions less those built for another version.
-func loadableExtensions() map[string]extensionManifest {
+// loadableExtensions is installedExtensions less those built for another
+// version. It runs for every file an extension serves, so it says why only
+// when asked to (the list, which is fetched once per page load).
+func loadableExtensions(explain bool) map[string]extensionManifest {
 	running, _ := buildinfo.Get()
 	out := map[string]extensionManifest{}
 	for name, m := range installedExtensions() {
 		ok, why := compatible(m.Requires, running)
-		if !ok {
-			log.Printf("[gui-extensions] %s skipped: %s", name, why)
-			continue
+		if explain && why != "" {
+			if ok {
+				log.Printf("[gui-extensions] %s loaded: %s", name, why)
+			} else {
+				log.Printf("[gui-extensions] %s skipped: %s", name, why)
+			}
 		}
-		if why != "" {
-			log.Printf("[gui-extensions] %s loaded: %s", name, why)
+		if !ok {
+			continue
 		}
 		out[name] = m
 	}
@@ -126,7 +131,7 @@ func loadableExtensions() map[string]extensionManifest {
 
 func (s *Server) handleExtensionList(w http.ResponseWriter, r *http.Request) {
 	list := []extensionEntry{}
-	for name, m := range loadableExtensions() {
+	for name, m := range loadableExtensions(true) {
 		// The version rides along so a reinstall is a new URL to the browser.
 		q := "?v=" + m.Version
 		e := extensionEntry{Name: name, Version: m.Version, Script: "/gui-extensions/" + name + "/" + m.Script + q}
@@ -158,7 +163,7 @@ func (s *Server) handleExtensionFile(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if _, loadable := loadableExtensions()[name]; !loadable {
+	if _, loadable := loadableExtensions(false)[name]; !loadable {
 		http.NotFound(w, r)
 		return
 	}
@@ -182,7 +187,7 @@ func (s *Server) serveExtensionPublic(w http.ResponseWriter, r *http.Request) bo
 	if r.URL.Path == "/" || strings.HasPrefix(r.URL.Path, "/assets/") {
 		return false
 	}
-	for name, m := range loadableExtensions() {
+	for name, m := range loadableExtensions(false) {
 		if m.Public == "" {
 			continue
 		}
