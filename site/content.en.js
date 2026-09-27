@@ -63,7 +63,7 @@ ${shot("dashboard.jpg", "The dashboard: your Wants as cards")}
           id: 'install',
           step: 'Step 2',
           title: 'Install',
-          sub: 'With Homebrew, together with MyWant',
+          sub: 'With Homebrew, together with MyWant — and mywant-guiex',
           icon: 'download',
           color: '#10b981',
           body: `
@@ -83,6 +83,23 @@ brew trust onelittlenightmusic/mywant</pre></div>
 <div class="code"><pre>git clone https://github.com/onelittlenightmusic/mywant-gui.git
 cd mywant-gui
 make install   # goes to ~/.local/bin/mywant-gui</pre></div>
+<h4>Add the mywant-guiex extension (canvas and Web Wants)</h4>
+<p><strong>mywant-guiex</strong> is an extension that adds the <strong>canvas</strong> and <strong>Web Wants</strong> to mywant-gui. mywant-gui works fine without it.</p>
+<ol class="steps">
+  <li><strong>Install it with Homebrew</strong> (mywant and mywant-gui come along)
+    <div class="code"><pre>brew install mywant-guiex</pre></div>
+  </li>
+  <li><strong>Reload the screen in your browser</strong><br />Done when <strong>Canvas</strong> and <strong>Web Wants</strong> appear in the Menu. There is no need to restart the screen's server.</li>
+</ol>
+<div class="box">
+  <p class="box-title"><i data-lucide="link"></i>Keep the versions together</p>
+  <p>mywant-guiex is built for the mywant-gui of the same version. If they differ, the screen keeps working but the canvas does not show up (<code>~/.mywant/gui.log</code> says why). Always upgrade the two together.</p>
+</div>
+<div class="code"><pre>brew upgrade mywant-gui mywant-guiex</pre></div>
+<p>To place or remove just the extension by hand, use these (it goes in <code>~/.mywant/gui-extensions/</code>, which wins over the Homebrew copy).</p>
+<div class="code"><pre>mywant guiex install     # place it
+mywant guiex uninstall   # remove it</pre></div>
+<p>How to use it: see "The canvas (mywant-guiex)" and "Web Wants (mywant-guiex)".</p>
 `,
         },
         {
@@ -505,10 +522,8 @@ ${shot('canvas-detail.jpg', 'The canvas: weather, reminder, timer and other Want
 </ul>
 ${shot('canvas.jpg', 'The minimap on the right shows the whole board and where you are')}
 <h4>Install</h4>
-<div class="code"><pre>brew install mywant-guiex
-# restart the screen, and Canvas appears in the Menu
-mywant-gui stop
-mywant-gui start -D</pre></div>
+<div class="code"><pre>brew install mywant-guiex</pre></div>
+<p>Then reload the screen in your browser, and Canvas appears in the Menu. More under "Install".</p>
 <p><strong>Canvas</strong> in the Menu (or the <code>c</code> key) goes to the canvas; <code>l</code> goes back to the list of cards.</p>
 <h4>Drive it from commands</h4>
 <div class="code"><pre># move a tile to cell (0, 1)

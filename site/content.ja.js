@@ -67,7 +67,7 @@ ${shot("dashboard.jpg", "ダッシュボード。置いた Want がカードで�
           id: 'install',
           step: 'Step 2',
           title: 'インストール',
-          sub: 'Homebrew で本体と一緒に',
+          sub: 'Homebrew で本体と一緒に。拡張 mywant-guiex も',
           icon: 'download',
           color: '#10b981',
           body: `
@@ -87,6 +87,23 @@ brew trust onelittlenightmusic/mywant</pre></div>
 <div class="code"><pre>git clone https://github.com/onelittlenightmusic/mywant-gui.git
 cd mywant-gui
 make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
+<h4>拡張 mywant-guiex も入れる（キャンバスと Web Want）</h4>
+<p><strong>mywant-guiex</strong> は、mywant-gui に <strong>キャンバス</strong> と <strong>Web Want</strong> を足す拡張です。入れなくても mywant-gui はそのまま使えます。</p>
+<ol class="steps">
+  <li><strong>Homebrew で入れる</strong>（mywant と mywant-gui も一緒に入ります）
+    <div class="code"><pre>brew install mywant-guiex</pre></div>
+  </li>
+  <li><strong>ブラウザで画面を再読み込みする</strong><br />Menu に <strong>Canvas</strong> と <strong>Web Wants</strong> が増えれば完了です。画面のサーバーを起動し直す必要はありません。</li>
+</ol>
+<div class="box">
+  <p class="box-title"><i data-lucide="link"></i>バージョンはそろえる</p>
+  <p>mywant-guiex は、同じバージョンの mywant-gui 用に作られています。バージョンが違うと、画面はそのまま動きますがキャンバスが出てきません（理由は <code>~/.mywant/gui.log</code> に出ます）。アップデートするときは、いつも 2 つ一緒に。</p>
+</div>
+<div class="code"><pre>brew upgrade mywant-gui mywant-guiex</pre></div>
+<p>手元で拡張だけを置いたり外したりするときは、次のコマンドを使います（<code>~/.mywant/gui-extensions/</code> に置かれ、Homebrew で入れたものより優先されます）。</p>
+<div class="code"><pre>mywant guiex install     # 置く
+mywant guiex uninstall   # 外す</pre></div>
+<p>使い方は「キャンバス（mywant-guiex）」と「Web Want（mywant-guiex）」を見てください。</p>
 `,
         },
         {
@@ -509,10 +526,8 @@ ${shot('canvas-detail.jpg', 'キャンバス。天気・リマインダー・タ
 </ul>
 ${shot('canvas.jpg', '右のミニマップで、盤面の全体と今いる場所がわかります')}
 <h4>入れる</h4>
-<div class="code"><pre>brew install mywant-guiex
-# 画面を起動し直すと、Menu に Canvas が増えます
-mywant-gui stop
-mywant-gui start -D</pre></div>
+<div class="code"><pre>brew install mywant-guiex</pre></div>
+<p>入れたらブラウザで画面を再読み込みすると、Menu に Canvas が増えます。くわしくは「インストール」を見てください。</p>
 <p>Menu の <strong>Canvas</strong>（または <code>c</code> キー）でキャンバスへ、<code>l</code> キーでカードの一覧へ戻ります。</p>
 <h4>コマンドで動かす</h4>
 <div class="code"><pre># タイルを (0, 1) のマスへ動かす
