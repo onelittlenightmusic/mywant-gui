@@ -57,6 +57,39 @@ export interface OverlayDesign {
   /** The whole overlay arriving, and one cell arriving (CSS animation shorthands). */
   enterAnimation: string;
   cellEnterAnimation: string;
+  /**
+   * The same look as plain CSS values, for overlays drawn where this app's
+   * classes do not exist — the browser extension's and the bookmarklet's menus
+   * on other people's pages. Stored with the choice (see withOverlayDesign), so
+   * those can read it off the character — and the global control pill, which is
+ * drawn from these values everywhere, the app's header included (see
+ * shared/controlPill). Absent: they keep the grid look.
+   */
+  portable?: OverlayPortableStyle;
+}
+
+/**
+ * An overlay design as values rather than class names — what a page that is
+ * not this app can apply as CSS custom properties (--mwo-*).
+ */
+export interface OverlayPortableStyle {
+  /** A cell's fill, per tone: any CSS colour. */
+  tones: Record<OverlayTone, string>;
+  /** The box's fill, its outline, and the colour of its words. */
+  surface: string;
+  outline: string;
+  ink: string;
+  /** The box's corner radius, px. */
+  radius: number;
+  /** A cell's corner radius, and the gap between cells, px — 0 and 0 are full-bleed tiles. */
+  cellRadius: number;
+  cellGap: number;
+  /** The word under a cell's icon. */
+  labelTransform: 'uppercase' | 'none';
+  labelWeight: number;
+  labelSize: number;
+  /** What is laid over a page behind a dialog. */
+  backdrop: string;
 }
 
 /** The built-in design: full-bleed coloured tiles on a dark box. */
@@ -93,6 +126,29 @@ export const GRID_OVERLAY_DESIGN: OverlayDesign = {
   // Keyframes in WantCard.module.css.
   enterAnimation: 'quickActionsIn 150ms ease-out forwards',
   cellEnterAnimation: 'quickActionBtnIn 150ms ease-out both',
+  portable: {
+    tones: {
+      confirm: 'rgba(5,150,105,.9)',
+      cancel:  'rgba(75,85,99,.9)',
+      danger:  'rgba(190,18,60,.9)',
+      primary: 'rgba(37,99,235,.9)',
+      caution: 'rgba(217,119,6,.9)',
+      info:    'rgba(2,132,199,.9)',
+      accent:  'rgba(79,70,229,.9)',
+      special: 'rgba(124,58,237,.9)',
+      muted:   '#334155',
+    },
+    surface: '#0f172a',
+    outline: '#475569',
+    ink: '#ffffff',
+    radius: 16,
+    cellRadius: 0,
+    cellGap: 0,
+    labelTransform: 'uppercase',
+    labelWeight: 700,
+    labelSize: 9,
+    backdrop: 'rgba(0,0,0,.6)',
+  },
 };
 
 // ── Registry ─────────────────────────────────────────────────────────────────
@@ -129,10 +185,23 @@ export function overlayDesignOf(display: Pick<CharacterDisplay, 'ext'> | null | 
   return typeof id === 'string' && id ? id : GRID_OVERLAY_DESIGN.id;
 }
 
-/** A display's `ext` with the overlay design set — for the character display editor. */
+/**
+ * A display's `ext` with the overlay design set — for the character display
+ * editor. The design's portable values go with it (or are cleared, for a
+ * design without them), so the extension and the bookmarklet can draw their
+ * menus the same way without knowing any design by name.
+ */
 export function withOverlayDesign(display: Pick<CharacterDisplay, 'ext'>, id: string): CharacterDisplay['ext'] {
   const ext = (display.ext ?? {}) as Record<string, unknown>;
-  return { ...ext, overlay: { ...((ext.overlay as object) ?? {}), design: id } };
+  const portable = designs.get(id)?.portable ?? null;
+  return { ...ext, overlay: { ...((ext.overlay as object) ?? {}), design: id, portable } };
+}
+
+/** The portable values a display carries for its chosen design, if any. */
+export function portableOverlayStyleOf(display: Pick<CharacterDisplay, 'ext'> | null | undefined): OverlayPortableStyle | null {
+  const ext = display?.ext as { overlay?: { portable?: unknown } } | undefined;
+  const p = ext?.overlay?.portable;
+  return p && typeof p === 'object' ? p as OverlayPortableStyle : null;
 }
 
 const resolve = (id: string): OverlayDesign => designs.get(id) ?? GRID_OVERLAY_DESIGN;

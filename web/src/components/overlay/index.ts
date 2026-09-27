@@ -20,7 +20,7 @@ export {
   OVERLAY_CELL_PX, OVERLAY_MAX_ROW, OVERLAY_HEIGHT_PX, OVERLAY_STAGGER_MS,
 } from './tones';
 export {
-  type OverlayDesign, GRID_OVERLAY_DESIGN,
+  type OverlayDesign, type OverlayPortableStyle, GRID_OVERLAY_DESIGN,
   registerOverlayDesign, listOverlayDesigns, onOverlayDesignRegistered,
-  overlayDesignOf, withOverlayDesign, overlayDesign, useOverlayDesign,
+  overlayDesignOf, withOverlayDesign, portableOverlayStyleOf, overlayDesign, useOverlayDesign,
 } from './design';
