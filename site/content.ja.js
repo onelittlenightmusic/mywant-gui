@@ -534,6 +534,7 @@ ${shot('canvas.jpg', '右のミニマップで、盤面の全体と今いる場�
 mywant guiex tile set tokyo-weather 0 1
 # 使えるコマンドの一覧
 mywant guiex commands</pre></div>
+<p>キャンバスやロボットなど、mywant-guiex のすべては <a href="https://onelittlenightmusic.github.io/mywant-guiex-guide/?lang=ja">mywant-guiex ガイド</a> で説明しています。</p>
 `,
         },
         {
@@ -566,6 +567,7 @@ ${shot('web-add.jpg', 'できた種類（ここでは mywant-gui Guide）は、W
   <p class="box-title"><i data-lucide="bookmark"></i>拡張を入れられないとき</p>
   <p>Web Wants ページの ＋ から、<strong>ブックマークレット</strong>でも取り込めます。拡張の入らないスマホのブラウザからも使えます。</p>
 </div>
+<p>キャンバスやロボットなど、mywant-guiex のすべては <a href="https://onelittlenightmusic.github.io/mywant-guiex-guide/?lang=ja">mywant-guiex ガイド</a> で説明しています。</p>
 `,
         },
       ],

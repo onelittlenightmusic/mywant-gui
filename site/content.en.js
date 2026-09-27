@@ -530,6 +530,7 @@ ${shot('canvas.jpg', 'The minimap on the right shows the whole board and where y
 mywant guiex tile set tokyo-weather 0 1
 # every command
 mywant guiex commands</pre></div>
+<p>Everything mywant-guiex does — the canvas, the robot and more — is in the <a href="https://onelittlenightmusic.github.io/mywant-guiex-guide/?lang=en">mywant-guiex guide</a>.</p>
 `,
         },
         {
@@ -562,6 +563,7 @@ ${shot('web-add.jpg', 'The new kind (mywant-gui Guide, here) can also be picked 
   <p class="box-title"><i data-lucide="bookmark"></i>Can't install the extension?</p>
   <p>The + on the Web Wants page captures a site with a <strong>bookmarklet</strong> instead — which also works from a phone's browser, where extensions can't go.</p>
 </div>
+<p>Everything mywant-guiex does — the canvas, the robot and more — is in the <a href="https://onelittlenightmusic.github.io/mywant-guiex-guide/?lang=en">mywant-guiex guide</a>.</p>
 `,
         },
       ],
