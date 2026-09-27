@@ -1,0 +1,11 @@
+# Built inside the image, never copied from the host
+bin/
+**/node_modules/
+web/dist/
+
+# Not part of the app
+site/
+docs/
+.git/
+.github/
+**/.DS_Store

@@ -50,6 +50,30 @@ mywant-gui stop
 `mywant-gui commands` lists every command; `mywant-gui <command> --help` gives
 its flags.
 
+## Run with Docker
+
+The image is `ghcr.io/onelittlenightmusic/mywant-gui-public` (linux/amd64 and
+linux/arm64), built from this repository's [Dockerfile](Dockerfile) — the GUI
+without the canvas. It proxies to the MyWant server named by `MYWANT_BACKEND`,
+and `MYWANT_AUTH_PASSWORD` turns on Basic auth (user `mywant`).
+
+The easiest way is MyWant's
+[`docker-compose.yml`](https://github.com/onelittlenightmusic/mywant/blob/master/docker-compose.yml),
+which runs it together with the server:
+
+```sh
+curl -O https://raw.githubusercontent.com/onelittlenightmusic/MyWant/master/docker-compose.yml
+docker compose up -d        # then open http://localhost:8081
+```
+
+To put it in front of a MyWant server you already run elsewhere:
+
+```sh
+docker run -d -p 127.0.0.1:8081:8080 \
+  -e MYWANT_BACKEND=https://your-mywant-server.example \
+  ghcr.io/onelittlenightmusic/mywant-gui-public
+```
+
 ## Build from source
 
 Requires Go and Node.js.
