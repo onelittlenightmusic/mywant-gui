@@ -1,10 +1,14 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Activity, PauseOctagon, Pause, Play, Bell, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAttentionStore } from '@/stores/attentionStore';
 import { useMarkJumpStore } from '@/stores/markJumpStore';
 import type { AttentionItem } from '@/api/client';
 import { classNames } from '@/utils/helpers';
+import { useOverlayDesign } from '@/components/overlay';
+import { useDarkMode } from '@/hooks/useDarkMode';
+import {
+  controlPillIcon, controlPillVars, ensureControlPillCss, CONTROL_PILL_LABELS, type ControlPillIcon,
+} from '@/shared/controlPill';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useSystemPauseStore } from '@/stores/systemPauseStore';
 import { usePrefersReducedMotion } from '@/components/ui/originReveal';
@@ -22,9 +26,11 @@ import { playSound } from '@/utils/sounds';
  * there is nowhere to warp to, so it is not drawn at all.
  *
  * The same pill is drawn on other sites by the extension and the bookmarklet
- * (webext-src/pill.js), in the same place, so an emergency stop is one press
- * away wherever the user is. The two are kept looking alike by hand: pill.js
- * cannot import this, so change both together.
+ * (mywant-guiex's webext-src/pill.js), in the same place, so an emergency stop
+ * is one press away wherever the user is. Both draw it from shared/controlPill
+ * — the stylesheet, the icons, the words and the overlay design's values — so
+ * they look alike by construction; what is here is only this host's: where the
+ * pill sits in the header, how it opens on a phone, and what each cell does.
  *
  *
  * On a phone the header has no room for four cells, so the pill shrinks to one
@@ -40,6 +46,9 @@ import { playSound } from '@/utils/sounds';
  * box, and the two copies never quite lined up.) The frame is a border, inside
  * the box, for the same reason.
  */
+// The shared pill's stylesheet, once, before the first paint of the header.
+if (typeof document !== 'undefined') ensureControlPillCss(document);
+
 export interface GlobalControlPillProps {
   isBottom: boolean;
   /** Something in the menu wants attention. */
@@ -126,18 +135,22 @@ export const GlobalControlPill: React.FC<GlobalControlPillProps> = ({
   const known = paused !== null;
   const shrunk = compact && !open;
 
-  const cell = 'relative flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-2 h-full transition-colors duration-150 focus:outline-none';
-  const label = 'text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block';
-  const icon = 'h-5 w-5 sm:h-6 sm:w-6';
+  // Drawn from the shared pill (shared/controlPill): the same elements, classes,
+  // icons and words the browser extension draws on every other page, in the
+  // overlay design this person picked — its values set on the pill as custom
+  // properties.
+  const design = useOverlayDesign();
+  const isDark = useDarkMode();
+  const designVars = controlPillVars(design.portable) as React.CSSProperties;
   // Cells hidden inside the shrunk pill are out of reach of Tab, too.
   const hiddenTab = shrunk ? -1 : undefined;
+  const focus = (id: string) => focusedCell === id && 'mwp-focus';
+  const icon = (name: ControlPillIcon) => (
+    <span className="mwp-icon" dangerouslySetInnerHTML={{ __html: controlPillIcon(name) }} />
+  );
 
-  const dot = (className: string) => attention && (
-    <span
-      aria-hidden
-      className={classNames('absolute block w-2 h-2 rounded-full ring-2 ring-white dark:ring-gray-800', className)}
-      style={{ background: attentionColor ?? '#ef4444' }}
-    />
+  const dot = (style?: React.CSSProperties) => attention && (
+    <span aria-hidden className="mwp-dot" style={{ ...(attentionColor ? { background: attentionColor } : {}), ...style }} />
   );
 
   // Opening decelerates into place; shrinking is quicker and gets out of the
@@ -152,13 +165,11 @@ export const GlobalControlPill: React.FC<GlobalControlPillProps> = ({
 
   const statusSign = (
     <>
-      {paused ? <PauseOctagon className={icon} /> : <Activity className={classNames(icon, known && 'animate-pulse')} />}
-      <span className={label}>{!known ? '—' : paused ? 'Paused' : 'Running'}</span>
+      {icon(paused ? 'paused' : 'activity')}
+      <span className="mwp-label">{!known ? CONTROL_PILL_LABELS.unknown : paused ? CONTROL_PILL_LABELS.paused : CONTROL_PILL_LABELS.running}</span>
     </>
   );
-  const statusTone = !known ? 'text-gray-400 dark:text-gray-500'
-    : paused ? 'bg-amber-500 text-white'
-    : 'text-emerald-600 dark:text-emerald-400';
+  const statusClass = classNames('mwp-cell mwp-status mwp-start', !known && 'is-unknown', paused && 'is-paused');
 
   const pill = (
     <div
@@ -166,15 +177,14 @@ export const GlobalControlPill: React.FC<GlobalControlPillProps> = ({
       aria-label="Global control"
       data-global-control-pill
       className={classNames(
-        'rounded-full overflow-hidden bg-white dark:bg-gray-800 border',
-        paused ? 'border-amber-500' : 'border-gray-300 dark:border-gray-700',
+        'mwp-pill', isDark && 'mwp-dark', paused && 'mwp-paused',
         compact
           ? classNames('absolute left-0 inset-y-0 z-10', open ? 'shadow-lg' : 'shadow-sm')
-          : 'flex self-stretch flex-shrink-0 -my-1 sm:-my-2 shadow-sm',
+          : 'flex self-stretch flex-shrink-0 -my-1 sm:-my-2',
       )}
-      style={compact ? { width: open && fullW ? fullW : shrunkW, transition: motion } : undefined}
+      style={{ ...designVars, ...(compact ? { width: open && fullW ? fullW : shrunkW, transition: motion } : {}) }}
     >
-      <div ref={rowRef} className="flex items-stretch h-full w-max">
+      <div ref={rowRef} className="mwp-row">
         {/* Status — a sign. On a phone it is also what opens and shrinks the
             pill, so there it is a button. */}
         {compact ? (
@@ -185,23 +195,23 @@ export const GlobalControlPill: React.FC<GlobalControlPillProps> = ({
             // this button's sound, and the two together land as one thud.
             aria-expanded={open}
             aria-label={`Global control: ${!known ? 'unknown' : paused ? 'paused' : 'running'}${attention ? ', something new' : ''}`}
-            className={classNames(cell, 'aspect-square !min-w-0 !px-0', statusTone)}
+            className={classNames(statusClass, 'aspect-square !min-w-0 !px-0', shrunk && 'mwp-end')}
           >
             {statusSign}
             {/* Inside the circle's curve — the pill clips its corners now. */}
-            {shrunk && dot('top-[18%] right-[18%]')}
+            {shrunk && dot({ top: '18%', right: '18%' })}
           </button>
         ) : (
-          <div role="status" aria-live="polite" className={classNames(cell, 'pl-3 sm:pl-4', statusTone)}>
+          <div role="status" aria-live="polite" className={statusClass}>
             {statusSign}
           </div>
         )}
 
         <div
-          className="flex items-stretch"
+          className="mwp-group"
           style={compact ? { opacity: open ? 1 : 0, transition: cellsMotion } : undefined}
         >
-          {/* Toggle — a grid button, like the header's own cells. */}
+          {/* Toggle — pause everything, or play again. */}
           <Tooltip label={paused ? 'Resume everything' : 'Pause everything'} below={!isBottom}>
             <button
               type="button"
@@ -211,15 +221,10 @@ export const GlobalControlPill: React.FC<GlobalControlPillProps> = ({
               tabIndex={hiddenTab}
               aria-label={paused ? 'Resume all wants' : 'Pause all wants'}
               data-header-btn-id="global-pause"
-              className={classNames(
-                cell, 'border-l border-gray-200 dark:border-gray-700 disabled:opacity-50', ring('pill-pause'),
-                paused
-                  ? 'bg-emerald-600/90 text-white hover:brightness-110'
-                  : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700',
-              )}
+              className={classNames('mwp-cell mwp-toggle mwp-divided', paused && 'is-paused', focus('pill-pause'))}
             >
-              {paused ? <Play className={icon} /> : <Pause className={icon} />}
-              <span className={label}>{paused ? 'Play' : 'Pause'}</span>
+              {icon(paused ? 'play' : 'pause')}
+              <span className="mwp-label">{paused ? CONTROL_PILL_LABELS.play : CONTROL_PILL_LABELS.pause}</span>
             </button>
           </Tooltip>
 
@@ -235,13 +240,11 @@ export const GlobalControlPill: React.FC<GlobalControlPillProps> = ({
                 tabIndex={hiddenTab}
                 aria-label={`Needs you: ${attentionItems.length}`}
                 data-header-btn-id="global-attention"
-                className={classNames(cell, 'border-l border-gray-200 dark:border-gray-700 bg-amber-500 text-white hover:brightness-110', ring('pill-attention'))}
+                className={classNames('mwp-cell mwp-alert mwp-divided', focus('pill-attention'))}
               >
-                <AlertTriangle className={classNames(icon, 'rounded motion-safe:animate-[mwblink_1.6s_ease-in-out_infinite]')} />
-                <span className={label}>Alert</span>
-                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold leading-4 text-center">
-                  {attentionItems.length}
-                </span>
+                {icon('alert')}
+                <span className="mwp-label">{CONTROL_PILL_LABELS.alert}</span>
+                <span className="mwp-count">{attentionItems.length}</span>
               </button>
             </Tooltip>
           )}
@@ -254,22 +257,20 @@ export const GlobalControlPill: React.FC<GlobalControlPillProps> = ({
               onPointerDown={onPointerDown}
               tabIndex={hiddenTab}
               aria-label={attention ? 'Notifications: something new' : 'Notifications: nothing new'}
-              className={classNames(cell, 'border-l border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700', ring('pill-bell'))}
+              className={classNames('mwp-cell mwp-divided', !bubble && 'mwp-end', focus('pill-bell'))}
             >
-              <Bell className={icon} />
-              <span className={label}>News</span>
-              {dot('top-1.5 right-1.5 sm:right-2')}
+              {icon('bell')}
+              <span className="mwp-label">{CONTROL_PILL_LABELS.news}</span>
+              {dot()}
             </button>
           </Tooltip>
           {/* Talking — the header's interact bubble, or on a narrow screen the
               character that opens it. Last, so it has the rounded end to itself. */}
           {bubble && (
-            <div className={classNames('flex items-stretch border-l border-gray-200 dark:border-gray-700 pr-1.5 sm:pr-2', ring('pill-talk'))}>
+            <div className={classNames('mwp-talk mwp-divided mwp-end', focus('pill-talk'))}>
               {bubble}
             </div>
           )}
-
-
         </div>
       </div>
     </div>
