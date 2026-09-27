@@ -18,8 +18,13 @@ import { useConstellationPromptStore, type PromptAction } from '@/stores/constel
  * ever be asked what flows between them — never that they are one group.
  *
  * Resolves whether the menu opened. With nothing to offer — every member
- * already in one group, and no action for the pair — it stays shut: saying it
- * again would only be the board agreeing with itself.
+ * already in one group, and no second half for the pair — it stays shut:
+ * saying it again would only be the board agreeing with itself.
+ *
+ * Being in one group already is not the end of the question, though. Things
+ * always have a second half (a want made of them), and a constellation is only
+ * the first of the answers — so the menu opens, without the groups they are
+ * all already in: joining one of those would change nothing.
  */
 export async function openConnectionMenu(opts: {
   /** The one put down (or the wire ended on) — what joins. */
@@ -44,15 +49,17 @@ export async function openConnectionMenu(opts: {
   const groups = useConstellationStore.getState().constellations;
 
   const all = opts.members?.length ? opts.members : [joiningId, anchorId];
-  const alreadyOne = groups.some(g => all.every(id => g.members.includes(id)));
-  if (alreadyOne && !actions?.length) return false;
+  const holdsAll = (g: (typeof groups)[number]) => all.every(id => g.members.includes(id));
+  const alreadyOne = groups.some(holdsAll);
+  if (alreadyOne && kind !== 'thing' && !actions?.length) return false;
 
   // The groups on offer: the ones of this kind, and any a member is already
-  // in (a mixed group is of no single kind). The anchor's own group comes
-  // pre-selected — the board has an opinion, and the user is confirming it.
-  const offered = groups.filter(g =>
-    g.kind === kind || g.kind === 'mixed' || all.some(id => g.members.includes(id)));
-  const theirs = groups.find(g => g.members.includes(anchorId));
+  // in (a mixed group is of no single kind) — less the ones that already hold
+  // them all. The anchor's own group comes pre-selected — the board has an
+  // opinion, and the user is confirming it.
+  const offered = groups.filter(g => !holdsAll(g)
+    && (g.kind === kind || g.kind === 'mixed' || all.some(id => g.members.includes(id))));
+  const theirs = offered.find(g => g.members.includes(anchorId));
   useConstellationPromptStore.getState().ask({
     thingId: joiningId,
     anchorId,
