@@ -130,7 +130,7 @@ ${shot("dashboard.jpg", "What you see at http://localhost:8081")}
 </dl>
 <div class="box">
   <p class="box-title"><i data-lucide="menu"></i>What is in the Menu</p>
-  <p>Wants, Thing, Want Types, Worlds, Agents, Recipes, Achievements, Logs, Devices, Help and Settings. Each page is explained under "Page by page".</p>
+  <p>Wants, Thing, Want Types, Worlds, Agents, Recipes, Characters, Achievements, Logs, Devices, Help and Settings. Each page is explained under "Page by page".</p>
 </div>
 ${shot("dashboard-detail.jpg", "The header on top, cards on the left, the sidebar on the right")}
 ${shot("menu.jpg", "Menu, at the top left: every page")}
@@ -258,6 +258,48 @@ ${shot("recipes.jpg", "The Recipes page")}
 `,
         },
         {
+          id: 'characters',
+          title: 'Characters',
+          sub: 'Who you are, and how you like it to look',
+          icon: 'users',
+          color: '#8b5cf6',
+          body: `
+<p>A character is a <strong>person</strong> using MyWant. When a family or a team share one server, each person has a character of their own — and the screen remembers each one's taste in looks and sound.</p>
+${shot('characters.jpg', 'Characters in the Menu: Aki, Ben and Mika, and the Default CursorMan that is always there')}
+<h4>Make one</h4>
+<ol class="steps">
+  <li><strong>Press the "Add Character" card (or + in the header)</strong></li>
+  <li><strong>Type a name, and pick an avatar (an emoji) and a colour</strong></li>
+  <li><strong>Press Create</strong></li>
+</ol>
+${shot('character-new.jpg', 'The form for a new character')}
+<h4>Make it yours</h4>
+<p>Choose a card and press <strong>Use as my CursorMan</strong>, and in this browser you are that character: your own icon on screen (your CursorMan) and the character walking the canvas take its look.
+The choice is kept per browser, so you can be one person on your computer and another on your phone.</p>
+<p>Press Start on a card (<code>Shift + Enter</code> on a keyboard) for <strong>Cursor</strong> (make it yours), <strong>Edit</strong> and <strong>Delete</strong>.</p>
+${shot('character-actions.jpg', "A card's actions: Cursor, Edit, Delete")}
+<h4>Colour and shape</h4>
+<p>The <strong>Character</strong> tab in the sidebar picks a colour and a shape (circle, star, heart, …). Everyone else's screen shows you in that colour and shape too.</p>
+${shot('character-detail.jpg', 'The Character tab: colour and shape')}
+<h4>How you like it to look (Display)</h4>
+<p>Settings on the <strong>Display</strong> tab are saved as that character's taste, and take effect the moment you press them.</p>
+<dl class="terms">
+  <dt>Appearance</dt><dd>Light, Dark or System</dd>
+  <dt>Sound Effects</dt><dd>Sounds on or off</dd>
+  <dt>Layout</dt><dd>The header at the top or the bottom — at the bottom, it is easier to reach with a thumb on a phone</dd>
+  <dt>Card Height, …</dt><dd>How tall cards are, how big the text is, how see-through cards are</dd>
+  <dt>Icon Style</dt><dd>Which icon set</dd>
+  <dt>Overlay Design</dt><dd>How menus and dialogs look</dd>
+  <dt>Canvas Background</dt><dd>The ground colour and background picture of the canvas (extension)</dd>
+</dl>
+${shot('character-display.jpg', 'The Display tab: press, and the screen changes at once')}
+<div class="box">
+  <p class="box-title"><i data-lucide="user"></i>No character chosen?</p>
+  <p>You can use MyWant as the Default CursorMan. The look stays the standard one, so to change things like light or dark, make a character of your own and choose it first.</p>
+</div>
+`,
+        },
+        {
           id: 'others',
           title: 'Other pages',
           sub: 'Achievements, Logs, Devices',
@@ -380,18 +422,13 @@ ${shot("help.jpg", "The list the ? key opens")}
         {
           id: 'settings',
           title: 'Settings',
-          sub: 'Light or dark, header position',
+          sub: 'Interaction mode, gamepad and more',
           icon: 'settings',
           color: '#6b7280',
           body: `
 <p><strong>Settings</strong> in the Menu changes how you interact (Interaction Mode), connects a gamepad (see "Play it with a gamepad"), and more.</p>
-<h4>Light or dark, and the header's place</h4>
-<p>These are kept in MyWant's settings, so every browser you open it in looks the same.</p>
-<div class="code"><pre># light / dark / system
-mywant config set color_mode dark
-# top / bottom
-mywant config set header_position bottom</pre></div>
-<p>On a phone, a header at the bottom is easier to reach with your thumb.</p>
+<h4>Light or dark, the header, sounds: see Characters</h4>
+<p>Since v0.6.115, the look — light or dark, where the header sits, sound effects, card size and so on — belongs to <strong>each character</strong>. Choose your character on the Characters page and change it on the <strong>Display</strong> tab (see "Characters").</p>
 ${shot("settings.jpg", "Settings, from the Menu")}
 `,
         },

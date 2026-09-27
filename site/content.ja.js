@@ -134,7 +134,7 @@ ${shot("dashboard.jpg", "http://localhost:8081 を開いたところ")}
 </dl>
 <div class="box">
   <p class="box-title"><i data-lucide="menu"></i>Menu の中身</p>
-  <p>Wants・Thing・Want Types・Worlds・Agents・Recipes・Achievements・Logs・Devices・Help・Settings。それぞれのページは「ページごとの使い方」で説明しています。</p>
+  <p>Wants・Thing・Want Types・Worlds・Agents・Recipes・Characters・Achievements・Logs・Devices・Help・Settings。それぞれのページは「ページごとの使い方」で説明しています。</p>
 </div>
 ${shot("dashboard-detail.jpg", "上がヘッダ、左がカード、右がサイドバー")}
 ${shot("menu.jpg", "左上の Menu。ページの一覧です")}
@@ -262,6 +262,48 @@ ${shot("recipes.jpg", "Recipes ページ")}
 `,
         },
         {
+          id: 'characters',
+          title: 'Characters',
+          sub: '自分のキャラクターと、見た目の好み',
+          icon: 'users',
+          color: '#8b5cf6',
+          body: `
+<p>キャラクターは、MyWant を使う<strong>人</strong>です。1 台のサーバーを家族やチームで使うとき、それぞれが自分のキャラクターを持ち、画面の見た目や音の好みもキャラクターごとに覚えておけます。</p>
+${shot('characters.jpg', 'Menu の Characters。Aki・Ben・Mika の 3 人と、はじめからいる Default CursorMan')}
+<h4>作る</h4>
+<ol class="steps">
+  <li><strong>「Add Character」のカード（またはヘッダの ＋）を押す</strong></li>
+  <li><strong>名前を入れ、アバター（絵文字）と色を選ぶ</strong></li>
+  <li><strong>Create を押す</strong></li>
+</ol>
+${shot('character-new.jpg', '新しいキャラクターのフォーム')}
+<h4>自分のキャラクターにする</h4>
+<p>カードを選んで <strong>Use as my CursorMan</strong> を押すと、このブラウザでのあなたはそのキャラクターになります。画面に出る自分のアイコン（CursorMan）や、キャンバスを歩くキャラクターがその姿になります。
+どのキャラクターを選んだかはブラウザごとに覚えられるので、パソコンとスマホで別の人になることもできます。</p>
+<p>カードで Start ボタン（キーボードなら <code>Shift + Enter</code>）を押すと、<strong>Cursor</strong>（自分にする）・<strong>Edit</strong>・<strong>Delete</strong> が出ます。</p>
+${shot('character-actions.jpg', 'カードの操作：Cursor・Edit・Delete')}
+<h4>色と形</h4>
+<p>サイドバーの <strong>Character</strong> タブで、色と形（丸・星・ハートなど）を選べます。ほかの人の画面にも、この色と形で表示されます。</p>
+${shot('character-detail.jpg', 'Character タブ：色と形を選ぶ')}
+<h4>見た目の好み（Display）</h4>
+<p><strong>Display</strong> タブの設定は、そのキャラクターの好みとして保存され、押したその場で画面に反映されます。</p>
+<dl class="terms">
+  <dt>Appearance</dt><dd>明るさ（Light / Dark / System）</dd>
+  <dt>Sound Effects</dt><dd>効果音のオン・オフ</dd>
+  <dt>Layout</dt><dd>ヘッダを上に置くか下に置くか。スマホでは下にすると親指で押しやすくなります</dd>
+  <dt>Card Height ほか</dt><dd>カードの高さ、文字の大きさ、カードの透け具合</dd>
+  <dt>Icon Style</dt><dd>アイコンの種類</dd>
+  <dt>Overlay Design</dt><dd>メニューやダイアログのデザイン</dd>
+  <dt>Canvas Background</dt><dd>キャンバス（拡張）の地面の色と背景画像</dd>
+</dl>
+${shot('character-display.jpg', 'Display タブ：押すとすぐに画面が変わります')}
+<div class="box">
+  <p class="box-title"><i data-lucide="user"></i>キャラクターを選んでいないとき</p>
+  <p>Default CursorMan のまま使えます。見た目は標準のままなので、明るさなどを変えたいときは、まず自分のキャラクターを作って選んでください。</p>
+</div>
+`,
+        },
+        {
           id: 'others',
           title: 'そのほかのページ',
           sub: 'Achievements・Logs・Devices',
@@ -384,18 +426,13 @@ ${shot("help.jpg", "? キーで開く一覧")}
         {
           id: 'settings',
           title: '設定',
-          sub: '明るさ・ヘッダの位置など',
+          sub: '操作モード・ゲームパッドなど',
           icon: 'settings',
           color: '#6b7280',
           body: `
 <p>Menu の <strong>Settings</strong> で、操作のしかた（Interaction Mode）やゲームパッドの接続（「ゲームパッドで操作」を参照）などを変えられます。</p>
-<h4>明るさとヘッダの位置</h4>
-<p>画面の明るさとヘッダの位置は MyWant の設定に保存され、どのブラウザで開いても同じになります。</p>
-<div class="code"><pre># 明るさ：light / dark / system
-mywant config set color_mode dark
-# ヘッダの位置：top / bottom
-mywant config set header_position bottom</pre></div>
-<p>スマホでは、ヘッダを下にすると親指で届きやすくなります。</p>
+<h4>明るさ・ヘッダの位置・効果音は Characters へ</h4>
+<p>明るさ（ライト・ダーク）、ヘッダの位置、効果音、カードの大きさなどの見た目は、v0.6.115 から<strong>キャラクターごと</strong>の設定になりました。Characters ページで自分のキャラクターを選び、<strong>Display</strong> タブで変えます（「Characters」を参照）。</p>
 ${shot("settings.jpg", "Menu の Settings")}
 `,
         },
