@@ -301,9 +301,9 @@ Steer the screen on your TV from the sofa, or browse and open your Wants without
 <p>In Chrome on a Mac you can also connect straight from the screen's settings. Allow it once and it reconnects by itself from then on — and a Switch Pro Controller rumbles as you play.</p>
 <ol class="steps">
   <li><strong>Open Menu → Settings</strong></li>
-  <li><strong>Click "コントローラーを接続" (Connect controller) under "Controller (WebHID)"</strong><br />Browsers require this one button to be pressed with a mouse click.</li>
+  <li><strong>Click "Connect controller" under "Controller (WebHID)"</strong><br />Browsers require this one button to be pressed with a mouse click.</li>
   <li><strong>In Chrome's small dialog, pick the controller and press "Connect"</strong></li>
-  <li><strong>Done when the button turns green ("接続済み", connected) and shows the controller's name</strong><br />The next time you open the screen, it connects by itself.</li>
+  <li><strong>Done when the button turns green ("Connected") and shows the controller's name</strong><br />The next time you open the screen, it connects by itself.</li>
 </ol>
 ${shot('settings-controller.jpg', '"Controller (WebHID)" and "Interaction Mode" in Settings')}
 <div class="box">
@@ -330,7 +330,7 @@ ${shot("help-gamepad.jpg", "\"Gamepad Layout\" in Help: a picture of the pad and
 <h4>When it doesn't work</h4>
 <ul>
   <li><strong>Nothing happens</strong>: click the page, then press a controller button again.</li>
-  <li><strong>"このブラウザは WebHID 未対応です" (this browser has no WebHID)</strong>: WebHID is Chrome-family only. Other browsers work with setup ①.</li>
+  <li><strong>"This browser does not support WebHID"</strong>: WebHID is Chrome-family only. Other browsers work with setup ①.</li>
   <li><strong>Another app is using the controller</strong>: close the game or app holding it, then try again.</li>
   <li><strong>What does each button do?</strong>: "Gamepad Layout" under Help in the Menu (the <code>?</code> key) has a picture.</li>
 </ul>

@@ -251,7 +251,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   )}
                 >
                   <Gamepad2 className="w-3.5 h-3.5" />
-                  {controller.connected ? '接続済み' : 'コントローラーを接続'}
+                  {controller.connected ? 'Connected' : 'Connect controller'}
                 </button>
                 {controller.connected && controller.name && (
                   <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{controller.name}</span>
@@ -259,11 +259,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </div>
               {controllerError && <p className="mt-1 text-[10px] text-red-500 dark:text-red-400">{controllerError}</p>}
               <p className="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500">
-                接続すると Gamepad API より WebHID が優先されます。一度許可すると記憶します（mac/Chrome専用）。
+                Once connected, WebHID is used instead of the Gamepad API. The browser remembers the permission (Chrome on a Mac only).
               </p>
             </>
           ) : (
-            <p className="text-[10px] text-gray-400 dark:text-gray-500">このブラウザは WebHID 未対応です（mac/Chrome が必要）。</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500">This browser does not support WebHID (needs Chrome on a Mac).</p>
           )}
         </section>
 

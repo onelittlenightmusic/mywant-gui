@@ -150,7 +150,7 @@ export function onControllerStatus(cb: (s: ControllerStatus) => void): () => voi
 /** User-gesture entry point: show the device chooser and open the pick. */
 export async function connectController(): Promise<boolean> {
   const hid = (navigator as any).hid;
-  if (!hid) throw new Error('WebHID未対応（mac/Chromeが必要）');
+  if (!hid) throw new Error('WebHID is not supported here (needs Chrome on a Mac).');
   const devices = await hid.requestDevice({
     filters: [
       { usagePage: 0x01, usage: 0x05 }, // Game Pad

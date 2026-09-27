@@ -3,7 +3,7 @@
 The web GUI and control CLI for [MyWant](https://github.com/onelittlenightmusic/mywant) —
 declarative wants, carried out by autonomous agents.
 
-![The mywant-gui dashboard](docs/img/dashboard.png)
+![The mywant-gui dashboard](docs/img/dashboard.jpg)
 
 📖 **Guides (English / 日本語):** [mywant-gui guide](https://onelittlenightmusic.github.io/mywant-gui/) · [MyWant guide](https://onelittlenightmusic.github.io/MyWant/) · [Developer docs](https://onelittlenightmusic.github.io/mywant-gui-dev/)
 
@@ -28,7 +28,7 @@ The same binary is a CLI that drives the open GUI: open a want, move between
 pages, fill in the Add Want form, read and set parameters, capture a card as
 an image.
 
-![The Add Want form](docs/img/add-want.png)
+![The Add Want form](docs/img/add-want.jpg)
 
 ## Install
 

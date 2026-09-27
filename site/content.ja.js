@@ -305,9 +305,9 @@ ${shot("help.jpg", "Help：キーボード操作の一覧")}
 <p>Mac の Chrome なら、画面の設定から直接つなぐこともできます。一度許可すれば次からは自動でつながり、Switch Pro コントローラーは操作に合わせて振動もします。</p>
 <ol class="steps">
   <li><strong>Menu → Settings を開く</strong></li>
-  <li><strong>「Controller (WebHID)」の「コントローラーを接続」をクリックする</strong><br />ブラウザの決まりで、このボタンだけはマウスのクリックで押す必要があります。</li>
+  <li><strong>「Controller (WebHID)」の「Connect controller」をクリックする</strong><br />ブラウザの決まりで、このボタンだけはマウスのクリックで押す必要があります。</li>
   <li><strong>Chrome の小さな画面でコントローラーを選び、「接続」を押す</strong></li>
-  <li><strong>ボタンが緑の「接続済み」になり、コントローラーの名前が出れば完了</strong><br />次に開いたときは、自動でつながります。</li>
+  <li><strong>ボタンが緑の「Connected」になり、コントローラーの名前が出れば完了</strong><br />次に開いたときは、自動でつながります。</li>
 </ol>
 ${shot('settings-controller.jpg', 'Settings の「Controller (WebHID)」と「Interaction Mode」')}
 <div class="box">
@@ -334,7 +334,7 @@ ${shot("help-gamepad.jpg", "Help の「Gamepad Layout」。ボタンの図と役
 <h4>うまく動かないとき</h4>
 <ul>
   <li><strong>何も反応しない</strong>：画面をクリックしてから、コントローラーのボタンを押し直してください。</li>
-  <li><strong>「このブラウザは WebHID 未対応です」と出る</strong>：WebHID は Chrome 系のブラウザだけです。ほかのブラウザでは ① の方法で使えます。</li>
+  <li><strong>「This browser does not support WebHID」と出る</strong>：WebHID は Chrome 系のブラウザだけです。ほかのブラウザでは ① の方法で使えます。</li>
   <li><strong>ほかのアプリがコントローラーを使っている</strong>：ゲームなど、コントローラーをつかんでいるアプリを閉じてから試してください。</li>
   <li><strong>ボタンの役割を確かめたい</strong>：Menu の Help（<code>?</code> キー）の「Gamepad Layout」に図があります。</li>
 </ul>
