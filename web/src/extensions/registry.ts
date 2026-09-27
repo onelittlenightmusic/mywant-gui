@@ -1,5 +1,6 @@
 import type { ComponentType, ReactElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import type { Character, CharacterDisplay } from '@/types/character';
 import { registerOverlayDesign, type OverlayDesign } from '@/components/overlay/design';
 
 /**
@@ -7,7 +8,7 @@ import { registerOverlayDesign, type OverlayDesign } from '@/components/overlay/
  *
  * The GUI is built in two editions from one source: mywant-gui, which is the
  * public one, and mywant-guiex, which is the same app with the canvas, kata,
- * characters, the robot and the browser extension added. Nothing public
+ * the robot and the browser extension added. Nothing public
  * imports those; instead they register here (see extensions/installed), and
  * the public code asks what has been registered at the few places it can be
  * extended — a page, a menu entry, a panel section, a hook run at the root.
@@ -48,6 +49,12 @@ export interface ExtensionSlots {
   groupDetails: ComponentType<{ groupName: string }>;
   /** Marks in a theme's header, after its count — what the theme turned out to be. */
   themeMarks: ComponentType<{ themeName: string; color?: string }>;
+  /** In a character's sheet, after the colour and the shape — how they appear
+   *  on a board the extension draws (the canvas: tile, aura, speeds). */
+  characterDetails: ComponentType<{ character: Character }>;
+  /** In a character's Display tab, after Icon Style — look choices only an
+   *  extension has (the canvas's design). `put` saves a patch of the display. */
+  characterDisplay: ComponentType<{ display: CharacterDisplay; put: (patch: Partial<CharacterDisplay>) => void }>;
 }
 
 /** What the header's bubble does with what is typed into it. */

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
-import { Plus, Heart, ListChecks, Map, Bot, Globe, Menu, X, Zap, BookOpen, Activity, Settings, Trophy, HelpCircle, Smartphone, Circle, Layers, Upload, Gamepad2 } from 'lucide-react';
+import { Plus, Heart, ListChecks, Map, Bot, Globe, Menu, X, Zap, BookOpen, Activity, Settings, Trophy, HelpCircle, Smartphone, Circle, Layers, Upload, Gamepad2, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { classNames } from '@/utils/helpers';
@@ -152,6 +152,7 @@ const BASE_NAV_ENTRIES: NavEntry[] = [
   { id: 'achievements', label: 'Achievements',  icon: Trophy,     href: '/achievements',color: '#eab308' },
   { id: 'logs',         label: 'Logs',          icon: Activity,   href: '/logs',        color: '#64748b' },
   { id: 'devices',      label: 'Devices',       icon: Smartphone, href: '/devices',     color: '#14b8a6' },
+  { id: 'characters',   label: 'Characters',    icon: Users,      href: '/characters',  color: '#8b5cf6' },
   { id: 'help',         label: 'Help',          icon: HelpCircle, href: null,           color: '#6b7280' },
   { id: 'settings',     label: 'Settings',      icon: Settings,   href: null,           color: '#6b7280' },
 ];

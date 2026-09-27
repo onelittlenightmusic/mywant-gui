@@ -10,6 +10,7 @@ import WantTypePage from '@/pages/WantTypePage';
 import WorldsPage from '@/pages/WorldsPage';
 import { AchievementsPage } from '@/pages/AchievementsPage';
 import DevicesPage from '@/pages/DevicesPage';
+import CharactersPage from '@/pages/CharactersPage';
 import { ThingPage } from '@/pages/ThingPage';
 import { useConfigStore } from '@/stores/configStore';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
@@ -198,6 +199,7 @@ function App() {
               <Route path="/want-types" element={<WantTypePage />} />
               <Route path="/worlds" element={<WorldsPage />} />
               <Route path="/devices" element={<DevicesPage />} />
+              <Route path="/characters" element={<CharactersPage />} />
               <Route path="/thing" element={<ThingPage />} />
               {/* The page was /memo; keep the old address working. */}
               <Route path="/memo" element={<Navigate to="/thing" replace />} />
