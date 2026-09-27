@@ -83,6 +83,8 @@ brew trust onelittlenightmusic/mywant</pre></div>
 <div class="code"><pre>git clone https://github.com/onelittlenightmusic/mywant-gui.git
 cd mywant-gui
 make install   # goes to ~/.local/bin/mywant-gui</pre></div>
+<h4>Run it with Docker</h4>
+<p>The screen also runs as a Docker image (<code>ghcr.io/onelittlenightmusic/mywant-gui-public</code>). How to start it together with MyWant is in <a href="https://onelittlenightmusic.github.io/MyWant/?lang=en#install">Install in the MyWant guide</a> (the canvas is not included).</p>
 <h4>Add the mywant-guiex extension (canvas and Web Wants)</h4>
 <p><strong>mywant-guiex</strong> is an extension that adds the <strong>canvas</strong> and <strong>Web Wants</strong> to mywant-gui. mywant-gui works fine without it.</p>
 <ol class="steps">

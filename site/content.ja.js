@@ -87,6 +87,8 @@ brew trust onelittlenightmusic/mywant</pre></div>
 <div class="code"><pre>git clone https://github.com/onelittlenightmusic/mywant-gui.git
 cd mywant-gui
 make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
+<h4>Docker で動かす</h4>
+<p>画面は Docker イメージ（<code>ghcr.io/onelittlenightmusic/mywant-gui-public</code>）でも動かせます。MyWant 本体と一緒に起動する手順は <a href="https://onelittlenightmusic.github.io/MyWant/?lang=ja#install">MyWant ガイドのインストール</a> にあります（キャンバスは入っていません）。</p>
 <h4>拡張 mywant-guiex も入れる（キャンバスと Web Want）</h4>
 <p><strong>mywant-guiex</strong> は、mywant-gui に <strong>キャンバス</strong> と <strong>Web Want</strong> を足す拡張です。入れなくても mywant-gui はそのまま使えます。</p>
 <ol class="steps">
