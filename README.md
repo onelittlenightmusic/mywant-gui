@@ -17,6 +17,13 @@ MyWant server. From the browser you can:
   constellations
 - browse agents, want types, recipes, worlds, devices and logs
 
+🎮 **Play it with a gamepad.** Every page works from a controller alone — the
+D-pad moves between cards, A opens, B goes back, L1/R1 switch tabs, Start
+brings up a card's actions. Any standard gamepad works over USB or Bluetooth;
+in Chrome on a Mac you can also connect one over WebHID from Settings (a
+Switch Pro Controller even rumbles). See the
+[guide](https://onelittlenightmusic.github.io/mywant-gui/#gamepad).
+
 The same binary is a CLI that drives the open GUI: open a want, move between
 pages, fill in the Add Want form, read and set parameters, capture a card as
 an image.
