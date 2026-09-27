@@ -49,6 +49,7 @@ window.GUIDE.en = {
   <li>Add, stop and remove Wants with buttons</li>
   <li>Browse your named values (Things), the kinds of Want, agents and recipes</li>
   <li>Drive all of it <strong>with just a gamepad</strong></li>
+  <li>Add the mywant-guiex extension for the <strong>canvas</strong> and <strong>Web Wants</strong> (turn the sites you use into Wants)</li>
   <li>Open it from your phone too</li>
 </ul>
 <div class="box">
@@ -454,7 +455,7 @@ Put an extension in <code>~/.mywant/gui-extensions/</code> and it is loaded the 
           icon: 'map',
           color: '#0891b2',
           body: `
-<p><strong>mywant-guiex</strong> is an extension that adds a <strong>canvas</strong> to mywant-gui.
+<p><strong>mywant-guiex</strong> is an extension that adds a <strong>canvas</strong> — and <strong>Web Wants</strong>, the next topic — to mywant-gui.
 Each Want becomes a <strong>tile</strong> on a board — a different way to see them from the list of cards.</p>
 ${shot('canvas-detail.jpg', 'The canvas: weather, reminder, timer and other Wants as tiles. Press one and its details open on the right')}
 <h4>What you can do</h4>
@@ -477,6 +478,38 @@ mywant-gui start -D</pre></div>
 mywant guiex tile set tokyo-weather 0 1
 # every command
 mywant guiex commands</pre></div>
+`,
+        },
+        {
+          id: 'web-want',
+          title: 'Web Wants (mywant-guiex)',
+          sub: 'Turn the sites you use into Wants',
+          icon: 'globe',
+          color: '#0ea5e9',
+          body: `
+<p>The other thing mywant-guiex brings is <strong>Web Wants</strong>.
+Capture a website you use and it becomes a <strong>kind of Want</strong>. Teach it the parts you care about — a search box, a button — and MyWant can open that site and work it for you. Even this guide can be one — see the pictures below.</p>
+${shot('web-wants-grid.jpg', 'Web Wants in the Menu — here with this very guide captured (mywant-gui Guide)')}
+<h4>Make one from the browser extension</h4>
+<p>The easiest way is the <strong>MyWant Web Inspector</strong> browser extension: you pick the parts right on the page you are looking at.</p>
+<ol class="steps">
+  <li><strong>Install the extension</strong><br />The steps are on the <strong>Extension</strong> page in the Menu. For Chrome, unzip the release, turn on Developer mode at <code>chrome://extensions</code>, choose "Load unpacked" and pick the <code>chrome-extension</code> folder. There is a Firefox build too.</li>
+  <li><strong>Open the site and press the MyWant icon in the toolbar</strong><br />Your character and a sidebar appear on top of the page.</li>
+  <li><strong>Teach it the parts you want</strong><br />Move your character onto a search box or a button with the arrow keys (or a gamepad) and press <code>X</code> to record it. The right-click menu records one too. Hold <code>X</code> to rename it.</li>
+  <li><strong>Press Save in the sidebar</strong><br />A kind of Want for that site is created, and it shows up on the Web Wants page and under <strong>web</strong> in the Add Want form.</li>
+</ol>
+${shot('web-add.jpg', 'The new kind (mywant-gui Guide, here) can also be picked under web in the Add Want form')}
+<h4>Use it</h4>
+<p>On the Web Wants page, choose a card and press Start (<code>Shift + Enter</code> on a keyboard) for its actions.</p>
+<dl class="terms">
+  <dt>Launch</dt><dd>Open the site in a new tab, with the recorded parts ready for MyWant to drive</dd>
+  <dt>Inspect</dt><dd>Reopen the site with its recorded parts shown. Add or fix parts, then Update to save over it</dd>
+  <dt>Delete</dt><dd>Remove that kind</dd>
+</dl>
+<div class="box">
+  <p class="box-title"><i data-lucide="bookmark"></i>Can't install the extension?</p>
+  <p>The + on the Web Wants page captures a site with a <strong>bookmarklet</strong> instead — which also works from a phone's browser, where extensions can't go.</p>
+</div>
 `,
         },
       ],

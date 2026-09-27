@@ -53,6 +53,7 @@ window.GUIDE.ja = {
   <li>Want の追加・停止・削除が、ボタンでできる</li>
   <li>よく使う値（Thing）、Want の種類、エージェント、レシピを眺められる</li>
   <li><strong>ゲームパッドだけで</strong>ぜんぶ操作できる</li>
+  <li>拡張 mywant-guiex を入れると、<strong>キャンバス</strong>と <strong>Web Want</strong>（いつものサイトを Want にする）も使える</li>
   <li>スマホからも開ける</li>
 </ul>
 <div class="box">
@@ -458,7 +459,7 @@ mywant-gui capture want &lt;Want の ID&gt;</pre></div>
           icon: 'map',
           color: '#0891b2',
           body: `
-<p><strong>mywant-guiex</strong> は、mywant-gui に <strong>キャンバス</strong> を足す拡張です。
+<p><strong>mywant-guiex</strong> は、mywant-gui に <strong>キャンバス</strong> と <strong>Web Want</strong>（次のトピック）を足す拡張です。
 Want が 1 つずつ <strong>タイル</strong> になって盤面に並び、カードの一覧とは違った見かたができます。</p>
 ${shot('canvas-detail.jpg', 'キャンバス。天気・リマインダー・タイマーなどの Want がタイルとして並び、押すと右に中身が開きます')}
 <h4>できること</h4>
@@ -481,6 +482,38 @@ mywant-gui start -D</pre></div>
 mywant guiex tile set tokyo-weather 0 1
 # 使えるコマンドの一覧
 mywant guiex commands</pre></div>
+`,
+        },
+        {
+          id: 'web-want',
+          title: 'Web Want（mywant-guiex）',
+          sub: 'いつものサイトを、Want にする',
+          icon: 'globe',
+          color: '#0ea5e9',
+          body: `
+<p>mywant-guiex のもう一つの特徴が <strong>Web Want</strong> です。
+いつも使う Web サイトを取り込むと、そのサイトが <strong>Want の種類</strong>になります。検索欄やボタンなど使いたい部品を覚えさせておけば、MyWant からそのサイトを開いて操作できます。たとえば、いま読んでいるこのガイドのページも Web Want にできます（下の写真）。</p>
+${shot('web-wants-grid.jpg', 'Menu の Web Wants。ここでは、このガイドのページ自体を取り込んでいます（mywant-gui Guide）')}
+<h4>ブラウザ拡張から作る</h4>
+<p>いちばん手軽なのは、ブラウザ拡張 <strong>MyWant Web Inspector</strong> から作る方法です。ふだん見ているページの上で、そのまま部品を選べます。</p>
+<ol class="steps">
+  <li><strong>拡張を入れる</strong><br />手順は Menu の <strong>Extension</strong> ページにあります。Chrome なら、配布されている zip を展開し、<code>chrome://extensions</code> でデベロッパーモードをオンにして、「パッケージ化されていない拡張機能を読み込む」から <code>chrome-extension</code> フォルダを選びます。Firefox 版もあります。</li>
+  <li><strong>取り込みたいサイトを開き、ツールバーの MyWant のアイコンを押す</strong><br />ページの上に自分のキャラクターとサイドバーが現れます。</li>
+  <li><strong>使いたい部品を覚えさせる</strong><br />矢印キー（またはゲームパッド）でキャラクターを検索欄やボタンの上へ動かし、<code>X</code> を押すと、その部品が記録されます。右クリックのメニューからも記録できます。<code>X</code> の長押しで名前を変えられます。</li>
+  <li><strong>サイドバーの Save を押す</strong><br />そのサイトの Want の種類ができあがり、Web Wants ページと、Want 追加フォームの <strong>web</strong> の分類に並びます。</li>
+</ol>
+${shot('web-add.jpg', 'できた種類（ここでは mywant-gui Guide）は、Want 追加フォームの web の分類からも選べます')}
+<h4>使う</h4>
+<p>Web Wants ページでカードを選び、Start ボタン（キーボードなら <code>Shift + Enter</code>）で操作が出ます。</p>
+<dl class="terms">
+  <dt>Launch</dt><dd>そのサイトを新しいタブで開き、記録した部品を MyWant から動かせるようにします</dd>
+  <dt>Inspect</dt><dd>記録した部品を表示した状態でサイトを開き直します。部品を足したり直したりして、Update で上書きします</dd>
+  <dt>Delete</dt><dd>その種類を消します</dd>
+</dl>
+<div class="box">
+  <p class="box-title"><i data-lucide="bookmark"></i>拡張を入れられないとき</p>
+  <p>Web Wants ページの ＋ から、<strong>ブックマークレット</strong>でも取り込めます。拡張の入らないスマホのブラウザからも使えます。</p>
+</div>
 `,
         },
       ],
