@@ -9,7 +9,7 @@ import { classNames } from '@/utils/helpers';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
 import { getTypeStyle } from '@/components/forms/sections/ParameterGridSection';
 import { DisplayCard } from '@/components/forms/CardPrimitives';
-import { OverlayActionGrid } from '@/components/common/OverlayActionGrid';
+import { OverlayActionGrid } from '@/components/overlay';
 import { useDataTypes, selfDescribedSubtype } from '@/hooks/useDataTypes';
 import { useAuraNaming } from '@/hooks/useAuraNaming';
 import { MarkBadges, useMarkJump } from '@/components/common/MarkButton';
@@ -235,7 +235,7 @@ export const StateFieldCard: React.FC<{
         ? `Rename or delete the name "${aura.myNamedDef.name}"`
         : `Name this ${aura.catalogKind}`,
       onClick: () => { setShowOverlay(false); aura.open(); },
-      colorClass: aura.myNamedDef ? 'bg-amber-600/90' : 'bg-amber-500/75',
+      tone: 'caution' as const, off: !aura.myNamedDef,
       delay: 0,
     }] : []),
     // Expose/Import only exist for a want's own fields — the Global sidebar
@@ -246,7 +246,7 @@ export const StateFieldCard: React.FC<{
       label: 'Expose',
       title: isExposed ? 'View expose settings' : 'Expose this field',
       onClick: () => { setShowOverlay(false); onGoToExpose?.(name); },
-      colorClass: isExposed ? 'bg-purple-600/90' : 'bg-purple-500/75',
+      tone: 'special' as const, off: !isExposed,
       delay: 0,
     }] : []),
     ...(onGoToImport ? [{
@@ -254,7 +254,7 @@ export const StateFieldCard: React.FC<{
       label: 'Import',
       title: isImported ? 'View import settings' : 'Import into this field',
       onClick: () => { setShowOverlay(false); onGoToImport?.(name); },
-      colorClass: isImported ? 'bg-teal-600/90' : 'bg-teal-500/75',
+      tone: 'info' as const, off: !isImported,
       delay: 30,
     }] : []),
     ...(onEdit ? [{
@@ -262,7 +262,7 @@ export const StateFieldCard: React.FC<{
       label: 'Edit',
       title: 'Edit this field',
       onClick: () => { setShowOverlay(false); onEdit(); },
-      colorClass: 'bg-blue-600/80',
+      tone: 'primary' as const,
       delay: 60,
     }] : []),
     ...(onDelete ? [{
@@ -270,7 +270,7 @@ export const StateFieldCard: React.FC<{
       label: 'Delete',
       title: 'Delete this field',
       onClick: () => { setShowOverlay(false); onDelete(); },
-      colorClass: 'bg-red-600/80',
+      tone: 'danger' as const,
       delay: 90,
     }] : []),
     {
@@ -278,7 +278,7 @@ export const StateFieldCard: React.FC<{
       label: 'Close',
       title: 'Close',
       onClick: () => setShowOverlay(false),
-      colorClass: 'bg-gray-600/75',
+      tone: 'cancel' as const,
       delay: 120,
     },
     // Stagger by position rather than by the literal above, so the optional

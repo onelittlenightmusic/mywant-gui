@@ -21,7 +21,7 @@ import { X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { classNames } from '@/utils/helpers';
 import { menuTintBg, menuColorForPath } from '@/utils/menuColors';
-import { OverlayActionGrid, OverlayItem } from '@/components/common/OverlayActionGrid';
+import { OverlayActionGrid, OverlayItem, type OverlayTone } from '@/components/overlay';
 import { WantCardOverlay } from '@/components/dashboard/WantCard/parts/WantCardOverlay';
 import { buildDeleteConfirmConfig } from '@/components/dashboard/WantCard/parts/DeleteConfirmOverlay';
 import { CardOverlayConfig } from '@/components/dashboard/WantCard/hooks/useCardOverlay';
@@ -58,8 +58,10 @@ export interface EntityCardAction {
   /** Short uppercase label under the icon. Keep it to one word where possible. */
   label: string;
   onClick: () => void;
-  /** Tailwind background class, e.g. 'bg-green-600/90'. */
-  colorClass: string;
+  /** What the action means, which decides its colour — see OverlayTone. */
+  tone: OverlayTone;
+  /** The off half of an on/off action — see OverlayCell. */
+  off?: boolean;
   disabled?: boolean;
   title?: string;
   /** When true, a Yes/No overlay is shown before onClick runs. */
@@ -359,7 +361,8 @@ export const EntityCard: React.FC<EntityCardProps> = ({
       label: action.label,
       title: action.title,
       onClick: () => runAction(action),
-      colorClass: action.colorClass,
+      tone: action.tone,
+      off: action.off,
       disabled: action.disabled,
       delay: i * 30,
     })),
@@ -367,7 +370,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
       icon: <X className="w-5 h-5 text-white" />,
       label: 'Close',
       onClick: closeActions,
-      colorClass: 'bg-gray-600/90',
+      tone: 'cancel',
       delay: actions.length * 30,
     },
   ];

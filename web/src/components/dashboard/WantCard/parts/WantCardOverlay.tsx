@@ -6,7 +6,7 @@
  * setOverlay(config) — nothing else in the card needs to change.
  */
 import React from 'react';
-import { OverlayActionGrid } from '@/components/common/OverlayActionGrid';
+import { OverlayActionGrid } from '@/components/overlay';
 import { CardOverlayConfig } from '../hooks/useCardOverlay';
 
 interface WantCardOverlayProps {

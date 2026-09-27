@@ -13,9 +13,9 @@ export function buildPlanApproveConfig(
     headerLabel: 'Deploy plan?',
     cols: 3,
     items: [
-      { icon: <X            className="w-6 h-6 text-white" />, label: 'Cancel', onClick: onCancel,  colorClass: 'bg-gray-600/90',  delay: 0,   keyboard: 'n' },
-      { icon: <ChevronDown  className="w-6 h-6 text-white" />, label: 'Detail', onClick: onDetail,  colorClass: 'bg-indigo-600/90', delay: 30                  },
-      { icon: <Check        className="w-6 h-6 text-white" />, label: 'Deploy', onClick: onApprove, colorClass: 'bg-blue-600/90',   delay: 60,  keyboard: 'y' },
+      { icon: <X            className="w-6 h-6 text-white" />, label: 'Cancel', onClick: onCancel,  tone: 'cancel',  delay: 0,   keyboard: 'n' },
+      { icon: <ChevronDown  className="w-6 h-6 text-white" />, label: 'Detail', onClick: onDetail,  tone: 'primary', delay: 30                  },
+      { icon: <Check        className="w-6 h-6 text-white" />, label: 'Deploy', onClick: onApprove, tone: 'confirm',   delay: 60,  keyboard: 'y' },
     ],
   };
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useReducer, useCallback, useRef } from 'react';
-import { OverlayActionGrid } from '@/components/common/OverlayActionGrid';
+import { OverlayActionGrid } from '@/components/overlay';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useSystemFontSize, CARD_CONTENT_SIZE } from '@/hooks/useSystemFontSize';
 import { AlertTriangle, ThumbsUp, ThumbsDown, Copy, Check } from 'lucide-react';
@@ -605,11 +605,11 @@ export const WantCardContent: React.FC<WantCardContentProps> = ({
                 </span>
               ) : undefined}
               items={[
-                { icon: <ThumbsDown className="w-6 h-6 text-white" />, label: 'Deny', onClick: () => { void submitReaction(false); }, colorClass: 'bg-red-600/90', delay: 0, disabled: isSubmittingReaction },
+                { icon: <ThumbsDown className="w-6 h-6 text-white" />, label: 'Deny', onClick: () => { void submitReaction(false); }, tone: 'danger', delay: 0, disabled: isSubmittingReaction },
                 { icon: isSubmittingReaction
                     ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     : <ThumbsUp className="w-6 h-6 text-white" />,
-                  label: 'Approve', onClick: () => { void submitReaction(true); }, colorClass: 'bg-green-600/90', delay: 30, disabled: isSubmittingReaction },
+                  label: 'Approve', onClick: () => { void submitReaction(true); }, tone: 'confirm', delay: 30, disabled: isSubmittingReaction },
               ]}
             />
           );

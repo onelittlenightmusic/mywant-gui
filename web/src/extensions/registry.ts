@@ -1,5 +1,6 @@
 import type { ComponentType, ReactElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { registerOverlayDesign, type OverlayDesign } from '@/components/overlay/design';
 
 /**
  * What an extension of this GUI can add, and where.
@@ -78,6 +79,13 @@ export interface GuiExtension {
   appHooks?: Array<() => void>;
   /** Hooks run by the layout (inside the router). */
   layoutHooks?: Array<() => void>;
+  /**
+   * Overlay designs this extension brings — skins for every overlay menu and
+   * dialog, chosen per person in their character's display (see
+   * components/overlay/design). Their class names come from the extension's
+   * own stylesheet.
+   */
+  overlayDesigns?: OverlayDesign[];
   /** Run once when registered — for registries and globals of its own. */
   setup?: () => void;
 }
@@ -87,6 +95,7 @@ const extensions: GuiExtension[] = [];
 export function registerExtension(ext: GuiExtension): void {
   if (extensions.some(e => e.id === ext.id)) return;
   extensions.push(ext);
+  ext.overlayDesigns?.forEach(registerOverlayDesign);
   ext.setup?.();
 }
 

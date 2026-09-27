@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Bot, Check, X } from 'lucide-react';
 import { classNames, truncateText } from '@/utils/helpers';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { OverlayCell, OVERLAY_STAGGER_MS } from '@/components/overlay';
 import { useInputActions } from '@/hooks/useInputActions';
 import { ConfirmationProps } from './types';
 import { useMyCursorColor } from '@/hooks/useMyCursorColor';
@@ -128,32 +129,27 @@ export const ConfirmationBubble: React.FC<ConfirmationProps> = ({
         {/* 2-column grid buttons */}
         <div className="relative z-10 h-full grid grid-cols-2 pointer-events-none">
           <div className="pointer-events-auto h-full w-full">
-            <button
+            <OverlayCell
+              icon={<X className="w-5 h-5 text-white" />}
+              label="Cancel"
+              tone="cancel"
               onClick={handleCancel}
               disabled={isLoading || loading}
-              className={classNames(
-                "flex flex-col items-center justify-center gap-1 w-full h-full bg-gray-700/90 hover:brightness-110 active:opacity-80 disabled:opacity-50 transition-all duration-150",
-                focusedBtn === 'cancel' && 'ring-2 ring-inset mw-focus-ring'
-              )}
-            >
-              <X className="w-5 h-5 text-white" />
-              <span className="text-white text-[10px] font-bold leading-none uppercase tracking-tighter">Cancel</span>
-            </button>
+              focused={focusedBtn === 'cancel'}
+            />
           </div>
           <div className="pointer-events-auto h-full w-full">
-            <button
-              onClick={handleConfirm}
-              disabled={isLoading || loading}
-              className={classNames(
-                `flex flex-col items-center justify-center gap-1 w-full h-full hover:brightness-110 active:opacity-80 disabled:opacity-50 transition-all duration-150 ${danger ? 'bg-rose-700/90' : 'bg-green-600/90'}`,
-                focusedBtn === 'confirm' && 'ring-2 ring-inset mw-focus-ring'
-              )}
-            >
-              {isLoading || loading
+            <OverlayCell
+              icon={isLoading || loading
                 ? <LoadingSpinner size="sm" color="white" className="h-5 w-5" />
                 : <Check className="w-5 h-5 text-white" />}
-              <span className="text-white text-[10px] font-bold leading-none uppercase tracking-tighter">Confirm</span>
-            </button>
+              label="Confirm"
+              tone={danger ? 'danger' : 'confirm'}
+              onClick={handleConfirm}
+              disabled={isLoading || loading}
+              focused={focusedBtn === 'confirm'}
+              delay={OVERLAY_STAGGER_MS}
+            />
           </div>
         </div>
       </div>

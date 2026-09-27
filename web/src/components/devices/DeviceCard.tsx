@@ -87,7 +87,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       icon: <Radio className={classNames('w-5 h-5 text-white', isActive && 'animate-pulse')} />,
       label: isActive ? 'Stop' : 'Locate',
       onClick: () => onToggleLocation?.(),
-      colorClass: isActive ? 'bg-rose-600/90' : 'bg-blue-600/90',
+      tone: isActive ? 'danger' : 'primary',
       disabled: !onToggleLocation,
       title: isActive ? 'Stop sending location' : 'Send location from this device',
     },
@@ -101,7 +101,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
     icon: <Home className="w-5 h-5 text-white" />,
     label: isHome ? 'Unhome' : 'Set home',
     onClick: () => onToggleHome?.(),
-    colorClass: isHome ? 'bg-emerald-600/90' : 'bg-indigo-600/90',
+    tone: isHome ? 'confirm' : 'accent',
     disabled: !onToggleHome,
     title: isHome
       ? 'Stop running browser work here — any browser may take it again'
@@ -122,7 +122,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         icon: <Download className="w-5 h-5 text-white" />,
         label: 'Get ext',
         onClick: () => window.open(EXTENSION_DOWNLOAD_URL, '_blank', 'noreferrer'),
-        colorClass: 'bg-gray-600/90',
+        tone: 'muted',
         title: 'No extension answered — open the download page',
       });
     } else if (!onThisServer) {
@@ -130,7 +130,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         icon: <Puzzle className="w-5 h-5 text-white" />,
         label: 'Watch',
         onClick: setExtensionToThisServer,
-        colorClass: 'bg-amber-600/90',
+        tone: 'confirm',
         disabled: extension === null,
         title: extension === null
           ? 'Looking for the browser extension…'

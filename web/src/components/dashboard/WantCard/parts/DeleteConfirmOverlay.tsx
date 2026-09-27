@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, X } from 'lucide-react';
 import { CardOverlayConfig } from '../hooks/useCardOverlay';
-import { OverlayActionGrid } from '@/components/common/OverlayActionGrid';
+import { OverlayActionGrid } from '@/components/overlay';
 
 /** Returns a CardOverlayConfig for the delete-confirmation overlay. */
 export function buildDeleteConfirmConfig(
@@ -11,8 +11,8 @@ export function buildDeleteConfirmConfig(
   return {
     headerLabel: 'Delete?',
     items: [
-      { icon: <X     className="w-6 h-6 text-white" />, label: 'No',  onClick: onCancel,  colorClass: 'bg-gray-600/90', delay: 0,  keyboard: 'n' },
-      { icon: <Check className="w-6 h-6 text-white" />, label: 'Yes', onClick: onConfirm, colorClass: 'bg-rose-700/90', delay: 60, keyboard: 'y' },
+      { icon: <X     className="w-6 h-6 text-white" />, label: 'No',  onClick: onCancel,  tone: 'cancel', delay: 0,  keyboard: 'n' },
+      { icon: <Check className="w-6 h-6 text-white" />, label: 'Yes', onClick: onConfirm, tone: 'danger', delay: 60, keyboard: 'y' },
     ],
   };
 }

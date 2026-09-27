@@ -14,7 +14,7 @@ import { suppressDragImage } from '@/utils/helpers';
 import { useWantStore } from '@/stores/wantStore';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { playSound } from '@/utils/sounds';
-import { OverlayActionGrid, OverlayItem } from '@/components/common/OverlayActionGrid';
+import { OverlayActionGrid, OverlayItem } from '@/components/overlay';
 
 // ─── Shared constants ─────────────────────────────────────────────────────────
 
@@ -121,14 +121,14 @@ function buildSlotItems(item: SlotItem, onClose: () => void): OverlayItem[] {
       icon:       <HelpCircle className="w-3 h-3 text-white" />,
       title:      'Help',
       onClick:    () => { onClose(); window.open(helpUrl, '_blank'); },
-      colorClass: 'bg-indigo-600/90',
+      tone: 'accent' as const,
       delay:      0,
     }] : []),
     {
       icon:       <X className="w-3 h-3 text-white" />,
       title:      'Close',
       onClick:    onClose,
-      colorClass: 'bg-gray-600/90',
+      tone: 'cancel' as const,
       delay:      helpUrl ? 30 : 0,
     },
   ];

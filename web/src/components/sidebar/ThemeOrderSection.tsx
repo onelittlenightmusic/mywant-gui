@@ -12,7 +12,7 @@ import { playSound } from '@/utils/sounds';
 import { classNames } from '@/utils/helpers';
 import { resolveLucideIcon } from '@/utils/subtypeIcons';
 import { DisplayCard, INDIGO_SCHEME } from '@/components/forms/CardPrimitives';
-import { OverlayActionGrid, OverlayItem } from '@/components/common/OverlayActionGrid';
+import { OverlayActionGrid, OverlayItem } from '@/components/overlay';
 import { MarkBadges, useMarkJump } from '@/components/common/MarkButton';
 import { useCardGridNavigation } from '@/hooks/useCardGridNavigation';
 import { useInputActions } from '@/hooks/useInputActions';
@@ -920,7 +920,7 @@ const ThemeMemberCard: React.FC<{
       label: 'Earlier',
       title: 'ひとつ前へ',
       onClick: () => { setShowOverlay(false); onMove(-1); },
-      colorClass: 'bg-blue-600/80',
+      tone: 'primary' as const,
       delay: 0,
       disabled: !canMoveEarlier || busy,
     },
@@ -929,7 +929,7 @@ const ThemeMemberCard: React.FC<{
       label: 'Later',
       title: 'ひとつ後ろへ',
       onClick: () => { setShowOverlay(false); onMove(1); },
-      colorClass: 'bg-blue-600/80',
+      tone: 'primary' as const,
       delay: 0,
       disabled: !canMoveLater || busy,
     },
@@ -940,7 +940,7 @@ const ThemeMemberCard: React.FC<{
       label: marked ? 'Keep' : 'Remove',
       title: marked ? 'このまま残す' : 'テーマから外す（確定するまで実行されません）',
       onClick: () => { setShowOverlay(false); onToggleMark(); },
-      colorClass: marked ? 'bg-gray-600/80' : 'bg-rose-600/80',
+      tone: marked ? 'cancel' as const : 'danger' as const,
       delay: 0,
       disabled: busy,
     },
@@ -949,7 +949,7 @@ const ThemeMemberCard: React.FC<{
       label: 'Close',
       title: 'Close',
       onClick: () => setShowOverlay(false),
-      colorClass: 'bg-gray-600/75',
+      tone: 'cancel' as const,
       delay: 0,
     },
   ].map((item, i) => ({ ...item, delay: i * 30 }));

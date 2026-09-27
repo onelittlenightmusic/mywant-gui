@@ -53,13 +53,13 @@ export const AgentCard: React.FC<AgentCardProps> = ({
       icon: <Edit className="w-5 h-5 text-white" />,
       label: 'Edit',
       onClick: () => onEdit(agent),
-      colorClass: 'bg-indigo-600/90',
+      tone: 'primary',
     },
     {
       icon: <Trash2 className="w-5 h-5 text-white" />,
       label: 'Delete',
       onClick: () => onDelete(agent),
-      colorClass: 'bg-rose-700/90',
+      tone: 'danger',
       confirm: true,
     },
   ];

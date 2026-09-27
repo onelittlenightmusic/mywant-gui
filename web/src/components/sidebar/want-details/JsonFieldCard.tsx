@@ -6,7 +6,7 @@ import { useCardOverlaySound } from '@/stores/cardOverlaySounds';
 import { classNames } from '@/utils/helpers';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
 import { getTypeStyle } from '@/components/forms/sections/ParameterGridSection';
-import { OverlayActionGrid } from '@/components/common/OverlayActionGrid';
+import { OverlayActionGrid } from '@/components/overlay';
 import { useDataTypes, selfDescribedSubtype } from '@/hooks/useDataTypes';
 import { MarkButton, MarkBadges, markKey } from '@/components/common/MarkButton';
 import { useThingNames } from '@/hooks/useThingNames';
@@ -128,7 +128,7 @@ export const JsonFieldCard: React.FC<{
       label: 'Expose',
       title: isExposed ? 'View expose settings' : 'Expose this field',
       onClick: () => { setShowOverlay(false); onGoToExpose?.(name); },
-      colorClass: isExposed ? 'bg-purple-600/90' : 'bg-purple-500/75',
+      tone: 'special' as const, off: !isExposed,
       delay: 0,
     },
     ...(onEdit ? [{
@@ -136,7 +136,7 @@ export const JsonFieldCard: React.FC<{
       label: 'Edit',
       title: 'Edit this field',
       onClick: () => { setShowOverlay(false); onEdit(); },
-      colorClass: 'bg-blue-600/80',
+      tone: 'primary' as const,
       delay: 30,
     }] : []),
     ...(onDelete ? [{
@@ -144,7 +144,7 @@ export const JsonFieldCard: React.FC<{
       label: 'Delete',
       title: 'Delete this field',
       onClick: () => { setShowOverlay(false); onDelete(); },
-      colorClass: 'bg-red-600/80',
+      tone: 'danger' as const,
       delay: 60,
     }] : []),
     {
@@ -152,7 +152,7 @@ export const JsonFieldCard: React.FC<{
       label: 'Close',
       title: 'Close',
       onClick: () => setShowOverlay(false),
-      colorClass: 'bg-gray-600/75',
+      tone: 'cancel' as const,
       delay: 90,
     },
   ];

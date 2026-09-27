@@ -1,6 +1,7 @@
 import React from 'react';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
 import { classNames } from '@/utils/helpers';
+import { overlayDesign } from '@/components/overlay';
 import { ConfirmationBubble } from '@/components/notifications';
 import { useConfigStore } from '@/stores/configStore';
 
@@ -36,7 +37,7 @@ export const HeaderOverlay: React.FC<HeaderOverlayProps> = ({
       style={{
         ...(isBottom ? {} : { top: 'env(safe-area-inset-top, 0px)' }),
         height: 'var(--header-height, 64px)',
-        animation: 'quickActionsIn 150ms ease-out forwards',
+        animation: overlayDesign().enterAnimation,
       }}
     >
       {/* Backdrop: Dark in light mode, whitish in dark mode */}

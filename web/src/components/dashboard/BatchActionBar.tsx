@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useInputActions } from '@/hooks/useInputActions';
 import { Play, Square, Trash2, X, FolderPlus, Check, Pin, PinOff, Eraser, Plus } from 'lucide-react';
 import { classNames } from '@/utils/helpers';
+import { overlayDesign } from '@/components/overlay';
 
 interface ActionCellProps {
   icon: React.ReactNode;
@@ -25,7 +26,7 @@ const ActionCell: React.FC<ActionCellProps> = ({ icon, label, onClick, colorClas
       focused && !disabled && 'ring-4 ring-inset ring-white/60'
     )}
     style={{
-      animation: 'quickActionBtnIn 150ms ease-out both',
+      animation: overlayDesign().cellEnterAnimation,
       animationDelay: `${delay}ms`,
     }}
   >

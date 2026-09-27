@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useIconFont } from '@/hooks/useDisplaySettings';
 import { Type, Hash, ToggleLeft, Link, Plus, X, Zap, List, LucideIcon, Globe, Rows3, Braces, Edit3, RotateCcw, Trash2, Star } from 'lucide-react';
-import { OverlayActionGrid, OverlayItem } from '@/components/common/OverlayActionGrid';
+import { OverlayActionGrid, OverlayItem } from '@/components/overlay';
 import { resolveLucideIcon } from '@/utils/subtypeIcons';
 import { ParameterDef, StateDef } from '@/types/wantType';
 import { SelectInput, SelectInputHandle } from '@/components/common/SelectInput';
@@ -484,7 +484,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
           ? `Rename or delete the name "${aura.myNamedDef.name}"`
           : `Name this ${aura.catalogKind}`,
         onClick: () => { close(); aura.open(); },
-        colorClass: aura.myNamedDef ? 'bg-amber-600/90' : 'bg-amber-500/75',
+        tone: 'caution' as const, off: !aura.myNamedDef,
         delay: 0,
       }] : []),
       {
@@ -492,7 +492,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
         label: 'Edit',
         title: 'Edit this parameter',
         onClick: () => { close(); setFocusedIndex(index); setEditingIndex(index); onDetailFocusEnter?.(); },
-        colorClass: 'bg-blue-600/80',
+        tone: 'primary' as const,
         delay: 0,
       },
       {
@@ -500,7 +500,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
         label: ctx.isParamRef ? 'Literal' : 'Ref',
         title: ctx.isParamRef ? 'Global param 参照をやめてリテラル値に戻す' : 'Global param を参照する',
         onClick: () => { close(); handleToggleParamRef(param.name, ctx.isParamRef ? (ctx.paramRef ?? '') : null); },
-        colorClass: ctx.isParamRef ? 'bg-teal-600/90' : 'bg-teal-500/75',
+        tone: 'info' as const, off: !ctx.isParamRef,
         delay: 30,
       },
       {
@@ -508,7 +508,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
         label: 'Reset',
         title: ctx.isModified ? '既定値に戻す' : '変更されていません',
         onClick: () => { close(); handleUpdateParam(param.name, String(ctx.origVal ?? ''), param.type); },
-        colorClass: 'bg-amber-500/80',
+        tone: 'caution' as const,
         delay: 60,
         disabled: !ctx.isModified,
       },
@@ -522,7 +522,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
           delete next[param.name];
           onChangeRef.current(next);
         },
-        colorClass: 'bg-red-600/80',
+        tone: 'danger' as const,
         delay: 90,
         disabled: param.required,
       },
@@ -531,7 +531,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
         label: 'Close',
         title: 'Close',
         onClick: close,
-        colorClass: 'bg-gray-600/75',
+        tone: 'cancel' as const,
         delay: 120,
       },
     ];

@@ -9,6 +9,7 @@ declare global {
    */
   interface MywantGlobals {
     registerPlugin: (plugin: WantCardPlugin) => void
+    registerOverlayDesign: (design: import('@/components/overlay/design').OverlayDesign) => void
     createCardLayout: (opts: {
       top?: import('react').ReactNode
       content: import('react').ReactNode

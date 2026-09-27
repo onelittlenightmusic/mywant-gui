@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/gen-want-icons.mjs && tsc && vite build",
+    "build": "node scripts/gen-want-icons.mjs && node scripts/check-overlays.mjs && tsc && vite build",
+    "check:overlays": "node scripts/check-overlays.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },

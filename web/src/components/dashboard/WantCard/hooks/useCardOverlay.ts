@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useWantStore } from '@/stores/wantStore';
-import { OverlayItem } from '@/components/common/OverlayActionGrid';
+import { OverlayItem } from '@/components/overlay';
 
 /** Configuration describing any overlay displayed on a want card. */
 export interface CardOverlayConfig {

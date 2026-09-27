@@ -1,7 +1,7 @@
 import React from 'react';
 import { Play, PlayCircle, Square, Trash2, Pause, RotateCcw, Settings, X, Archive, ArchiveRestore, Tag, ExternalLink } from 'lucide-react';
 import { Want } from '@/types/want';
-import { OverlayActionGrid, OverlayItem } from '@/components/common/OverlayActionGrid';
+import { OverlayActionGrid, OverlayItem } from '@/components/overlay';
 
 const COLS = 3;
 const ARCHIVE_LABEL = 'mywant.io/archived';
@@ -57,22 +57,22 @@ export const QuickActionsOverlay: React.FC<QuickActionsOverlayProps> = ({
   const items: OverlayItem[] = [
     // Row 0
     isStopped
-      ? { icon: <Play   className="w-5 h-5 text-white" fill="currentColor" />, label: 'Start',   onClick: () => { onStart();   onClose(); }, colorClass: 'bg-green-600/90', delay: 0, disabled: isSystem, title: isSystem ? 'The system keeps this want running' : undefined }
-      : { icon: <Square className="w-5 h-5 text-white" fill="currentColor" />, label: 'Stop',    onClick: () => { onStop();    onClose(); }, colorClass: 'bg-red-600/90',   delay: 0, disabled: isSystem, title: isSystem ? 'The system keeps this want running' : undefined },
-    {   icon: <RotateCcw className="w-5 h-5 text-white" />,                    label: 'Restart', onClick: () => { onRestart(); onClose(); }, colorClass: 'bg-blue-500/90',  delay: 30 },
-    {   icon: <Settings  className="w-5 h-5 text-white" />,                    label: 'Edit',    onClick: () => { onEdit();    onClose(); }, colorClass: 'bg-indigo-600/90', delay: 60, disabled: isSystem, title: isSystem ? 'The system owns this want' : undefined },
+      ? { icon: <Play   className="w-5 h-5 text-white" fill="currentColor" />, label: 'Start',   onClick: () => { onStart();   onClose(); }, tone: 'confirm' as const, delay: 0, disabled: isSystem, title: isSystem ? 'The system keeps this want running' : undefined }
+      : { icon: <Square className="w-5 h-5 text-white" fill="currentColor" />, label: 'Stop',    onClick: () => { onStop();    onClose(); }, tone: 'danger' as const,   delay: 0, disabled: isSystem, title: isSystem ? 'The system keeps this want running' : undefined },
+    {   icon: <RotateCcw className="w-5 h-5 text-white" />,                    label: 'Restart', onClick: () => { onRestart(); onClose(); }, tone: 'primary' as const,  delay: 30 },
+    {   icon: <Settings  className="w-5 h-5 text-white" />,                    label: 'Edit',    onClick: () => { onEdit();    onClose(); }, tone: 'primary' as const, delay: 60, disabled: isSystem, title: isSystem ? 'The system owns this want' : undefined },
     // Row 1
     isArchived
-      ? { icon: <ArchiveRestore className="w-5 h-5 text-white" />, label: 'Unarchive', onClick: () => { onUnarchive?.(); onClose(); }, colorClass: 'bg-green-600/90',  delay: 60 }
+      ? { icon: <ArchiveRestore className="w-5 h-5 text-white" />, label: 'Unarchive', onClick: () => { onUnarchive?.(); onClose(); }, tone: 'confirm' as const,  delay: 60 }
       : isAchieved && onArchive
-      ? { icon: <Archive        className="w-5 h-5 text-white" />, label: 'Archive',   onClick: () => { onArchive();   onClose(); }, colorClass: 'bg-amber-500/90',  delay: 60 }
+      ? { icon: <Archive        className="w-5 h-5 text-white" />, label: 'Archive',   onClick: () => { onArchive();   onClose(); }, tone: 'caution' as const,  delay: 60 }
       : isRunning
-      ? { icon: <Pause     className="w-5 h-5 text-white" fill="currentColor" />, label: 'Suspend', onClick: () => { onSuspend(); onClose(); }, colorClass: 'bg-amber-500/90', delay: 60, disabled: isSystem, title: isSystem ? 'The system keeps this want running' : undefined }
+      ? { icon: <Pause     className="w-5 h-5 text-white" fill="currentColor" />, label: 'Suspend', onClick: () => { onSuspend(); onClose(); }, tone: 'caution' as const, delay: 60, disabled: isSystem, title: isSystem ? 'The system keeps this want running' : undefined }
       : isSuspended
-      ? { icon: <PlayCircle className="w-5 h-5 text-white" />,                    label: 'Resume',  onClick: () => { onResume();  onClose(); }, colorClass: 'bg-green-600/90', delay: 60 }
-      : { icon: <Pause     className="w-5 h-5 text-white" />,                    label: 'Suspend', onClick: () => {},                         colorClass: 'bg-gray-400/30',  delay: 60, disabled: true },
-    {   icon: <X     className="w-4 h-4 sm:w-5 sm:h-5 text-white" />,            label: 'Close',   onClick: onClose,                          colorClass: 'bg-gray-600/90',  delay: 90 },
-    {   icon: <Trash2 className="w-5 h-5 text-white" />,                          label: 'Delete',  onClick: () => { onDelete();  onClose(); }, colorClass: 'bg-rose-700/90',  delay: 120, disabled: isSystem, title: isSystem ? 'The system owns this want — it would be put straight back' : undefined },
+      ? { icon: <PlayCircle className="w-5 h-5 text-white" />,                    label: 'Resume',  onClick: () => { onResume();  onClose(); }, tone: 'confirm' as const, delay: 60 }
+      : { icon: <Pause     className="w-5 h-5 text-white" />,                    label: 'Suspend', onClick: () => {},                         tone: 'caution' as const,  delay: 60, disabled: true },
+    {   icon: <X     className="w-4 h-4 sm:w-5 sm:h-5 text-white" />,            label: 'Close',   onClick: onClose,                          tone: 'cancel' as const,  delay: 90 },
+    {   icon: <Trash2 className="w-5 h-5 text-white" />,                          label: 'Delete',  onClick: () => { onDelete();  onClose(); }, tone: 'danger' as const,  delay: 120, disabled: isSystem, title: isSystem ? 'The system owns this want — it would be put straight back' : undefined },
     // Row 2. Appended rather than slotted in among the others, which would
     // shift five actions people already reach for by position.
     //
@@ -83,7 +83,7 @@ export const QuickActionsOverlay: React.FC<QuickActionsOverlayProps> = ({
     // stays live rather than being a dead square with no explanation.
     ...(onAddAura
       ? [{ icon: <Tag className="w-5 h-5 text-white" />, label: 'Add Aura',
-           onClick: () => { onAddAura(); onClose(); }, colorClass: 'bg-fuchsia-600/90', delay: 150 }]
+           onClick: () => { onAddAura(); onClose(); }, tone: 'special' as const, delay: 150 }]
       : []),
     // This want on its own, in a new tab — the /w/:id page a home-screen icon
     // points at. Appended, so it never shifts the actions above it.
@@ -95,7 +95,7 @@ export const QuickActionsOverlay: React.FC<QuickActionsOverlayProps> = ({
         if (id) window.open(`/w/${id}`, '_blank', 'noopener,noreferrer');
         onClose();
       },
-      colorClass: 'bg-sky-600/90',
+      tone: 'info' as const,
       delay: 180,
     },
   ];

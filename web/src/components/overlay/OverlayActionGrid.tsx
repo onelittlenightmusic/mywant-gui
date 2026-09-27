@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
-import { classNames } from '@/utils/helpers';
 import { useOverlayKeyNav } from '@/hooks/useOverlayKeyNav';
+import { OverlayCell } from './OverlayCell';
+import type { OverlayTone } from './tones';
+import { useOverlayDesign } from './design';
 
 /**
  * A single action button entry for OverlayActionGrid.
@@ -13,15 +15,15 @@ export interface OverlayItem {
   /** Tooltip / aria-label for the button */
   title?: string;
   onClick: () => void;
-  /** Tailwind background color class (e.g. 'bg-green-600/90') */
-  colorClass: string;
+  /** What the action means, which decides its colour — see OverlayTone. */
+  tone?: OverlayTone;
   /**
-   * Inline styles merged onto the button, for colors Tailwind can't express.
-   * Needed when the color is runtime data rather than a fixed palette entry —
-   * e.g. a character's own `color` hex (see CharacterPickerGrid). Leave
-   * colorClass empty when using this.
+   * A colour that is data rather than meaning — a character's own `color` hex
+   * (see CharacterPickerGrid). Takes the place of `tone`.
    */
-  style?: React.CSSProperties;
+  color?: string;
+  /** The off half of an on/off action — see OverlayCell. */
+  off?: boolean;
   /** Animation delay in ms for the staggered quickActionBtnIn animation */
   delay: number;
   disabled?: boolean;
@@ -109,7 +111,7 @@ export const OverlayActionGrid: React.FC<OverlayActionGridProps> = ({
   headerLabel,
   focusRingClass,
   className = 'absolute inset-0 z-40 rounded-[inherit] overflow-hidden',
-  backdropClassName = 'absolute inset-0 bg-black/60 rounded-[inherit]',
+  backdropClassName,
   showLabel = true,
   initialFocus = 0,
   ignoreWhenInSidebar = false,
@@ -117,6 +119,7 @@ export const OverlayActionGrid: React.FC<OverlayActionGridProps> = ({
   confirmOnTriggerRelease = false,
   keyboardEnabled = true,
 }) => {
+  const design = useOverlayDesign();
   const rows = Math.ceil(items.length / cols);
 
   // Per-item letter shortcuts ('y'/'n' for confirm/cancel, mostly). Handed to
@@ -153,19 +156,19 @@ export const OverlayActionGrid: React.FC<OverlayActionGridProps> = ({
       // question — a test, the robot driver — asks it the same way instead of
       // pattern-matching on class names that exist for layout reasons.
       data-card-overlay="true"
-      style={{ animation: 'quickActionsIn 150ms ease-out forwards' }}
+      style={{ animation: design.enterAnimation }}
       onMouseDown={onMouseDown}
     >
       {/* Translucent backdrop — click closes the overlay */}
       <div
-        className={backdropClassName}
+        className={backdropClassName ?? `absolute inset-0 rounded-[inherit] ${design.backdrop}`}
         onClick={(e) => { e.stopPropagation(); onClose(); }}
       />
 
       {/* Optional header label above the grid (e.g. "Delete?") */}
       {headerLabel && (
         <div className="absolute inset-x-0 top-0 flex items-center justify-center pt-3 pointer-events-none z-10">
-          <span className="flex items-center gap-1.5 text-white text-xs font-bold uppercase tracking-widest opacity-80">
+          <span className={design.header}>
             {headerLabel}
           </span>
         </div>
@@ -181,40 +184,21 @@ export const OverlayActionGrid: React.FC<OverlayActionGridProps> = ({
       >
         {items.map((item, idx) => (
           <div key={idx} className="pointer-events-auto h-full w-full">
-            <button
-              type="button"
+            <OverlayCell
+              icon={item.icon}
+              label={item.label}
               title={item.title}
+              tone={item.tone}
+              color={item.color}
+              off={item.off}
               disabled={item.disabled}
-              onClick={(e) => { e.stopPropagation(); if (!item.disabled) item.onClick(); }}
+              onClick={item.onClick}
               onMouseEnter={() => setFocusedIndex(idx)}
-              className={classNames(
-                'flex flex-col items-center justify-center w-full h-full transition-all duration-150',
-                showLabel ? 'gap-1' : '',
-                item.disabled
-                  ? 'bg-gray-400/30 cursor-not-allowed grayscale opacity-50'
-                  : `hover:brightness-110 active:opacity-80 ${item.colorClass}`,
-                // mw-focus-ring paints it in the character's colour; a caller
-                // that named a class gets that instead.
-                // Thick enough to read at a glance over a coloured tile, and
-                // inset so it frames the tile without overlapping its
-                // neighbours.
-                keyboardEnabled && !item.disabled && idx === focusedIndex
-                  ? classNames('ring-4 ring-inset', focusRingClass ?? 'mw-focus-ring')
-                  : '',
-              )}
-              style={{
-                animation: 'quickActionBtnIn 150ms ease-out both',
-                animationDelay: `${item.delay}ms`,
-                ...(item.disabled ? undefined : item.style),
-              }}
-            >
-              {item.icon}
-              {showLabel && item.label && (
-                <span className="text-white text-[9px] font-bold leading-none uppercase tracking-tighter">
-                  {item.label}
-                </span>
-              )}
-            </button>
+              focused={keyboardEnabled && idx === focusedIndex}
+              focusRingClass={focusRingClass}
+              delay={item.delay}
+              showLabel={showLabel}
+            />
           </div>
         ))}
       </div>

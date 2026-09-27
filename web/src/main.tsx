@@ -8,6 +8,7 @@ import App from './App.tsx'
 import './styles/index.css'
 import { registerWantCardPlugin } from './components/dashboard/WantCard/plugins/registry'
 import { loadRuntimeExtensions } from './extensions/runtime'
+import { registerOverlayDesign } from './components/overlay/design'
 
 // Expose globals for dynamically loaded external plugins
 window.React = React
@@ -16,6 +17,9 @@ window.React = React
 window.__mywant = {
   ...(window.__mywant ?? {}),
   registerPlugin: registerWantCardPlugin,
+  // A design for every overlay menu and dialog, from an extension written as a
+  // plain script — see components/overlay/design.
+  registerOverlayDesign,
   /**
    * Standard 3-section card layout for external JSX plugins.
    * top    — flex-shrink-0, anchored to card top

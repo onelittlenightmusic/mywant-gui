@@ -55,7 +55,7 @@ export const WantTypeCard: React.FC<WantTypeCardProps> = ({
       ),
       label: 'Add Want',
       onClick: () => onDeploy?.(wantType),
-      colorClass: 'bg-primary-600/90',
+      tone: 'primary',
       disabled: !onDeploy,
       title: `Add a ${wantType.name} want`,
     },
@@ -63,7 +63,7 @@ export const WantTypeCard: React.FC<WantTypeCardProps> = ({
       icon: <Download className="w-5 h-5 text-white" />,
       label: 'Download',
       onClick: () => onDownload?.(wantType),
-      colorClass: 'bg-purple-600/90',
+      tone: 'special',
       disabled: !onDownload,
     },
   ];

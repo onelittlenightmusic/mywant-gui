@@ -95,7 +95,7 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
       label: 'Go to',
       title: `盤面の "${record.value}" へ行く`,
       onClick: () => { requestJump({ kind: 'thing', id: record.id, name: record.value }); navigate('/canvas'); },
-      colorClass: 'bg-emerald-600/90',
+      tone: 'info' as const,
     }] : []),
     {
       icon: onCanvas ? <PinOff className="w-5 h-5 text-white" /> : <Pin className="w-5 h-5 text-white" />,
@@ -104,7 +104,7 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
         ? `Take "${record.value}" off the canvas`
         : `Put "${record.value}" on the canvas`,
       onClick: () => { void setPinned(record.id, !onCanvas); },
-      colorClass: onCanvas ? 'bg-amber-600/90' : 'bg-slate-600/90',
+      tone: onCanvas ? 'caution' : 'muted',
     },
     ...(onAddWant ? [{
       icon: (
@@ -116,7 +116,7 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
       label: 'Add Want',
       title: `Start a new want from "${record.value}"`,
       onClick: () => onAddWant(record),
-      colorClass: 'bg-primary-600/90',
+      tone: 'primary' as const,
     }] : []),
     {
       icon: <Pencil className="w-5 h-5 text-white" />,
@@ -127,13 +127,13 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
       // board, and none of those is the owner — so it asks by name and whoever
       // has a sidebar answers. See thingEditStore.
       onClick: () => requestThingEdit(record),
-      colorClass: 'bg-amber-600/90',
+      tone: 'primary' as const,
     },
     ...(onDelete ? [{
       icon: <Trash2 className="w-5 h-5 text-white" />,
       label: 'Delete',
       onClick: () => onDelete(record),
-      colorClass: 'bg-rose-700/90',
+      tone: 'danger' as const,
       confirm: true,
     }] : []),
   ];
