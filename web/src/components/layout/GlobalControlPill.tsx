@@ -169,7 +169,8 @@ export const GlobalControlPill: React.FC<GlobalControlPillProps> = ({
       <span className="mwp-label">{!known ? CONTROL_PILL_LABELS.unknown : paused ? CONTROL_PILL_LABELS.paused : CONTROL_PILL_LABELS.running}</span>
     </>
   );
-  const statusClass = classNames('mwp-cell mwp-status mwp-start', !known && 'is-unknown', paused && 'is-paused');
+  const called = attentionItems.length > 0;
+  const statusClass = classNames('mwp-cell mwp-status mwp-start', !known && 'is-unknown', paused && 'is-paused', called && 'is-called');
 
   const pill = (
     <div
@@ -194,7 +195,7 @@ export const GlobalControlPill: React.FC<GlobalControlPillProps> = ({
             // No tap click here: the air of the pill opening or shrinking is
             // this button's sound, and the two together land as one thud.
             aria-expanded={open}
-            aria-label={`Global control: ${!known ? 'unknown' : paused ? 'paused' : 'running'}${attention ? ', something new' : ''}`}
+            aria-label={`Global control: ${!known ? 'unknown' : paused ? 'paused' : 'running'}${called ? ', needs you' : ''}${attention ? ', something new' : ''}`}
             className={classNames(statusClass, 'aspect-square !min-w-0 !px-0', shrunk && 'mwp-end')}
           >
             {statusSign}

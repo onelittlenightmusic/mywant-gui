@@ -145,6 +145,9 @@ export function controlPillCss(): string {
     '.mwp-status { color:var(--mwp-running); cursor:default; padding-left:14px; }',
     '.mwp-status.is-unknown { color:var(--mwp-muted); }',
     '.mwp-status.is-paused { background:var(--mwp-caution, #d97706); color:#fff; }',
+    // Something needs a person: the sign itself turns, so a folded or shrunk
+    // pill still says so — and green keeps meaning "nothing needs you".
+    '.mwp-status.is-called:not(.is-paused):not(.is-unknown) { color:var(--mwp-caution, #d97706); }',
     '.mwp-status:not(.is-paused):not(.is-unknown) .mwp-icon svg { animation:mwp-pulse 2s cubic-bezier(.4,0,.6,1) infinite; }',
     // Tones, as the overlay design has them.
     '.mwp-toggle.is-paused { background:var(--mwp-confirm, rgba(5,150,105,.9)); color:#fff; }',
