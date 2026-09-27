@@ -104,13 +104,19 @@ async function loadExternalModules(endpoint: string) {
 async function loadExternalPlugins() {
   // Everything a custom can add to the UI, all self-registering via
   // window.__mywant.* on import:
-  //   /plugins        card views   ~/.mywant/custom-types/<id>/view
-  // and whatever an extension accepts besides (the canvas: skins and board
-  // forms — see its pluginEndpoints). Loaded together and unordered — each
-  // registers under its own id, and ESM resolves any imports between them.
-  await Promise.allSettled(
-    ['/api/v1/plugins', ...extensionPluginEndpoints()].map(loadExternalModules),
-  )
+  //   /plugins          card views       ~/.mywant/custom-types/<id>/view
+  //   /design-plugins   design customs   ~/.mywant/design-plugin/<id>/plugin.*
+  // and whatever an extension accepts besides (the canvas: board forms — see
+  // its pluginEndpoints). Loaded together and unordered — each registers under
+  // its own id, and ESM resolves any imports between them.
+  //
+  // Design customs are the app's own to load, not an extension's: an overlay
+  // design (registerOverlayDesign) is drawn in this app's header pill and every
+  // overlay, with or without the canvas. A design custom written for the canvas
+  // alone (registerDesign) fails to register without it, and only it — each
+  // module is imported on its own.
+  const endpoints = new Set(['/api/v1/plugins', '/api/v1/design-plugins', ...extensionPluginEndpoints()]);
+  await Promise.allSettled([...endpoints].map(loadExternalModules))
 }
 
 function App() {

@@ -23,4 +23,6 @@ export {
   type OverlayDesign, type OverlayPortableStyle, GRID_OVERLAY_DESIGN,
   registerOverlayDesign, listOverlayDesigns, onOverlayDesignRegistered,
   overlayDesignOf, withOverlayDesign, portableOverlayStyleOf, overlayDesign, useOverlayDesign,
+  currentOverlayDesignId, setLocalOverlayDesign,
 } from './design';
+export { useOverlayDesignChoice, type OverlayDesignChoice } from './useOverlayDesignChoice';

@@ -3,7 +3,8 @@ import { BaseModal } from './BaseModal';
 import { useConfigStore } from '@/stores/configStore';
 import { useDebugStore } from '@/stores/debugStore';
 import { POLLING_PRESETS } from '@/constants/polling';
-import { Power, RotateCcw, ShieldAlert, Bug, Gamepad2, Pencil, Info } from 'lucide-react';
+import { Power, RotateCcw, ShieldAlert, Bug, Gamepad2, Pencil, Info, LayoutGrid } from 'lucide-react';
+import { useOverlayDesignChoice } from '@/components/overlay';
 import { classNames } from '@/utils/helpers';
 import { apiClient } from '@/api/client';
 import { useInputActions } from '@/hooks/useInputActions';
@@ -55,6 +56,10 @@ const GROUP_SIZES = [POLLING_PRESETS.length, INTERACTION_MODES.length, 2];
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { config, updateConfig } = useConfigStore();
+  // How every overlay and the header's pill look — my character's choice. Here
+  // as well as in the canvas's character display, because without the canvas
+  // this is the only place to make it, and the header pill is there regardless.
+  const overlayDesign = useOverlayDesignChoice();
   const { pollingIntervalMs, setPollingIntervalMs } = useDebugStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -289,6 +294,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           </div>
           <p className="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500">
             Game mode locks want tile positions on the canvas (drag, keyboard, gamepad, and CLI moves are all blocked).
+          </p>
+        </section>
+
+        {/* Overlay design — no keyboard nav group, like the controller below. */}
+        <section className="pt-3 border-t border-gray-100 dark:border-gray-800">
+          <h4 className={sectionHead}><LayoutGrid className="w-3.5 h-3.5" />Overlay Design</h4>
+          <div className="flex gap-2 flex-wrap">
+            {overlayDesign.designs.map(d => (
+              <button
+                key={d.id}
+                onClick={() => { void overlayDesign.choose(d.id); }}
+                disabled={overlayDesign.saving}
+                className={optBtn(overlayDesign.current === d.id, false)}
+              >
+                <LayoutGrid className="w-3.5 h-3.5 flex-shrink-0" />
+                {d.name}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500">
+            Menus, dialogs and the header's control pill{overlayDesign.onCharacter ? ' — saved on your character' : ' — kept in this browser (no character chosen)'}. More designs come from design customs (mywant custom install).
           </p>
         </section>
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDisplaySettings, displaySettings } from '@/hooks/useDisplaySettings';
+import { useCharacterStore } from '@/stores/characterStore';
 import type { CharacterDisplay } from '@/types/character';
 import type { OverlayTone } from './tones';
 
@@ -206,9 +207,41 @@ export function portableOverlayStyleOf(display: Pick<CharacterDisplay, 'ext'> | 
 
 const resolve = (id: string): OverlayDesign => designs.get(id) ?? GRID_OVERLAY_DESIGN;
 
+// ── Without a character ──────────────────────────────────────────────────────
+//
+// The choice is my character's — but the app on its own has no screen for
+// choosing who I am (that is the canvas's), so a browser can be nobody. Then
+// the choice is kept in this browser instead: the header pill and every
+// overlay are drawn here either way, and a design installed as a custom must
+// be choosable without the canvas. (The browser extension reads the character,
+// so it keeps the grid look for somebody who is nobody.)
+
+const LOCAL_KEY = 'mywant.overlayDesign';
+
+function localOverlayDesignId(): string {
+  try { return localStorage.getItem(LOCAL_KEY) || GRID_OVERLAY_DESIGN.id; } catch { return GRID_OVERLAY_DESIGN.id; }
+}
+
+/** Keep the choice in this browser — for when there is no character to keep it on. */
+export function setLocalOverlayDesign(id: string): void {
+  try { localStorage.setItem(LOCAL_KEY, id); } catch { /* kept for this page only */ }
+  localChosen = id;
+  listeners.forEach(fn => fn());
+}
+let localChosen: string | null = null;
+const localId = () => localChosen ?? localOverlayDesignId();
+
+/** Whose choice it is: my character's when there is one, this browser's otherwise. */
+const hasCharacter = () => !!useCharacterStore.getState().getMyCharacter();
+
 /** The design in use, for code that is not a React render. */
 export function overlayDesign(): OverlayDesign {
-  return resolve(overlayDesignOf(displaySettings()));
+  return resolve(hasCharacter() ? overlayDesignOf(displaySettings()) : localId());
+}
+
+/** The id of the design in use — my character's choice, or this browser's when I am nobody. */
+export function currentOverlayDesignId(display: Pick<CharacterDisplay, 'ext'> | null | undefined, character: boolean): string {
+  return character ? overlayDesignOf(display) : localId();
 }
 
 /**
@@ -217,7 +250,9 @@ export function overlayDesign(): OverlayDesign {
  * A choice naming a design that is not installed falls back to `grid`.
  */
 export function useOverlayDesign(): OverlayDesign {
-  const id = overlayDesignOf(useDisplaySettings());
+  const display = useDisplaySettings();
+  const character = useCharacterStore(s => !!s.myCharacterId && s.characters.some(c => c.id === s.myCharacterId));
+  const id = currentOverlayDesignId(display, character);
   const [, bump] = useState(0);
   useEffect(() => onOverlayDesignRegistered(() => bump(n => n + 1)), []);
   return resolve(id);
