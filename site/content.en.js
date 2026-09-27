@@ -11,7 +11,7 @@ window.GUIDE.en = {
     subtitle: 'A gentle guide',
     topics: n => `${n} topics`,
     heroLead: 'The screen where you watch what MyWant is doing, as cards, and move it along.',
-    heroSub: 'Press a card to open its explanation on the right. MyWant itself is explained in the MyWant guide.',
+    heroSub: 'Drive it with a mouse, a keyboard — or a gamepad alone. Press a card to open its explanation on the right.',
     menu: 'Menu',
     sections: 'Sections',
     startHere: 'Start here',
@@ -48,12 +48,14 @@ window.GUIDE.en = {
   <li>Press a card to see its results, settings and history</li>
   <li>Add, stop and remove Wants with buttons</li>
   <li>Browse your named values (Things), the kinds of Want, agents and recipes</li>
+  <li>Drive all of it <strong>with just a gamepad</strong></li>
   <li>Open it from your phone too</li>
 </ul>
 <div class="box">
   <p class="box-title"><i data-lucide="info"></i>It needs MyWant itself</p>
   <p>mywant-gui is only the screen, so a MyWant server has to be running behind it. For MyWant itself, see the <a href="https://onelittlenightmusic.github.io/MyWant/?lang=en">MyWant guide</a>.</p>
 </div>
+${shot("dashboard.jpg", "The dashboard: your Wants as cards")}
 `,
         },
         {
@@ -108,6 +110,7 @@ make install   # goes to ~/.local/bin/mywant-gui</pre></div>
   <p class="box-title"><i data-lucide="info"></i>Ports</p>
   <p>The screen uses port 8081 and talks to the MyWant server on 8080. To change them, use <code>mywant-gui start -D --port 9091</code> or <code>--backend http://another-machine:8080</code>.</p>
 </div>
+${shot("dashboard.jpg", "What you see at http://localhost:8081")}
 `,
         },
         {
@@ -128,6 +131,8 @@ make install   # goes to ~/.local/bin/mywant-gui</pre></div>
   <p class="box-title"><i data-lucide="menu"></i>What is in the Menu</p>
   <p>Wants, Thing, Want Types, Worlds, Agents, Recipes, Achievements, Logs, Devices, Help and Settings. Each page is explained under "Page by page".</p>
 </div>
+${shot("dashboard-detail.jpg", "The header on top, cards on the left, the sidebar on the right")}
+${shot("menu.jpg", "Menu, at the top left: every page")}
 `,
         },
         {
@@ -146,6 +151,8 @@ make install   # goes to ~/.local/bin/mywant-gui</pre></div>
 </ol>
 <h4>From a file</h4>
 <p>Wants written in a YAML file can be loaded all at once with the <strong>Import</strong> button in the header.</p>
+${shot("add-want.jpg", "Press + and the kinds of Want appear, by category")}
+${shot("add-want-form.jpg", "Pick a kind and it becomes a form for its values")}
 `,
         },
       ],
@@ -176,6 +183,8 @@ make install   # goes to ~/.local/bin/mywant-gui</pre></div>
 <p>The sidebar's buttons <strong>Start</strong>, <strong>Stop</strong>, <strong>Suspend</strong> (pause) and <strong>Delete</strong> it.</p>
 <h4>Rearrange</h4>
 <p>Drag cards to put them in the order you like.</p>
+${shot("dashboard-detail.jpg", "Press a card and the sidebar opens on the right")}
+${shot("dashboard-results.jpg", "The Results tab: what the agents wrote back")}
 `,
         },
         {
@@ -191,6 +200,7 @@ make install   # goes to ~/.local/bin/mywant-gui</pre></div>
   <li>Make a Want that uses a Thing's value right from its card</li>
   <li>Group related Things into a constellation</li>
 </ul>
+${shot("thing.jpg", "The Thing page")}
 `,
         },
         {
@@ -202,6 +212,7 @@ make install   # goes to ~/.local/bin/mywant-gui</pre></div>
           body: `
 <p>The catalogue of Wants you can place. Press a card to see its description, the values it takes, and examples.</p>
 <p>When you wonder "what should I put in here?", its <strong>Examples</strong> are the quickest answer.</p>
+${shot("want-types.jpg", "The Want Types page. Press a kind to open its description")}
 `,
         },
         {
@@ -214,6 +225,7 @@ make install   # goes to ~/.local/bin/mywant-gui</pre></div>
 <p>Save every Want you have placed under a name.
 Make one per situation — "trip planning", "watching work" — and switch with a press.</p>
 <p>When you switch, the current World is saved for you first.</p>
+${shot("worlds.jpg", "The Worlds page")}
 `,
         },
         {
@@ -229,6 +241,7 @@ Make one per situation — "trip planning", "watching work" — and switch with 
   <dt>Monitor</dt><dd>Keeps watching</dd>
   <dt>Think</dt><dd>Thinks it through</dd>
 </dl>
+${shot("agents.jpg", "The Agents page. Press an agent to see what it can do")}
 `,
         },
         {
@@ -240,6 +253,7 @@ Make one per situation — "trip planning", "watching work" — and switch with 
           body: `
 <p>A set of Wants saved as a template. Change the values and place it as often as you like.</p>
 <p>The <strong>Recipe</strong> button in a Want's sidebar makes a recipe from that Want.</p>
+${shot("recipes.jpg", "The Recipes page")}
 `,
         },
         {
@@ -256,6 +270,7 @@ Make one per situation — "trip planning", "watching work" — and switch with 
   <dt>Help</dt><dd>Every keyboard shortcut (the <code>?</code> key opens it too)</dd>
   <dt>Settings</dt><dd>Settings for the screen (see "Settings")</dd>
 </dl>
+${shot("help.jpg", "Help: every keyboard shortcut")}
 `,
         },
       ],
@@ -266,6 +281,43 @@ Make one per situation — "trip planning", "watching work" — and switch with 
       note: 'Once you are used to it',
       icon: 'wrench',
       topics: [
+        {
+          id: 'gamepad',
+          title: 'Play it with a gamepad',
+          sub: 'A controller is all you need',
+          icon: 'gamepad-2',
+          color: '#8b5cf6',
+          body: `
+<p>mywant-gui is built so that <strong>a gamepad alone can drive all of it</strong>.
+Steer the screen on your TV from the sofa, or browse and open your Wants without touching a keyboard.</p>
+<h4>Connect</h4>
+<ol class="steps">
+  <li><strong>Connect the controller over USB or Bluetooth</strong><br />Ordinary gamepads work — Xbox, PlayStation, Switch Pro and so on.</li>
+  <li><strong>Open the screen and press any button</strong><br />The browser finds the controller and you are in control.</li>
+</ol>
+<div class="box">
+  <p class="box-title"><i data-lucide="usb"></i>Even more reliable in Chrome on a Mac</p>
+  <p>Connect it from <strong>Settings</strong> in the Menu → "Controller (WebHID)", and a controller you have allowed once reconnects by itself next time. A Switch Pro Controller also rumbles as you play.</p>
+</div>
+<h4>What the buttons do</h4>
+<dl class="terms">
+  <dt>D-pad / left stick</dt><dd>Move between cards (hold B to move faster)</dd>
+  <dt>A</dt><dd>Confirm, open. Twice quickly to show it large</dd>
+  <dt>B</dt><dd>Cancel, back</dd>
+  <dt>X</dt><dd>Toggle, pick</dd>
+  <dt>Y</dt><dd>Jump to the header's buttons</dd>
+  <dt>L1 / R1</dt><dd>Previous / next sidebar tab (with B held: the tabs in the lower row)</dd>
+  <dt>Select</dt><dd>Open the Menu</dd>
+  <dt>Start</dt><dd>Quick actions for the chosen card — or, in select mode with cards picked, act on them all</dd>
+</dl>
+<p>Inside the screen, <code>?</code> (Help in the Menu) shows a picture of the pad and the whole list.</p>
+<div class="box">
+  <p class="box-title"><i data-lucide="map"></i>More on the canvas</p>
+  <p>With the canvas extension (mywant-guiex) you also get zoom on the right stick, jumps from tile to tile on L2 / R2, and moving a tile by holding A.</p>
+</div>
+${shot("help-gamepad.jpg", "\"Gamepad Layout\" in Help: a picture of the pad and what each button does")}
+`,
+        },
         {
           id: 'select',
           title: 'Many at once',
@@ -281,6 +333,7 @@ Press cards to pick them, then act on all of them at once.</p>
   <dt>Delete</dt><dd>Remove them all</dd>
 </dl>
 <p>When you are done, press ✕ at the top right, or <code>s</code> again.</p>
+${shot("select.jpg", "Select mode with Tokyo and Osaka picked")}
 `,
         },
         {
@@ -290,7 +343,7 @@ Press cards to pick them, then act on all of them at once.</p>
           icon: 'keyboard',
           color: '#64748b',
           body: `
-<p>The whole screen works from the keyboard. Press <code>?</code> for the full list.</p>
+<p>The whole screen works from the keyboard (for a gamepad, see "Play it with a gamepad"). Press <code>?</code> for the full list.</p>
 <dl class="terms">
   <dt>↑ ↓ ← →</dt><dd>Move between cards</dd>
   <dt>Enter</dt><dd>Confirm, open</dd>
@@ -302,6 +355,7 @@ Press cards to pick them, then act on all of them at once.</p>
   <dt>s</dt><dd>Select mode</dd>
   <dt>?</dt><dd>Help</dd>
 </dl>
+${shot("help.jpg", "The list the ? key opens")}
 `,
         },
         {
@@ -311,7 +365,7 @@ Press cards to pick them, then act on all of them at once.</p>
           icon: 'settings',
           color: '#6b7280',
           body: `
-<p><strong>Settings</strong> in the Menu changes how you interact (Interaction Mode), connects a game controller, and more.</p>
+<p><strong>Settings</strong> in the Menu changes how you interact (Interaction Mode), connects a gamepad (see "Play it with a gamepad"), and more.</p>
 <h4>Light or dark, and the header's place</h4>
 <p>These are kept in MyWant's settings, so every browser you open it in looks the same.</p>
 <div class="code"><pre># light / dark / system
@@ -319,6 +373,7 @@ mywant config set color_mode dark
 # top / bottom
 mywant config set header_position bottom</pre></div>
 <p>On a phone, a header at the bottom is easier to reach with your thumb.</p>
+${shot("settings.jpg", "Settings, from the Menu")}
 `,
         },
         {
@@ -337,6 +392,7 @@ You can find the Mac's IP address in System Settings → Network.</p>
   <p class="box-title"><i data-lucide="shield"></i>From outside your home</p>
   <p>If you put it on the internet, use a way that is protected by a password. See the authentication notes in MyWant's documentation.</p>
 </div>
+${shot("phone.jpg", "On a phone: the cards stack in one column", { phone: true })}
 `,
         },
         {
@@ -370,7 +426,39 @@ mywant-gui capture want &lt;want ID&gt;</pre></div>
           body: `
 <p>mywant-gui has <strong>extensions</strong>: pages, menu entries, buttons and looks you can add later.
 Put an extension in <code>~/.mywant/gui-extensions/</code> and it is loaded the next time the screen starts.</p>
-<p>How to write one is in the <a href="https://onelittlenightmusic.github.io/mywant-gui-dev/">developer docs</a>.</p>
+<p>How to write one is in the <a href="https://onelittlenightmusic.github.io/mywant-gui-dev/">developer docs</a>. A finished example is the next topic, "The canvas (mywant-guiex)".</p>
+`,
+        },
+        {
+          id: 'canvas',
+          title: 'The canvas (mywant-guiex)',
+          sub: 'An extension that lays Wants out as tiles',
+          icon: 'map',
+          color: '#0891b2',
+          body: `
+<p><strong>mywant-guiex</strong> is an extension that adds a <strong>canvas</strong> to mywant-gui.
+Each Want becomes a <strong>tile</strong> on a board — a different way to see them from the list of cards.</p>
+${shot('canvas-detail.jpg', 'The canvas: weather, reminder, timer and other Wants as tiles. Press one and its details open on the right')}
+<h4>What you can do</h4>
+<ul>
+  <li>Place Wants where you like and build a board of your own</li>
+  <li>The Things a Want uses (the round ones) float beside it, with lines showing the connection</li>
+  <li>Your character walks the board, opening and moving the tile it stands on</li>
+  <li>See the whole board at once on the minimap</li>
+  <li>Made for a gamepad: zoom on the right stick, jump from tile to tile on L2 / R2</li>
+</ul>
+${shot('canvas.jpg', 'The minimap on the right shows the whole board and where you are')}
+<h4>Install</h4>
+<div class="code"><pre>brew install mywant-guiex
+# restart the screen, and Canvas appears in the Menu
+mywant-gui stop
+mywant-gui start -D</pre></div>
+<p><strong>Canvas</strong> in the Menu (or the <code>c</code> key) goes to the canvas; <code>l</code> goes back to the list of cards.</p>
+<h4>Drive it from commands</h4>
+<div class="code"><pre># move a tile to cell (0, 1)
+mywant guiex tile set tokyo-weather 0 1
+# every command
+mywant guiex commands</pre></div>
 `,
         },
       ],

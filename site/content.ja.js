@@ -15,7 +15,7 @@ window.GUIDE.ja = {
     subtitle: 'やさしいガイド',
     topics: n => `${n} topics`,
     heroLead: 'MyWant で起きていることを、ブラウザでカードとして眺めて、動かす画面です。',
-    heroSub: 'カードを押すと、右側にくわしい説明が開きます。MyWant 本体のことは「MyWant ガイド」で説明しています。',
+    heroSub: 'マウスでも、キーボードでも、ゲームパッドだけでも動かせます。カードを押すと、右側にくわしい説明が開きます。',
     menu: 'メニュー',
     sections: 'Sections',
     startHere: 'Start here',
@@ -52,12 +52,14 @@ window.GUIDE.ja = {
   <li>カードを押すと、結果・設定・履歴が見られる</li>
   <li>Want の追加・停止・削除が、ボタンでできる</li>
   <li>よく使う値（Thing）、Want の種類、エージェント、レシピを眺められる</li>
+  <li><strong>ゲームパッドだけで</strong>ぜんぶ操作できる</li>
   <li>スマホからも開ける</li>
 </ul>
 <div class="box">
   <p class="box-title"><i data-lucide="info"></i>MyWant 本体が必要です</p>
   <p>mywant-gui は画面だけなので、裏で MyWant のサーバーが動いている必要があります。MyWant 自体のことは <a href="https://onelittlenightmusic.github.io/MyWant/?lang=ja">MyWant ガイド</a> を見てください。</p>
 </div>
+${shot("dashboard.jpg", "ダッシュボード。置いた Want がカードで並びます")}
 `,
         },
         {
@@ -112,6 +114,7 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
   <p class="box-title"><i data-lucide="info"></i>ポート番号</p>
   <p>画面は 8081 番を使い、8080 番の MyWant サーバーにつなぎます。変えたいときは <code>mywant-gui start -D --port 9091</code> や <code>--backend http://別のマシン:8080</code> のように指定します。</p>
 </div>
+${shot("dashboard.jpg", "http://localhost:8081 を開いたところ")}
 `,
         },
         {
@@ -132,6 +135,8 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
   <p class="box-title"><i data-lucide="menu"></i>Menu の中身</p>
   <p>Wants・Thing・Want Types・Worlds・Agents・Recipes・Achievements・Logs・Devices・Help・Settings。それぞれのページは「ページごとの使い方」で説明しています。</p>
 </div>
+${shot("dashboard-detail.jpg", "上がヘッダ、左がカード、右がサイドバー")}
+${shot("menu.jpg", "左上の Menu。ページの一覧です")}
 `,
         },
         {
@@ -150,6 +155,8 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
 </ol>
 <h4>ファイルから読み込む</h4>
 <p>YAML ファイルに書いた Want は、ヘッダの <strong>Import</strong> ボタンからまとめて読み込めます。</p>
+${shot("add-want.jpg", "＋ を押すと、Want の種類が分類ごとに並びます")}
+${shot("add-want-form.jpg", "種類を選ぶと、入れる項目のフォームになります")}
 `,
         },
       ],
@@ -180,6 +187,8 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
 <p>サイドバーのボタンで <strong>Start</strong>（動かす）、<strong>Stop</strong>（止める）、<strong>Suspend</strong>（一時停止）、<strong>Delete</strong>（消す）ができます。</p>
 <h4>並べ替える</h4>
 <p>カードはドラッグで並べ替えられます。</p>
+${shot("dashboard-detail.jpg", "カードを押すと、右にサイドバーが開きます")}
+${shot("dashboard-results.jpg", "Results タブ：エージェントが書き込んだ結果")}
 `,
         },
         {
@@ -195,6 +204,7 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
   <li>Thing のカードから、その値を使う Want をすぐ作れます</li>
   <li>関係のある Thing どうしは、星座（constellation）としてまとめられます</li>
 </ul>
+${shot("thing.jpg", "Thing ページ")}
 `,
         },
         {
@@ -206,6 +216,7 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
           body: `
 <p>置ける Want の種類のカタログです。カードを押すと、説明・受け取る値・例が見られます。</p>
 <p>「どんな値を入れればいいんだろう？」と思ったら、まずここで <strong>Examples</strong> を見るのが近道です。</p>
+${shot("want-types.jpg", "Want Types ページ。種類を押すと説明が開きます")}
 `,
         },
         {
@@ -218,6 +229,7 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
 <p>いま置いている Want 全部を、名前をつけて保存しておくページです。
 「旅行の準備」「仕事の見張り」のように場面ごとに作り、押すだけで切り替えられます。</p>
 <p>切り替えるときは、いまの World が自動で保存されます。</p>
+${shot("worlds.jpg", "Worlds ページ")}
 `,
         },
         {
@@ -233,6 +245,7 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
   <dt>Monitor</dt><dd>見張り続ける</dd>
   <dt>Think</dt><dd>考える</dd>
 </dl>
+${shot("agents.jpg", "Agents ページ。エージェントを押すと、できることが開きます")}
 `,
         },
         {
@@ -244,6 +257,7 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
           body: `
 <p>いくつかの Want の組み合わせを、ひな形として保存したものです。値を変えるだけで何度でも置けます。</p>
 <p>Want のサイドバーにある <strong>Recipe</strong> ボタンから、その Want をもとにレシピを作れます。</p>
+${shot("recipes.jpg", "Recipes ページ")}
 `,
         },
         {
@@ -260,6 +274,7 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
   <dt>Help</dt><dd>キーボード操作の一覧（<code>?</code> キーでも開きます）</dd>
   <dt>Settings</dt><dd>画面の設定（「設定」を見てください）</dd>
 </dl>
+${shot("help.jpg", "Help：キーボード操作の一覧")}
 `,
         },
       ],
@@ -270,6 +285,43 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
       note: '慣れてきたら',
       icon: 'wrench',
       topics: [
+        {
+          id: 'gamepad',
+          title: 'ゲームパッドで操作',
+          sub: 'コントローラーだけで、ぜんぶ動かせる',
+          icon: 'gamepad-2',
+          color: '#8b5cf6',
+          body: `
+<p>mywant-gui は <strong>ゲームパッド（コントローラー）だけで操作できる</strong>ように作られています。
+ソファからテレビに映した画面を動かしたり、キーボードを使わずに Want を眺めて開いたりできます。</p>
+<h4>つなぐ</h4>
+<ol class="steps">
+  <li><strong>コントローラーを USB か Bluetooth でつなぐ</strong><br />ふつうのゲームパッド（Xbox・PlayStation・Switch Pro など）が使えます。</li>
+  <li><strong>画面を開いて、どれかボタンを押す</strong><br />ブラウザがコントローラーを見つけて、すぐ操作できるようになります。</li>
+</ol>
+<div class="box">
+  <p class="box-title"><i data-lucide="usb"></i>Mac の Chrome ならもっと確実に</p>
+  <p>Menu の <strong>Settings</strong> →「Controller (WebHID)」から接続すると、一度許可したコントローラーに次回から自動でつながります。Switch Pro コントローラーは、操作に合わせて振動もします。</p>
+</div>
+<h4>ボタンの役割</h4>
+<dl class="terms">
+  <dt>十字キー / 左スティック</dt><dd>カードを移動する（B を押しながらだと速く動く）</dd>
+  <dt>A</dt><dd>決定・開く。すばやく 2 回で大きく表示</dd>
+  <dt>B</dt><dd>やめる・戻る</dd>
+  <dt>X</dt><dd>切り替え・選ぶ</dd>
+  <dt>Y</dt><dd>ヘッダのボタンへ移る</dd>
+  <dt>L1 / R1</dt><dd>サイドバーのタブを前後に切り替える（B を押しながらだと下の段のタブ）</dd>
+  <dt>Select</dt><dd>Menu を開く</dd>
+  <dt>Start</dt><dd>選んでいるカードのクイックアクション。選択モードで選んでいれば、まとめて操作</dd>
+</dl>
+<p>画面の中でも <code>?</code> キー（Menu の Help）で、ボタンの図と一覧が見られます。</p>
+<div class="box">
+  <p class="box-title"><i data-lucide="map"></i>キャンバスではもっと</p>
+  <p>キャンバス拡張（mywant-guiex）では、右スティックでズーム、L2 / R2 でタイルからタイルへジャンプ、A 長押しでタイルを動かす、といった操作も加わります。</p>
+</div>
+${shot("help-gamepad.jpg", "Help の「Gamepad Layout」。ボタンの図と役割が見られます")}
+`,
+        },
         {
           id: 'select',
           title: 'まとめて操作',
@@ -285,6 +337,7 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
   <dt>Delete</dt><dd>まとめて消す</dd>
 </dl>
 <p>終わったら右上の ✕ か、もう一度 <code>s</code> で戻ります。</p>
+${shot("select.jpg", "選択モードで Tokyo と Osaka を選んだところ")}
 `,
         },
         {
@@ -294,7 +347,7 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
           icon: 'keyboard',
           color: '#64748b',
           body: `
-<p>画面はキーボードだけでも操作できます。全部の一覧は <code>?</code> キーで出ます。</p>
+<p>画面はキーボードだけでも操作できます（ゲームパッドは「ゲームパッドで操作」を見てください）。全部の一覧は <code>?</code> キーで出ます。</p>
 <dl class="terms">
   <dt>↑ ↓ ← →</dt><dd>カードを移動する</dd>
   <dt>Enter</dt><dd>決定・開く</dd>
@@ -306,6 +359,7 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
   <dt>s</dt><dd>選択モード</dd>
   <dt>?</dt><dd>ヘルプ</dd>
 </dl>
+${shot("help.jpg", "? キーで開く一覧")}
 `,
         },
         {
@@ -315,7 +369,7 @@ make install   # ~/.local/bin/mywant-gui に入ります</pre></div>
           icon: 'settings',
           color: '#6b7280',
           body: `
-<p>Menu の <strong>Settings</strong> で、操作のしかた（Interaction Mode）やゲームコントローラーの接続などを変えられます。</p>
+<p>Menu の <strong>Settings</strong> で、操作のしかた（Interaction Mode）やゲームパッドの接続（「ゲームパッドで操作」を参照）などを変えられます。</p>
 <h4>明るさとヘッダの位置</h4>
 <p>画面の明るさとヘッダの位置は MyWant の設定に保存され、どのブラウザで開いても同じになります。</p>
 <div class="code"><pre># 明るさ：light / dark / system
@@ -323,6 +377,7 @@ mywant config set color_mode dark
 # ヘッダの位置：top / bottom
 mywant config set header_position bottom</pre></div>
 <p>スマホでは、ヘッダを下にすると親指で届きやすくなります。</p>
+${shot("settings.jpg", "Menu の Settings")}
 `,
         },
         {
@@ -341,6 +396,7 @@ Mac の IP アドレスは「システム設定 → ネットワーク」で確�
   <p class="box-title"><i data-lucide="shield"></i>家の外から使うとき</p>
   <p>インターネットに公開するときは、パスワードで守られた方法を使ってください。くわしくは MyWant のドキュメントの認証の説明を見てください。</p>
 </div>
+${shot("phone.jpg", "スマホで開いたところ。カードが縦に並びます", { phone: true })}
 `,
         },
         {
@@ -374,7 +430,39 @@ mywant-gui capture want &lt;Want の ID&gt;</pre></div>
           body: `
 <p>mywant-gui には、あとからページ・メニュー・ボタン・見た目を足せる <strong>拡張</strong> の仕組みがあります。
 拡張は <code>~/.mywant/gui-extensions/</code> に置くと、次に起動したときに読み込まれます。</p>
-<p>拡張の作り方は <a href="https://onelittlenightmusic.github.io/mywant-gui-dev/">開発者ドキュメント</a>（英語）で説明しています。</p>
+<p>拡張の作り方は <a href="https://onelittlenightmusic.github.io/mywant-gui-dev/">開発者ドキュメント</a>（英語）で説明しています。できあがった拡張の例が、次の「キャンバス（mywant-guiex）」です。</p>
+`,
+        },
+        {
+          id: 'canvas',
+          title: 'キャンバス（mywant-guiex）',
+          sub: 'Want を盤面のタイルとして並べる拡張',
+          icon: 'map',
+          color: '#0891b2',
+          body: `
+<p><strong>mywant-guiex</strong> は、mywant-gui に <strong>キャンバス</strong> を足す拡張です。
+Want が 1 つずつ <strong>タイル</strong> になって盤面に並び、カードの一覧とは違った見かたができます。</p>
+${shot('canvas-detail.jpg', 'キャンバス。天気・リマインダー・タイマーなどの Want がタイルとして並び、押すと右に中身が開きます')}
+<h4>できること</h4>
+<ul>
+  <li>Want を好きな位置に並べて、自分だけの盤面を作る</li>
+  <li>Want が使っている Thing（丸いもの）が横に浮かび、つながりが線で見える</li>
+  <li>自分のキャラクターが盤面を歩き、立ったタイルを開いたり動かしたりできる</li>
+  <li>ミニマップで盤面の全体を見渡せる</li>
+  <li>ゲームパッドとの相性がよく、右スティックでズーム、L2 / R2 でタイルからタイルへジャンプできる</li>
+</ul>
+${shot('canvas.jpg', '右のミニマップで、盤面の全体と今いる場所がわかります')}
+<h4>入れる</h4>
+<div class="code"><pre>brew install mywant-guiex
+# 画面を起動し直すと、Menu に Canvas が増えます
+mywant-gui stop
+mywant-gui start -D</pre></div>
+<p>Menu の <strong>Canvas</strong>（または <code>c</code> キー）でキャンバスへ、<code>l</code> キーでカードの一覧へ戻ります。</p>
+<h4>コマンドで動かす</h4>
+<div class="code"><pre># タイルを (0, 1) のマスへ動かす
+mywant guiex tile set tokyo-weather 0 1
+# 使えるコマンドの一覧
+mywant guiex commands</pre></div>
 `,
         },
       ],
