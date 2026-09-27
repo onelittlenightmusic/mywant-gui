@@ -40,6 +40,7 @@ import { useAddWantForm } from './useAddWantForm';
 import { useWantView } from './useWantView';
 import { useWantLists } from './useWantLists';
 import type { BoardLink } from './boardLink';
+import { publishCursorManCell } from '@/utils/cursorManCell';
 
 /**
  * The workspace both pages share — the wants and what is selected of them,
@@ -372,6 +373,16 @@ export function useWorkspace({ board }: { board: BoardLink }) {
   }, [wants, sidebar.selectedItem]);
 
   useEffect(() => { if (error) { const t = setTimeout(() => clearError(), 5000); return () => clearTimeout(t); } }, [error, clearError]);
+
+  // Where a new want lands, for the paths that add one without the form's
+  // placement (a card overlay, a recipe deploy, another page) — see
+  // cursorManCell.ts. The character's canvas centre stands in until CursorMan
+  // has a cell, as the Add press does.
+  useEffect(() => {
+    publishCursorManCell(cursorManPos ?? (canvasCenterX !== undefined && canvasCenterY !== undefined
+      ? { x: canvasCenterX, y: canvasCenterY }
+      : null));
+  }, [cursorManPos, canvasCenterX, canvasCenterY]);
 
   // pendingCanvasPosRef is set when the form opens in canvas mode.
   // Canvas labels are now included directly in the createWant request via WantForm's

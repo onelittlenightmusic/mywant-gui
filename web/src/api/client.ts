@@ -56,6 +56,8 @@ import {
 } from '@/types/achievement';
 import { Character, CharacterDisplay, CharacterListResponse, RemoteCursor } from '@/types/character';
 import { KataListResponse, KataRecord, LiveKataResponse } from '@/types/kata';
+import { CANVAS_LABEL_X, CANVAS_LABEL_Y, isSystemWant } from '@/utils/wantPlacement';
+import { Cell, knownCursorManCell } from '@/utils/cursorManCell';
 
 export interface WantHashEntry {
   id: string;
@@ -308,11 +310,37 @@ class MyWantApiClient {
     // matches characterStore's MY_CHAR_KEY. Labels round-trip & persist via the
     // backend, so no server change is needed to carry ownership.
     const ownerCharacterId = (typeof localStorage !== 'undefined' && localStorage.getItem('mywant_my_character_id')) || '';
-    const stamped = ownerCharacterId
-      ? { ...request, metadata: { ...request.metadata, labels: { ...request.metadata.labels, 'mywant.io/owner-character': ownerCharacterId } } }
-      : request;
+    const labels: Record<string, string> = { ...request.metadata.labels };
+    if (ownerCharacterId) labels['mywant.io/owner-character'] = ownerCharacterId;
+    // Where it lands: on my character, whichever path added it (see
+    // cursorManCell.ts). A want that names its own cell (a drop on the board)
+    // keeps it; a child sits inside its parent and a system want is not placed.
+    const placed = labels[CANVAS_LABEL_X] !== undefined || labels[CANVAS_LABEL_Y] !== undefined;
+    if (!placed && !request.metadata.ownerReferences?.length && !isSystemWant(request)) {
+      const cell = knownCursorManCell() ?? await this.savedCursorManCell(ownerCharacterId);
+      if (cell) {
+        labels[CANVAS_LABEL_X] = String(cell.x);
+        labels[CANVAS_LABEL_Y] = String(cell.y);
+      }
+    }
+    const stamped = { ...request, metadata: { ...request.metadata, labels } };
     const response = await this.client.post<Want>('/api/v1/wants', stamped);
     return response.data;
+  }
+
+  /** The CursorMan cell the dashboard last saved to gui_state (useGuiStateSync's
+   *  canvas_cursor_x_<id>) — for a want added before the dashboard was opened
+   *  in this tab. Null if there is none, and never an error. */
+  private async savedCursorManCell(characterId: string): Promise<Cell | null> {
+    try {
+      const { state } = await this.getGUIState();
+      const suffix = characterId ? `_${characterId}` : '';
+      const x = state[`canvas_cursor_x${suffix}`];
+      const y = state[`canvas_cursor_y${suffix}`];
+      return typeof x === 'number' && typeof y === 'number' ? { x: Math.round(x), y: Math.round(y) } : null;
+    } catch {
+      return null;
+    }
   }
 
   async listWants(options?: { includeCancelled?: boolean; series?: string }): Promise<Want[]> {
