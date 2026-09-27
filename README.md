@@ -3,7 +3,9 @@
 The web GUI and control CLI for [MyWant](https://github.com/onelittlenightmusic/mywant) —
 declarative wants, carried out by autonomous agents.
 
-📖 **Beginner's guide (English / 日本語):** https://onelittlenightmusic.github.io/mywant-gui/
+![The mywant-gui dashboard](docs/img/dashboard.png)
+
+📖 **Guides (English / 日本語):** [mywant-gui guide](https://onelittlenightmusic.github.io/mywant-gui/) · [MyWant guide](https://onelittlenightmusic.github.io/MyWant/) · [Developer docs](https://onelittlenightmusic.github.io/mywant-gui-dev/)
 
 `mywant-gui` serves the web frontend and proxies its API requests to a running
 MyWant server. From the browser you can:
@@ -18,6 +20,8 @@ MyWant server. From the browser you can:
 The same binary is a CLI that drives the open GUI: open a want, move between
 pages, fill in the Add Want form, read and set parameters, capture a card as
 an image.
+
+![The Add Want form](docs/img/add-want.png)
 
 ## Install
 
@@ -64,6 +68,10 @@ proxying `/api` to the MyWant server on :8080.
 | `skills/` | a Claude Code skill for driving the GUI from the CLI |
 
 ## Extending
+
+How to write an extension, with a worked example, is in the
+[developer docs](https://onelittlenightmusic.github.io/mywant-gui-dev/). The
+MyWant canvas (`brew install mywant-guiex`) is one such extension.
 
 The frontend declares the places it can be extended — pages, menu entries,
 named slots in the header, settings and panels, hooks run at the root — in
