@@ -81,7 +81,7 @@ func (s *Server) serveWantHome(w http.ResponseWriter, r *http.Request) bool {
 		`<meta name="apple-mobile-web-app-title" content="MyWant" />`,
 		`<meta name="apple-mobile-web-app-title" content="`+esc+`" />`, 1)
 	page = strings.Replace(page,
-		`<title>MyWant Dashboard</title>`,
+		`<title>MyWant</title>`,
 		`<title>`+esc+`</title>`, 1)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

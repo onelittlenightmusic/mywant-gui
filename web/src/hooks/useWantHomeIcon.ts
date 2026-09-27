@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { WANT_ICON_KEYS } from '@/generated/wantIconKeys';
+import { holdAppIdentity } from '@/lib/appIdentity';
 
 /**
  * While a `/w/:id` "one want as an app" page is open, point the page's
@@ -65,7 +66,9 @@ export function useWantHomeIcon(
       runtimeReady
         ? `/w-home-icon/${wantId}-${size}.png`
         : `/want-icons/${key}-${size}.png`;
-    const prevTitle = document.title;
+    // Borrowed from the app while this page is open, and handed back on the
+    // way out — see appIdentity, which also owns the title and the tab icon.
+    const release = holdAppIdentity();
     document.title = name;
 
     const restores = [
@@ -78,8 +81,8 @@ export function useWantHomeIcon(
     ];
 
     return () => {
-      document.title = prevTitle;
       restores.forEach((r) => r());
+      release();
     };
   }, [wantId, wantName, category, runtimeReady]);
 }

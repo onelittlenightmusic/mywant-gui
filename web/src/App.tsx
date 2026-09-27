@@ -19,6 +19,7 @@ import { Layout } from '@/components/layout/Layout';
 import { RouteTransition } from '@/components/layout/RouteTransition';
 import { FocusRingColor } from '@/components/common/FocusRingColor';
 import { GlobalFreeCursor } from '@/components/common/GlobalFreeCursor';
+import { useAppIdentity } from '@/lib/appIdentity';
 import { useDeviceSession, myDeviceId, myDeviceName } from '@/hooks/useDeviceSession';
 import { useLocationSender } from '@/hooks/useLocationSender';
 import { usePendingDeviceActionsWatcher } from '@/hooks/usePendingDeviceActions';
@@ -116,6 +117,8 @@ function App() {
   const fetchConfig = useConfigStore(state => state.fetchConfig);
   const fetchWantTypes = useWantTypeStore(state => state.fetchWantTypes);
   const fetchCharacters = useCharacterStore(state => state.fetchCharacters);
+  // The tab: this server's name and this person's character — see appIdentity.
+  useAppIdentity();
 
   useEffect(() => {
     fetchConfig();
