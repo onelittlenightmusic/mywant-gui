@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>mywant-gui ガイド</title>
+    <meta name="description" content="mywant-gui（MyWant のダッシュボード）の使い方を、はじめての人向けにやさしく説明します。 A gentle guide to the MyWant dashboard." />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <!-- Same first-paint colours as mywant-gui (bg-gray-100 / bg-gray-950), so
+         there is no white flash before the stylesheet and script arrive. -->
+    <style>
+      html, body { margin: 0; background-color: #f3f4f6; }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme="light"]), html:not([data-theme="light"]) body { background-color: #030712; color: #f9fafb; }
+      }
+      html[data-theme="dark"], html[data-theme="dark"] body { background-color: #030712; }
+    </style>
+    <script>
+      try {
+        var t = localStorage.getItem('mywant-guide-theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch (e) {}
+      /* The language, before first paint: ?lang= wins, then the viewer's last
+         choice, then the browser's own. app.js reads it back from <html lang>. */
+      (function () {
+        var l = new URLSearchParams(location.search).get('lang');
+        if (l !== 'ja' && l !== 'en') { try { l = localStorage.getItem('mywant-guide-lang'); } catch (e) {} }
+        if (l !== 'ja' && l !== 'en') l = /^ja\b/i.test(navigator.language || '') ? 'ja' : 'en';
+        document.documentElement.lang = l;
+      })();
+    </script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-left">
+        <div class="menu-wrap">
+          <button class="cell" id="menu-btn" aria-haspopup="menu" aria-expanded="false" data-i18n-label="menu">
+            <i data-lucide="menu"></i><span class="cell-label">Menu</span>
+          </button>
+          <div class="menu" id="menu" role="menu" hidden></div>
+        </div>
+        <a class="title" href="#" id="home-link">
+          <h1>MyWant</h1>
+          <span class="count"><span data-i18n="subtitle"></span> · <span id="topic-count"></span></span>
+        </a>
+      </div>
+      <div class="header-right">
+        <a class="cell" id="github-link" href="#" target="_blank" rel="noopener" aria-label="GitHub">
+          <i data-lucide="github"></i><span class="cell-label">GitHub</span>
+        </a>
+        <button class="cell" id="lang-btn" data-i18n-label="lang">
+          <i data-lucide="languages"></i><span class="cell-label" id="lang-label"></span>
+        </button>
+        <button class="cell" id="theme-btn" data-i18n-label="theme">
+          <i data-lucide="sun-moon"></i><span class="cell-label">Theme</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="main" id="main">
+      <section class="hero">
+        <p class="hero-lead" data-i18n="heroLead"></p>
+        <p class="hero-sub" data-i18n="heroSub"></p>
+      </section>
+      <div id="sections"></div>
+    </main>
+
+    <div class="scrim" id="scrim" hidden></div>
+    <aside class="sidebar" id="sidebar" aria-hidden="true" aria-labelledby="sb-title">
+      <div class="sb-grip" aria-hidden="true"><span></span></div>
+      <div class="sb-head">
+        <h2 id="sb-title"><i data-lucide="circle" id="sb-icon"></i><span id="sb-title-text"></span></h2>
+        <button class="sb-close" id="sb-close" data-i18n-label="close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="sb-body" id="sb-body"></div>
+      <nav class="sb-tabs">
+        <button class="tab" id="sb-prev"><i data-lucide="chevron-left"></i><span class="cell-label" data-i18n="prev"></span></button>
+        <button class="tab" id="sb-grid"><i data-lucide="layout-grid"></i><span class="cell-label" data-i18n="grid"></span></button>
+        <button class="tab" id="sb-next"><i data-lucide="chevron-right"></i><span class="cell-label" data-i18n="next"></span></button>
+      </nav>
+    </aside>
+
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+    <script src="site.js"></script>
+    <script src="content.ja.js"></script>
+    <script src="content.en.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

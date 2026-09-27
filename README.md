@@ -3,6 +3,8 @@
 The web GUI and control CLI for [MyWant](https://github.com/onelittlenightmusic/mywant) —
 declarative wants, carried out by autonomous agents.
 
+📖 **Beginner's guide (English / 日本語):** https://onelittlenightmusic.github.io/mywant-gui/
+
 `mywant-gui` serves the web frontend and proxies its API requests to a running
 MyWant server. From the browser you can:
 
