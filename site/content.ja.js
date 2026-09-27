@@ -288,20 +288,31 @@ ${shot("help.jpg", "Help：キーボード操作の一覧")}
         {
           id: 'gamepad',
           title: 'ゲームパッドで操作',
-          sub: 'コントローラーだけで、ぜんぶ動かせる',
+          sub: '設定のしかたと、ボタンの役割',
           icon: 'gamepad-2',
           color: '#8b5cf6',
           body: `
 <p>mywant-gui は <strong>ゲームパッド（コントローラー）だけで操作できる</strong>ように作られています。
 ソファからテレビに映した画面を動かしたり、キーボードを使わずに Want を眺めて開いたりできます。</p>
-<h4>つなぐ</h4>
+<h4>設定のしかた ①　そのまま使う</h4>
+<p>いちばん簡単な方法です。Chrome・Edge・Safari・Firefox など、ふつうのブラウザで使えます。</p>
 <ol class="steps">
-  <li><strong>コントローラーを USB か Bluetooth でつなぐ</strong><br />ふつうのゲームパッド（Xbox・PlayStation・Switch Pro など）が使えます。</li>
-  <li><strong>画面を開いて、どれかボタンを押す</strong><br />ブラウザがコントローラーを見つけて、すぐ操作できるようになります。</li>
+  <li><strong>コントローラーを Mac（PC）につなぐ</strong><br />USB ケーブルでつなぐか、コントローラーをペアリング状態にして Mac の「システム設定 → Bluetooth」から接続します。Xbox・PlayStation・Switch Pro など、ふつうのゲームパッドが使えます。</li>
+  <li><strong>mywant-gui を開く</strong><br /><a href="http://localhost:8081" target="_blank" rel="noopener">http://localhost:8081</a> を開きます。</li>
+  <li><strong>コントローラーのボタンをどれか 1 回押す</strong><br />ブラウザは、ボタンが押されるまでコントローラーを画面に見せない決まりになっています。1 回押せば、そのあとはすぐ操作できます。</li>
 </ol>
+<h4>設定のしかた ②　Chrome で WebHID 接続する（Mac）</h4>
+<p>Mac の Chrome なら、画面の設定から直接つなぐこともできます。一度許可すれば次からは自動でつながり、Switch Pro コントローラーは操作に合わせて振動もします。</p>
+<ol class="steps">
+  <li><strong>Menu → Settings を開く</strong></li>
+  <li><strong>「Controller (WebHID)」の「コントローラーを接続」をクリックする</strong><br />ブラウザの決まりで、このボタンだけはマウスのクリックで押す必要があります。</li>
+  <li><strong>Chrome の小さな画面でコントローラーを選び、「接続」を押す</strong></li>
+  <li><strong>ボタンが緑の「接続済み」になり、コントローラーの名前が出れば完了</strong><br />次に開いたときは、自動でつながります。</li>
+</ol>
+${shot('settings-controller.jpg', 'Settings の「Controller (WebHID)」と「Interaction Mode」')}
 <div class="box">
-  <p class="box-title"><i data-lucide="usb"></i>Mac の Chrome ならもっと確実に</p>
-  <p>Menu の <strong>Settings</strong> →「Controller (WebHID)」から接続すると、一度許可したコントローラーに次回から自動でつながります。Switch Pro コントローラーは、操作に合わせて振動もします。</p>
+  <p class="box-title"><i data-lucide="lock"></i>キャンバスで遊ぶなら Game モード</p>
+  <p>同じ Settings の <strong>Interaction Mode</strong> を <strong>Game</strong> にすると、キャンバスのタイルの位置が固定されます。ゲームパッドで盤面を歩き回っても、うっかりタイルを動かしません。並べ替えたいときは <strong>Edit</strong> に戻します。</p>
 </div>
 <h4>ボタンの役割</h4>
 <dl class="terms">
@@ -320,6 +331,13 @@ ${shot("help.jpg", "Help：キーボード操作の一覧")}
   <p>キャンバス拡張（mywant-guiex）では、右スティックでズーム、L2 / R2 でタイルからタイルへジャンプ、A 長押しでタイルを動かす、といった操作も加わります。</p>
 </div>
 ${shot("help-gamepad.jpg", "Help の「Gamepad Layout」。ボタンの図と役割が見られます")}
+<h4>うまく動かないとき</h4>
+<ul>
+  <li><strong>何も反応しない</strong>：画面をクリックしてから、コントローラーのボタンを押し直してください。</li>
+  <li><strong>「このブラウザは WebHID 未対応です」と出る</strong>：WebHID は Chrome 系のブラウザだけです。ほかのブラウザでは ① の方法で使えます。</li>
+  <li><strong>ほかのアプリがコントローラーを使っている</strong>：ゲームなど、コントローラーをつかんでいるアプリを閉じてから試してください。</li>
+  <li><strong>ボタンの役割を確かめたい</strong>：Menu の Help（<code>?</code> キー）の「Gamepad Layout」に図があります。</li>
+</ul>
 `,
         },
         {

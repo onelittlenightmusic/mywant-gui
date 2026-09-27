@@ -284,20 +284,31 @@ ${shot("help.jpg", "Help: every keyboard shortcut")}
         {
           id: 'gamepad',
           title: 'Play it with a gamepad',
-          sub: 'A controller is all you need',
+          sub: 'Setting it up, and what the buttons do',
           icon: 'gamepad-2',
           color: '#8b5cf6',
           body: `
 <p>mywant-gui is built so that <strong>a gamepad alone can drive all of it</strong>.
 Steer the screen on your TV from the sofa, or browse and open your Wants without touching a keyboard.</p>
-<h4>Connect</h4>
+<h4>Setup ①: just use it</h4>
+<p>The simplest way, and it works in any ordinary browser — Chrome, Edge, Safari, Firefox.</p>
 <ol class="steps">
-  <li><strong>Connect the controller over USB or Bluetooth</strong><br />Ordinary gamepads work — Xbox, PlayStation, Switch Pro and so on.</li>
-  <li><strong>Open the screen and press any button</strong><br />The browser finds the controller and you are in control.</li>
+  <li><strong>Connect the controller to your Mac (or PC)</strong><br />Plug it in over USB, or put it in pairing mode and connect it from System Settings → Bluetooth. Ordinary gamepads work — Xbox, PlayStation, Switch Pro and so on.</li>
+  <li><strong>Open mywant-gui</strong><br />Go to <a href="http://localhost:8081" target="_blank" rel="noopener">http://localhost:8081</a>.</li>
+  <li><strong>Press any button on the controller once</strong><br />Browsers keep a controller hidden from the page until a button is pressed. One press, and you are in control.</li>
 </ol>
+<h4>Setup ②: connect over WebHID in Chrome (Mac)</h4>
+<p>In Chrome on a Mac you can also connect straight from the screen's settings. Allow it once and it reconnects by itself from then on — and a Switch Pro Controller rumbles as you play.</p>
+<ol class="steps">
+  <li><strong>Open Menu → Settings</strong></li>
+  <li><strong>Click "コントローラーを接続" (Connect controller) under "Controller (WebHID)"</strong><br />Browsers require this one button to be pressed with a mouse click.</li>
+  <li><strong>In Chrome's small dialog, pick the controller and press "Connect"</strong></li>
+  <li><strong>Done when the button turns green ("接続済み", connected) and shows the controller's name</strong><br />The next time you open the screen, it connects by itself.</li>
+</ol>
+${shot('settings-controller.jpg', '"Controller (WebHID)" and "Interaction Mode" in Settings')}
 <div class="box">
-  <p class="box-title"><i data-lucide="usb"></i>Even more reliable in Chrome on a Mac</p>
-  <p>Connect it from <strong>Settings</strong> in the Menu → "Controller (WebHID)", and a controller you have allowed once reconnects by itself next time. A Switch Pro Controller also rumbles as you play.</p>
+  <p class="box-title"><i data-lucide="lock"></i>Playing on the canvas? Use Game mode</p>
+  <p>Set <strong>Interaction Mode</strong> in the same Settings to <strong>Game</strong> and the canvas's tiles stay where they are, so walking the board with a gamepad never moves one by accident. Switch back to <strong>Edit</strong> to rearrange them.</p>
 </div>
 <h4>What the buttons do</h4>
 <dl class="terms">
@@ -316,6 +327,13 @@ Steer the screen on your TV from the sofa, or browse and open your Wants without
   <p>With the canvas extension (mywant-guiex) you also get zoom on the right stick, jumps from tile to tile on L2 / R2, and moving a tile by holding A.</p>
 </div>
 ${shot("help-gamepad.jpg", "\"Gamepad Layout\" in Help: a picture of the pad and what each button does")}
+<h4>When it doesn't work</h4>
+<ul>
+  <li><strong>Nothing happens</strong>: click the page, then press a controller button again.</li>
+  <li><strong>"このブラウザは WebHID 未対応です" (this browser has no WebHID)</strong>: WebHID is Chrome-family only. Other browsers work with setup ①.</li>
+  <li><strong>Another app is using the controller</strong>: close the game or app holding it, then try again.</li>
+  <li><strong>What does each button do?</strong>: "Gamepad Layout" under Help in the Menu (the <code>?</code> key) has a picture.</li>
+</ul>
 `,
         },
         {
