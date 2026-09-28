@@ -912,6 +912,7 @@ export const Header: React.FC<HeaderProps> = ({
             compact={compact}
             bubble={bubbleCell}
             focusedCell={isHeaderFocused ? hBtns[headerFocusIdx]?.id : undefined}
+            board={showZModeLamp}
           />
 
           <h1 className="hidden xs:block xs:text-[10.5px] sm:text-xl font-bold text-gray-900 dark:text-white whitespace-nowrap">{title}</h1>
@@ -943,11 +944,6 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: full-height flush button grid */}
         <div className="flex items-stretch self-stretch -my-2 sm:-my-4 min-w-0 overflow-hidden">
-
-          {/* The board's mode lamp, when the page has a board — see the
-              headerModeLamp slot. Leftmost: a status light reads better
-              apart from the buttons that do things. */}
-          {showZModeLamp && <Slot name="headerModeLamp" below={!isBottom} onPointerDown={cellTick} />}
 
           {/* Minimap - mobile only */}
           {onMinimapToggle && (

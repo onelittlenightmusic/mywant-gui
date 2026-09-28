@@ -37,8 +37,14 @@ export interface ExtensionMenuItem {
 export interface ExtensionSlots {
   /** Mounted once at the app root, inside the router. Render nothing or float. */
   appRoot: ComponentType;
-  /** The header's mode lamp, on a page that asks for one (showZModeLamp). */
-  headerModeLamp: ComponentType<{ below: boolean; onPointerDown: () => void }>;
+  /**
+   * Cells of the global control pill, before its bell — an extension's own
+   * switches, in the one place every tab carries (the canvas puts its mode
+   * lamp here). `board` is whether this page has a board (the header's
+   * showZModeLamp); `compact` the phone's shrunk pill, whose cells are hidden
+   * until it opens.
+   */
+  pillCells: ComponentType<{ board: boolean; compact: boolean; below: boolean; onPointerDown?: () => void }>;
   /** Over the header, for things waiting on an answer said in the bubble. */
   interactOverlay: ComponentType<{ onSay: (text: string) => Promise<void> | void }>;
   /** Beside the header's bubble: who answers what is said in it. */

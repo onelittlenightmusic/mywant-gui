@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAttentionStore } from '@/stores/attentionStore';
+import { Slot } from '@/extensions/Slot';
 import { useMarkJumpStore } from '@/stores/markJumpStore';
 import type { AttentionItem } from '@/api/client';
 import { classNames } from '@/utils/helpers';
@@ -70,10 +71,16 @@ export interface GlobalControlPillProps {
    * 'pill-bell', 'pill-talk'), ringed the way the header's own cells are.
    */
   focusedCell?: string;
+  /**
+   * This page has a board (the header's showZModeLamp) — passed on to the
+   * extensions' pillCells, so a switch for the board can show only where
+   * there is one.
+   */
+  board?: boolean;
 }
 
 export const GlobalControlPill: React.FC<GlobalControlPillProps> = ({
-  isBottom, attention, attentionColor, onBell, onPointerDown, compact = false, bubble, focusedCell,
+  isBottom, attention, attentionColor, onBell, onPointerDown, compact = false, bubble, focusedCell, board = false,
 }) => {
   const ring = (id: string) => focusedCell === id && 'ring-2 ring-inset ring-sky-400';
   const [open, setOpen] = useState(false);
@@ -249,6 +256,10 @@ export const GlobalControlPill: React.FC<GlobalControlPillProps> = ({
               </button>
             </Tooltip>
           )}
+
+          {/* The extensions' own cells (the canvas's mode lamp), before the
+              bell so the bell keeps the rounded end when there is no talk. */}
+          <Slot name="pillCells" board={board} compact={compact} below={!isBottom} onPointerDown={onPointerDown} />
 
           {/* Bell — the menu's attention dot, repeated where every tab has it. */}
           <Tooltip label={attention ? 'Something is waiting in the menu' : 'Nothing new'} below={!isBottom}>
