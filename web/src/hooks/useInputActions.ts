@@ -1487,6 +1487,42 @@ function _syntheticGamepad(frame: { buttons: boolean[]; axes: number[] }): Gamep
   } as unknown as Gamepad;
 }
 
+// Buttons already down when this tab came back to the front — ignored until
+// they are let go.
+//
+// The poll runs on requestAnimationFrame, which stops while the tab is hidden,
+// so a button pressed elsewhere is never seen going down; the first frame back
+// sees it held, reads that as a fresh press, and on its release A fires
+// 'confirm'. The extension's Warp is exactly that: A pressed on another site's
+// tab brings this one forward with A still down, and the card that had focus
+// here was opened as if A had been pressed on it. What began on another tab
+// belongs to that tab.
+const _heldSinceReturn = new Set<number>();
+let _hiddenSincePoll = false;
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) _hiddenSincePoll = true;
+  });
+}
+
+/** The frame with every button held since the tab came back reading as up. */
+function _maskHeldSinceReturn(frame: { buttons: boolean[]; axes: number[] }): { buttons: boolean[]; axes: number[] } {
+  if (_hiddenSincePoll) {
+    _hiddenSincePoll = false;
+    _heldSinceReturn.clear();
+    frame.buttons.forEach((p, i) => { if (p) _heldSinceReturn.add(i); });
+  }
+  if (_heldSinceReturn.size === 0) return frame;
+  return {
+    axes: frame.axes,
+    buttons: frame.buttons.map((p, i) => {
+      if (!_heldSinceReturn.has(i)) return p;
+      if (!p) _heldSinceReturn.delete(i);
+      return false;
+    }),
+  };
+}
+
 function _pollGamepads(): void {
   // Processing is wrapped so a throw can never skip the re-schedule below.
   // This loop is self-perpetuating: the requestAnimationFrame at the end is
@@ -1504,7 +1540,7 @@ function _pollGamepads(): void {
     // from the shared source — see controllerHub.getControllerState. Processed as
     // one synthetic gamepad at index 0.
     const state = getControllerState();
-    if (state) _processGamepad(0, _syntheticGamepad(state));
+    if (state) _processGamepad(0, _syntheticGamepad(_maskHeldSinceReturn(state)));
   } catch (err) {
     console.error('[useInputActions] gamepad poll failed', err);
   }
