@@ -3,6 +3,7 @@ import { ExternalLink, RefreshCw } from 'lucide-react';
 import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { Want } from '@/types/want';
+import { myDeviceId } from '@/hooks/useDeviceSession';
 
 /**
  * Hosts that refuse to be framed as-is but have a way in. Mirrored by
@@ -102,7 +103,8 @@ export function openWebWant(want: Want): void {
   fetch(`/api/v1/web-wants/${encodeURIComponent(typeName)}/launch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ target_url: pageUrl, field_values: values, fill_only: true }),
+    // device: the tab opens in this browser, not whichever one is home.
+    body: JSON.stringify({ target_url: pageUrl, field_values: values, fill_only: true, device: myDeviceId }),
   })
     .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); })
     .catch(err => {

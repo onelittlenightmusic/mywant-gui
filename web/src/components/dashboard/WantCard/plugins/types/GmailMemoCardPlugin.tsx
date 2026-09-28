@@ -6,6 +6,7 @@ import { CardFrame, CardFrameBadge, CardFrameTitle, CardFrameNote } from '../../
 import { useDataTypes } from '@/hooks/useDataTypes';
 import { resolveLucideIcon } from '@/utils/subtypeIcons';
 import { useInputActions } from '@/hooks/useInputActions';
+import { myDeviceId } from '@/hooks/useDeviceSession';
 
 /**
  * One remembered mail: what it was about, who sent it, and a way back to it.
@@ -67,7 +68,8 @@ const GmailMemoContentSection: React.FC<WantCardPluginProps> = ({ want, isFocuse
       const res = await fetch('/api/v1/web-wants/open', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: emailUrl }),
+        // device: the mail opens in this browser, not whichever one is home.
+        body: JSON.stringify({ url: emailUrl, device: myDeviceId }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch (err) {
