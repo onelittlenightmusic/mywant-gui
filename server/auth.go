@@ -27,6 +27,7 @@ const (
 // the SPA, every other API route — still requires Basic auth.
 var inspectorTokenPaths = []string{
 	"/inspector-overlay.standalone.js", // the loader the bookmarklet injects
+	"/mywant-embed.js",                 // the GUI's components it mounts (mywant-guiex's embed bundle)
 	"/api/v1/web-wants/",               // active-inspection, capture, suggest-name
 	"/api/v1/webhooks/",                // per-session capture webhook
 	"/api/v1/system/pause",             // the control pill's emergency stop

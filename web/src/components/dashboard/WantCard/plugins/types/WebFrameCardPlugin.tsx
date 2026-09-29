@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
@@ -140,10 +140,27 @@ export function openWebWant(want: Want): void {
  * once it has loaded (MYWANT_FILL_FRAME — this page cannot reach into a
  * cross-origin frame). Filled, never submitted.
  */
+/**
+ * Something to show in place of the page, with what a press on it does.
+ *
+ * Where the card is drawn somewhere the page itself is — the browser
+ * extension's warp sidebar, on that very page — framing it again would be a
+ * picture of what is already all around it. There the card shows where it
+ * leads instead (the board, as last seen) and a press goes there. Provided by
+ * mywant-guiex's embed (WarpSidebar); absent everywhere in the app.
+ */
+export interface WebFrameStandIn {
+  image?: string;
+  label: string;
+  onPress: () => void;
+}
+export const WebFrameStandInContext = createContext<WebFrameStandIn | null>(null);
+
 const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
   want, isFocused, isExpanded, isInnerFocused, onEnterInnerFocus, onExitInnerFocus,
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const standIn = useContext(WebFrameStandInContext);
   const current = (want.state?.current ?? {}) as Record<string, unknown>;
   const params = (want.spec?.params ?? {}) as Record<string, unknown>;
   const labels = want.metadata?.labels ?? {};
@@ -267,6 +284,23 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
     e.stopPropagation();
     openWebWant(want);
   };
+
+  if (standIn) {
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); standIn.onPress(); }}
+        className="relative w-full h-full min-h-0 overflow-hidden bg-gradient-to-br from-sky-300 to-sky-600 text-left"
+        title={standIn.label}
+      >
+        {standIn.image && <img src={standIn.image} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />}
+        {/* At the foot: the card's own badges sit along its top edge. */}
+        <span className="absolute left-2 right-12 bottom-2 flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 text-white text-[0.65rem]">
+          <ExternalLink className="w-3 h-3 flex-shrink-0" />
+          <span className="truncate">{standIn.label}</span>
+        </span>
+      </button>
+    );
+  }
 
   // The server asked the page when the type was made, and it said no
   // (X-Frame-Options / frame-ancestors). A frame here would only ever be the

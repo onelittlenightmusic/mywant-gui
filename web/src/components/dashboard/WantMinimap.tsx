@@ -3,6 +3,7 @@ import { useIconFont } from '@/hooks/useDisplaySettings';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
 import { Want } from '@/types/want';
 import { classNames } from '@/utils/helpers';
+import { minimapSurfaceClass } from './minimapSurface';
 import { useColorMode } from '@/hooks/useColorMode';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { useMinimapFocusStore } from '@/stores/minimapFocusStore';
@@ -186,6 +187,7 @@ export interface WantMinimapRef {
  *
  * Fixed position on the right side, matches WantGrid layout (3 columns)
  */
+
 export const WantMinimap = forwardRef<WantMinimapRef, WantMinimapProps>(({
   wants,
   drafts,
@@ -248,10 +250,7 @@ export const WantMinimap = forwardRef<WantMinimapRef, WantMinimapProps>(({
     <div
       className={classNames(
         "fixed right-0 w-full sm:w-[480px] border-l transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-        "border-gray-300/60 dark:border-gray-700/50",
-        isCanvasMode
-          ? "bg-slate-100/50 dark:bg-gray-900/60"
-          : "bg-slate-100/90 dark:bg-gray-900/80 p-4 overflow-hidden",
+        minimapSurfaceClass(isCanvasMode),
         // Out of the header, not in from the side.
         //
         // It used to arrive from the right edge, which is a direction nothing
