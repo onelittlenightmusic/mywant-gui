@@ -45,6 +45,21 @@ export interface ExtensionSlots {
    * until it opens.
    */
   pillCells: ComponentType<{ board: boolean; compact: boolean; below: boolean; onPointerDown?: () => void }>;
+  /**
+   * The first cells of a web want's page pill (the expanded card's, /w/:id's)
+   * — how the page is moved through: the canvas puts the browser extension's
+   * own Browse / Canvas switch and mode lamp here, the cells its pill has on a
+   * page of its own. Filled, it replaces the card's plain Browse / Canvas
+   * switch. `frameName` names the frame, `frameWindow` gives its window (to
+   * tell its messages from others'), `canvas` / `setCanvas` are the card's
+   * Browse / Canvas.
+   */
+  webFramePillCells: ComponentType<{
+    frameName: string;
+    frameWindow: () => Window | null;
+    canvas: boolean;
+    setCanvas: (on: boolean) => void;
+  }>;
   /** Over the header, for things waiting on an answer said in the bubble. */
   interactOverlay: ComponentType<{ onSay: (text: string) => Promise<void> | void }>;
   /** Beside the header's bubble: who answers what is said in it. */

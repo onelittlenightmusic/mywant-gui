@@ -56,12 +56,10 @@ export const CONTROL_PILL_LABELS = {
   warp: 'Warp',
   save: 'Save',
   ask: 'Ask',
-  // A web want's page, framed (the want card's bar) or on its own page.
+  // How a page is moved through (shared/pageCells in the canvas, and the web
+  // want card's plain switch).
   browse: 'Browse',
   canvas: 'Canvas',
-  zoom: 'Zoom',
-  reload: 'Reload',
-  open: 'Open',
 } as const;
 
 // ── Design ───────────────────────────────────────────────────────────────────

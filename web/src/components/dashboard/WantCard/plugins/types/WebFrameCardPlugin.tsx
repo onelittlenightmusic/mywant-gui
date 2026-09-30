@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, Globe, Map as MapIcon, Minus, Plus, RefreshCw } from 'lucide-react';
+import { ExternalLink, Globe, Map as MapIcon } from 'lucide-react';
 import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { Want } from '@/types/want';
@@ -8,6 +8,8 @@ import { writeWantState } from '@/api/wantState';
 import { lendController } from '@/lib/controllerHub';
 import { useOverlayDesign } from '@/components/overlay';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { Slot } from '@/extensions/Slot';
+import { extensionSlot } from '@/extensions/registry';
 import { classNames } from '@/utils/helpers';
 import { controlPillVars, ensureControlPillCss, CONTROL_PILL_LABELS } from '@/shared/controlPill';
 
@@ -41,19 +43,17 @@ function toEmbeddableUrl(raw: string): string {
  * How large the page is drawn inside the card. A card is a small window onto a
  * page laid out for a whole screen, so by default the page is shown at half
  * size — laid out as if the card were twice as wide, then scaled down — and
- * more of it fits. Kept per want in the `zoom` state field, so a card someone
- * has zoomed stays that way.
+ * more of it fits. A `zoom` in the want's state (0.25–1) is used instead.
  *
  * Web want types do not declare `zoom`, so the server files it under
  * hidden_state; writeWantState shows it in current until the server's copy
  * arrives. Read from either.
  */
 const DEFAULT_ZOOM = 0.5;
-const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1];
 
 function readZoom(want: Want): number {
   const raw = Number(want.state?.current?.zoom ?? want.hidden_state?.zoom);
-  return Number.isFinite(raw) && raw >= ZOOM_STEPS[0] && raw <= 1 ? raw : DEFAULT_ZOOM;
+  return Number.isFinite(raw) && raw >= 0.25 && raw <= 1 ? raw : DEFAULT_ZOOM;
 }
 
 /**
@@ -82,11 +82,6 @@ function readFrameField(want: Want, key: string): unknown {
 function readFrameHistory(want: Want): FrameVisit[] {
   const raw = readFrameField(want, 'frame_history');
   return Array.isArray(raw) ? raw.filter((v): v is FrameVisit => !!v && typeof v.url === 'string') : [];
-}
-
-function stepZoom(zoom: number, dir: 1 | -1): number {
-  const next = dir > 0 ? ZOOM_STEPS.find(z => z > zoom + 0.001) : [...ZOOM_STEPS].reverse().find(z => z < zoom - 0.001);
-  return next ?? zoom;
 }
 
 /**
@@ -263,10 +258,6 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
   const onOwnPage = standalone && !onExitInnerFocus;
   const zoom = onOwnPage ? 1 : readZoom(want);
   const wantId = want.metadata?.id || want.id || '';
-  const setZoom = (e: React.MouseEvent, next: number) => {
-    e.stopPropagation();
-    if (wantId && next !== zoom) writeWantState(wantId, { zoom: next });
-  };
 
   // Filling the framed page. Once per (page, values): on the frame's first load,
   // and again when the values change — not on every load, which would type the
@@ -306,6 +297,7 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
   const isDark = useDarkMode();
   const hasExtension = document.documentElement.dataset.mywantExtension === 'true';
   const viewable = standalone && hasExtension;
+  const hasPageCells = extensionSlot('webFramePillCells').length > 0;
   const [canvas, setCanvas] = useState(false);
   // The first load of a page it resumes also asks for the scroll back.
   const scrollBack = useRef(frameSrc !== src && savedScroll > 0 ? { url: frameSrc, y: savedScroll } : null);
@@ -583,87 +575,45 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
         {keysHere && (
           <div aria-hidden className="absolute inset-0 z-[5] pointer-events-none ring-4 ring-inset ring-sky-400/80" />
         )}
-        {/* The page's controls: a control pill (shared/controlPill) in the
-            overlay design this person picked — the header pill's height, icons
-            and words — only as wide as its cells, floating in the page's top
-            right corner so it costs the page no height. On its own page
-            (/w/:id) it keeps clear of the notification bell there
-            (WantPushToggle). */}
-        <div
-          className={classNames('mwp-pill absolute top-1 z-10 shadow-lg', isDark && 'mwp-dark', onOwnPage ? 'right-[56px]' : 'right-1')}
-          style={{ ...(controlPillVars(design.portable) as React.CSSProperties), height: 40 }}
-        >
-          <div className="mwp-row">
-            {viewable && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setCanvas(c => !c); }}
-                className="mwp-cell mwp-start"
-                title={canvas ? 'キャンバスモード（タップでブラウズへ・b）' : 'ブラウズモード（タップでキャンバスへ・c）'}
-                aria-pressed={canvas}
-              >
-                <span className="mwp-icon">{canvas ? <MapIcon /> : <Globe />}</span>
-                <span className="mwp-label">{canvas ? CONTROL_PILL_LABELS.canvas : CONTROL_PILL_LABELS.browse}</span>
-              </button>
-            )}
-            {!onOwnPage && (
-              <>
+        {/* The browser extension's pill, for how the page is moved through —
+            the same cells, nothing of the card's own: a control pill
+            (shared/controlPill) in the overlay design this person picked, only
+            as wide as its cells, floating in the page's top right corner so it
+            costs the page no height. Only where the extension can do it (a
+            live frame, the extension there). On its own page (/w/:id) it keeps
+            clear of the notification bell there (WantPushToggle). */}
+        {viewable && (
+          <div
+            className={classNames('mwp-pill absolute top-1 z-10 shadow-lg', isDark && 'mwp-dark', onOwnPage ? 'right-[56px]' : 'right-1')}
+            style={{ ...(controlPillVars(design.portable) as React.CSSProperties), height: 40 }}
+          >
+            <div className="mwp-row">
+              {/* How the page is moved through: the extensions' cells when there
+                  are (the canvas's — the browser extension's own Browse / Canvas
+                  and mode lamp), else a plain Browse / Canvas switch. */}
+              {hasPageCells ? (
+                <Slot
+                  name="webFramePillCells"
+                  frameName={frameName}
+                  frameWindow={() => iframeRef.current?.contentWindow ?? null}
+                  canvas={canvas}
+                  setCanvas={setCanvas}
+                />
+              ) : (
                 <button
                   type="button"
-                  onClick={(e) => setZoom(e, stepZoom(zoom, -1))}
-                  disabled={zoom <= ZOOM_STEPS[0]}
-                  className={classNames('mwp-cell !min-w-[36px] !px-1', viewable ? 'mwp-divided' : 'mwp-start')}
-                  title="縮小"
-                  aria-label="縮小"
+                  onClick={(e) => { e.stopPropagation(); setCanvas(c => !c); }}
+                  className="mwp-cell mwp-start mwp-end"
+                  title={canvas ? 'キャンバスモード（タップでブラウズへ・b）' : 'ブラウズモード（タップでキャンバスへ・c）'}
+                  aria-pressed={canvas}
                 >
-                  <span className="mwp-icon"><Minus /></span>
+                  <span className="mwp-icon">{canvas ? <MapIcon /> : <Globe />}</span>
+                  <span className="mwp-label">{canvas ? CONTROL_PILL_LABELS.canvas : CONTROL_PILL_LABELS.browse}</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={(e) => setZoom(e, DEFAULT_ZOOM)}
-                  className="mwp-cell !min-w-[44px] !px-1"
-                  title={`${Math.round(DEFAULT_ZOOM * 100)}% に戻す`}
-                >
-                  <span className="font-mono text-[12px] font-bold leading-none">{Math.round(zoom * 100)}%</span>
-                  <span className="mwp-label">{CONTROL_PILL_LABELS.zoom}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => setZoom(e, stepZoom(zoom, 1))}
-                  disabled={zoom >= 1}
-                  className="mwp-cell !min-w-[36px] !px-1"
-                  title="拡大"
-                  aria-label="拡大"
-                >
-                  <span className="mwp-icon"><Plus /></span>
-                </button>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                // A reload is a fresh start, at the want's own page: fill it again.
-                frameFill.current = { loadedSrc: '', sent: '' };
-                if (iframeRef.current) iframeRef.current.src = src;
-              }}
-              className={classNames('mwp-cell', viewable || !onOwnPage ? 'mwp-divided' : 'mwp-start')}
-              title="再読み込み"
-            >
-              <span className="mwp-icon"><RefreshCw /></span>
-              <span className="mwp-label">{CONTROL_PILL_LABELS.reload}</span>
-            </button>
-            <button
-              type="button"
-              onClick={openRealSite}
-              className="mwp-cell mwp-divided mwp-end"
-              title="実サイトを新しいタブで開く"
-            >
-              <span className="mwp-icon"><ExternalLink /></span>
-              <span className="mwp-label">{CONTROL_PILL_LABELS.open}</span>
-            </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
