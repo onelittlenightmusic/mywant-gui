@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, Globe, Map as MapIcon, Minus, Plus, RefreshCw } from 'lucide-react';
 import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { Want } from '@/types/want';
 import { myDeviceId } from '@/hooks/useDeviceSession';
 import { writeWantState } from '@/api/wantState';
+import { lendController } from '@/lib/controllerHub';
 import { useOverlayDesign } from '@/components/overlay';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { classNames } from '@/utils/helpers';
@@ -53,6 +54,34 @@ const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1];
 function readZoom(want: Want): number {
   const raw = Number(want.state?.current?.zoom ?? want.hidden_state?.zoom);
   return Number.isFinite(raw) && raw >= ZOOM_STEPS[0] && raw <= 1 ? raw : DEFAULT_ZOOM;
+}
+
+/**
+ * Where the page in a live frame (an expanded card, /w/:id) has got to, kept in
+ * the want's state so the want opens there again — on another tab, or on a
+ * phone through Open w:
+ *
+ *   frame_url      the page the frame is on
+ *   frame_from     the page it started from — frame_url counts only while the
+ *                  want still starts there (new values, a new start: fresh)
+ *   frame_scroll   how far down it was
+ *   frame_history  the pages it went through, oldest first, each with when
+ *
+ * The frame is cross-origin, so only the extension can read these off it
+ * (MYWANT_FRAME_PLACE, from background.js's frame stand-in); without it — a
+ * phone — they are only read. Undeclared by web want types, so filed under
+ * hidden_state, as zoom is.
+ */
+const FRAME_HISTORY_MAX = 30;
+type FrameVisit = { url: string; at: string };
+
+function readFrameField(want: Want, key: string): unknown {
+  return want.state?.current?.[key] ?? want.hidden_state?.[key];
+}
+
+function readFrameHistory(want: Want): FrameVisit[] {
+  const raw = readFrameField(want, 'frame_history');
+  return Array.isArray(raw) ? raw.filter((v): v is FrameVisit => !!v && typeof v.url === 'string') : [];
 }
 
 function stepZoom(zoom: number, dir: 1 | -1): number {
@@ -215,6 +244,15 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
     labels['source-url'] ||
     '';
   const src = url ? toEmbeddableUrl(url) : '';
+  // The page the frame starts at: where it was left, when it was left from
+  // this same start. Settled once per start — the frame saving where it goes
+  // must not send it there again (a reload under the person's feet).
+  const savedUrl = readFrameField(want, 'frame_url');
+  const savedFrom = readFrameField(want, 'frame_from');
+  const savedScroll = Number(readFrameField(want, 'frame_scroll')) || 0;
+  const resumes = typeof savedUrl === 'string' && !!savedUrl && savedFrom === src;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const frameSrc = useMemo(() => (resumes ? savedUrl as string : src), [src]);
 
   const standalone = !onEnterInnerFocus;
   const live = standalone || !!isInnerFocused;
@@ -269,9 +307,16 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
   const hasExtension = document.documentElement.dataset.mywantExtension === 'true';
   const viewable = standalone && hasExtension;
   const [canvas, setCanvas] = useState(false);
+  // The first load of a page it resumes also asks for the scroll back.
+  const scrollBack = useRef(frameSrc !== src && savedScroll > 0 ? { url: frameSrc, y: savedScroll } : null);
   const sendView = (on: boolean) => {
     if (!viewable) return;
-    window.postMessage({ source: 'mywant-gui', type: 'MYWANT_FRAME_VIEW', frameName, canvas: on }, window.location.origin);
+    const back = scrollBack.current;
+    scrollBack.current = null;
+    window.postMessage({
+      source: 'mywant-gui', type: 'MYWANT_FRAME_VIEW', frameName, canvas: on,
+      ...(back ? { scrollUrl: back.url, scrollY: back.y } : {}),
+    }, window.location.origin);
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (frameFill.current.loadedSrc) sendView(canvas); }, [canvas, viewable]);
@@ -286,26 +331,110 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [viewable]);
-  // b / c here too, as the pill hears them on a page of its own: b Browse,
-  // c Canvas. In the capture phase, ahead of the board's own c (its canvas
-  // mode), while this page is what is in front. Not while typing, not with a
-  // modifier. With the frame focused, the keys are the frame's — the CursorMan
-  // there, or the stand-in pill's c, sends them back as MYWANT_FRAME_VIEW_SET.
+
+  // Where the page has got to, as the extension reads it off the frame, into
+  // the want's state (see FRAME_HISTORY_MAX). A new page is written at once,
+  // with a line in the history; a scroll once it has come to rest.
+  const placeRef = useRef({ url: typeof savedUrl === 'string' ? savedUrl : '', scroll: savedScroll });
+  const wantRef = useRef(want);
+  wantRef.current = want;
+  useEffect(() => {
+    if (!viewable || !wantId) return;
+    let scrollTimer: ReturnType<typeof setTimeout> | undefined;
+    const onMessage = (e: MessageEvent) => {
+      const m = e.data;
+      if (e.source !== window || !m || m.source !== 'mywant-ext' || m.type !== 'MYWANT_FRAME_PLACE') return;
+      if (m.frameName !== frameName || typeof m.url !== 'string' || !m.url) return;
+      const scroll = Math.max(0, Math.round(Number(m.scroll) || 0));
+      const place = placeRef.current;
+      if (m.url !== place.url) {
+        clearTimeout(scrollTimer);
+        placeRef.current = { url: m.url, scroll };
+        const history = readFrameHistory(wantRef.current);
+        const next = history[history.length - 1]?.url === m.url
+          ? history
+          : [...history, { url: m.url, at: new Date().toISOString() }].slice(-FRAME_HISTORY_MAX);
+        writeWantState(wantId, { frame_url: m.url, frame_from: src, frame_scroll: scroll, frame_history: next });
+        return;
+      }
+      if (scroll === place.scroll) return;
+      place.scroll = scroll;
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => writeWantState(wantId, { frame_scroll: scroll }), 1500);
+    };
+    window.addEventListener('message', onMessage);
+    return () => {
+      clearTimeout(scrollTimer);
+      window.removeEventListener('message', onMessage);
+    };
+  }, [viewable, wantId, frameName, src]);
+
+  // Whether the page has the keys: the frame focused (a click into it), or
+  // Canvas, where every key goes to the CursorMan in it. Shown as a ring round
+  // the page (below) — the one a board card wears while you are inside it,
+  // thicker for a page this size — so it is plain at a glance where the
+  // arrows will go.
+  const [frameFocused, setFrameFocused] = useState(false);
+  useEffect(() => {
+    if (!live) return;
+    const check = () => setFrameFocused(!!iframeRef.current && document.activeElement === iframeRef.current);
+    // Focus moving into a frame shows here only as this window's blur.
+    const later = () => setTimeout(check, 0);
+    check();
+    window.addEventListener('blur', later);
+    window.addEventListener('focus', later);
+    document.addEventListener('focusin', later);
+    return () => {
+      window.removeEventListener('blur', later);
+      window.removeEventListener('focus', later);
+      document.removeEventListener('focusin', later);
+    };
+  }, [live]);
+  const keysHere = standalone && (canvas || frameFocused);
+
+  // The keys and the controller, as on a page of its own. In Browse, c here
+  // turns Canvas on, as the pill hears it (the board's own c comes after: this
+  // is in the capture phase). In Canvas they are the CursorMan's: every key
+  // pressed here goes to it in the frame — through the extension
+  // (MYWANT_FRAME_KEY), never to the page's own scripts — and it answers them
+  // exactly as on a tab (cursorKeydown), b included. Kept here: typing into a
+  // field of the GUI's, Escape (the expanded card's way out), and the
+  // browser's own shortcuts (Cmd / Ctrl with anything but an arrow). With the
+  // frame focused none of this runs — the keys land in the frame already.
+  // The controller is lent to the frame's CursorMan for as long.
   useEffect(() => {
     if (!viewable) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.repeat || e.isComposing || e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
-      const key = e.key.toLowerCase();
-      if (key !== 'b' && key !== 'c') return;
+      if (e.isComposing) return;
       const t = document.activeElement as HTMLElement | null;
       if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const down = e.type === 'keydown';
+      if (!canvas) {
+        if (!down || e.repeat || e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+        if (e.key !== 'c' && e.key !== 'C') return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        setCanvas(true);
+        return;
+      }
+      if (e.key === 'Escape') return;
+      if ((e.metaKey || e.ctrlKey) && !e.key.startsWith('Arrow')) return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      setCanvas(key === 'c');
+      window.postMessage({
+        source: 'mywant-gui', type: 'MYWANT_FRAME_KEY', frameName, kind: down ? 'down' : 'up',
+        key: e.key, shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey, altKey: e.altKey, repeat: e.repeat,
+      }, window.location.origin);
     };
     window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [viewable]);
+    window.addEventListener('keyup', onKey, true);
+    if (canvas) lendController(frameName);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('keyup', onKey, true);
+      if (canvas) lendController(null);
+    };
+  }, [viewable, canvas, frameName]);
 
   // React 18 does not pass `inert` through, so it is set on the element.
   useEffect(() => {
@@ -423,9 +552,10 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
           data-inner-focus
           data-inner-focus-default
           ref={iframeRef}
-          src={src}
+          src={frameSrc}
           name={frameName}
-          onLoad={() => { frameFill.current.loadedSrc = src; fillFrame(); sendView(canvas); }}
+          // Filled only when it starts at the want's own page, not where it was left.
+          onLoad={() => { frameFill.current.loadedSrc = frameSrc; fillFrame(); sendView(canvas); }}
           className={zoom === 1 ? 'flex-1 w-full min-h-0 border-0' : 'absolute left-0 top-0 border-0'}
           // Laid out 1/zoom times the card's size, then scaled back down into it.
           style={{
@@ -449,6 +579,9 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
             title="クリックでページを操作"
             onClick={() => onEnterInnerFocus?.()}
           />
+        )}
+        {keysHere && (
+          <div aria-hidden className="absolute inset-0 z-[5] pointer-events-none ring-4 ring-inset ring-sky-400/80" />
         )}
         {/* The page's controls: a control pill (shared/controlPill) in the
             overlay design this person picked — the header pill's height, icons
@@ -510,7 +643,7 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                // A reload is a fresh page: fill it again.
+                // A reload is a fresh start, at the want's own page: fill it again.
                 frameFill.current = { loadedSrc: '', sent: '' };
                 if (iframeRef.current) iframeRef.current.src = src;
               }}

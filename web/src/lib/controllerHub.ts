@@ -131,8 +131,20 @@ export function rumbleTap(ms = 150): void {
   }
 }
 
-/** The current controller state (WebHID-preferred, Gamepad-API fallback). */
+/**
+ * Who has the controller besides the GUI, if anyone. A web want's page in
+ * Canvas (WebFrameCardPlugin) lends it to the CursorMan in its frame — which
+ * gets the same frames from the extension, as a CursorMan on a tab of its own
+ * does — so the board and the page do not both answer one press.
+ */
+let lentTo: string | null = null;
+export function lendController(to: string | null): void {
+  lentTo = to;
+}
+
+/** The current controller state (WebHID-preferred, Gamepad-API fallback); none while lent. */
 export function getControllerState(): NormalizedControllerState | null {
+  if (lentTo) return null;
   return resolver.getState();
 }
 
