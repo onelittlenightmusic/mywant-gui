@@ -130,3 +130,12 @@ export async function updateWantDependencies(
     }
   }
 }
+
+/**
+ * This want on its own, in a new tab — the /w/:id page a home-screen icon
+ * points at. The card menu's "Open w" and the expanded card's Max.
+ */
+export function openWantApp(want: Want): void {
+  const id = want.metadata?.id || want.id;
+  if (id) window.open(`/w/${id}`, '_blank', 'noopener,noreferrer');
+}

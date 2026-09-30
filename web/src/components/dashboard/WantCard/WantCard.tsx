@@ -118,6 +118,18 @@ interface WantCardProps extends SelectModeProps {
   isKbReorderSource?: boolean;
 }
 
+/** The expanded card: its margin to the screen's edge, and its usual width. */
+const EXPAND_PAD = 16;
+const EXPAND_MAX_W = 640;
+/** Wide: the most it grows to, and how much wider than usual it must get to be offered. */
+const WIDE_MAX_W = 1280;
+const WIDE_MAX_ASPECT = 1.6;
+const WIDE_MIN_GAIN = 120;
+
+function wideExpandWidth(room: number, height: number): number {
+  return Math.min(room, WIDE_MAX_W, height * WIDE_MAX_ASPECT);
+}
+
 export const WantCard: React.FC<WantCardProps> = ({
   want,
   children,
@@ -296,17 +308,24 @@ export const WantCard: React.FC<WantCardProps> = ({
   // Prevents the external-maximization useEffect from re-triggering our own expand/collapse
   const ownActionRef = useRef(false);
 
+  // Wide: as wide as the screen allows, up to a width that still reads as a
+  // card — no wider than WIDE_MAX_W, nor than WIDE_MAX_ASPECT times its
+  // height, so a tall-and-narrow window does not get a strip. Only offered
+  // where that is worth a button (canWiden). Back to the usual width each time
+  // the card is expanded.
+  const [expandWide, setExpandWide] = useState(false);
   const getTargetRect = useCallback(() => {
-    const pad = 16;
-    const maxW = 640;
-    const w = Math.min(maxW, window.innerWidth - pad * 2);
+    const room = window.innerWidth - EXPAND_PAD * 2;
+    const height = window.innerHeight * 0.82;
+    const w = Math.min(expandWide ? wideExpandWidth(room, height) : EXPAND_MAX_W, room);
     return {
-      top: Math.max(pad, window.innerHeight * 0.06),
-      left: Math.max(pad, (window.innerWidth - w) / 2),
+      top: Math.max(EXPAND_PAD, window.innerHeight * 0.06),
+      left: Math.max(EXPAND_PAD, (window.innerWidth - w) / 2),
       width: w,
-      height: window.innerHeight * 0.82,
+      height,
     };
-  }, []);
+  }, [expandWide]);
+  const canWiden = wideExpandWidth(window.innerWidth - EXPAND_PAD * 2, window.innerHeight * 0.82) >= EXPAND_MAX_W + WIDE_MIN_GAIN;
 
   const handleExpand = useCallback(() => {
     const rect = cardRef.current?.getBoundingClientRect();
@@ -333,7 +352,7 @@ export const WantCard: React.FC<WantCardProps> = ({
     const rect = cardRef.current?.getBoundingClientRect();
     if (rect) setOriginRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
     setExpandAnimated(false);
-    setTimeout(() => { setExpandShowing(false); setOriginRect(null); ownActionRef.current = false; }, 300);
+    setTimeout(() => { setExpandShowing(false); setOriginRect(null); setExpandWide(false); ownActionRef.current = false; }, 300);
     onMaximizeChange?.(null);
   }, [onMaximizeChange]);
 
@@ -1383,6 +1402,9 @@ export const WantCard: React.FC<WantCardProps> = ({
           isFullScreen={isFullScreen}
           groupNames={wantGroupNames}
           onCollapse={handleCollapse}
+          isWide={expandWide}
+          onToggleWide={canWiden || expandWide ? () => setExpandWide(w => !w) : undefined}
+          showMax
         />
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-hidden relative">

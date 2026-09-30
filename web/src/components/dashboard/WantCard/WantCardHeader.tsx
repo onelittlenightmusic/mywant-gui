@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Clock, X, Tag, Folder } from 'lucide-react';
+import { Bot, Clock, X, Tag, Folder, RectangleHorizontal, Square, Maximize } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { Want } from '@/types/want';
 import { StatusChangeIcon } from './parts/StatusChangeIcon';
@@ -9,6 +9,7 @@ import { wantTypeIconStyle, cardInkVars } from '@/components/dashboard/WantCardF
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { useCharacterStore } from '@/stores/characterStore';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { openWantApp } from '@/utils/wantUtils';
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,12 @@ export interface WantCardHeaderProps {
   /** User-defined groups this want belongs to (chips in the header). */
   groupNames?: string[];
   onCollapse?: () => void;
+  /** Whether the card is drawn wide (see WantCard's getTargetRect). */
+  isWide?: boolean;
+  /** Widen or narrow the card. Left out where the screen has no room to widen. */
+  onToggleWide?: () => void;
+  /** Offer Max: the want on its own page (/w/:id) in a new tab, as "Open w" does. */
+  showMax?: boolean;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -36,6 +43,9 @@ export const WantCardHeader: React.FC<WantCardHeaderProps> = ({
   isFullScreen = false,
   groupNames = [],
   onCollapse,
+  isWide = false,
+  onToggleWide,
+  showMax = false,
 }) => {
   const hasScheduling = !!(want.spec?.when && want.spec.when.length > 0);
 
@@ -78,8 +88,9 @@ export const WantCardHeader: React.FC<WantCardHeaderProps> = ({
       className="flex-shrink-0 flex items-center justify-between pl-4 border-b border-gray-200 dark:border-gray-700"
       style={{ backgroundColor: expandedHeaderBgColor, ...cardInkVars(typeColor, isDarkMode) }}
     >
-      {/* Title: type / name */}
-      <div className="flex items-center gap-2 min-w-0 py-2.5">
+      {/* Title: type / name — takes the spare width, so what follows sits
+          together at the right end. */}
+      <div className="flex-1 flex items-center gap-2 min-w-0 py-2.5">
         <TypeIcon
           className="w-3.5 h-3.5 flex-shrink-0"
           style={wantTypeIconStyle(want.metadata?.type ?? '', typeCategory, isDarkMode)}
@@ -137,6 +148,34 @@ export const WantCardHeader: React.FC<WantCardHeaderProps> = ({
           <StatusChangeIcon status={want.status} size="sm" />
         )}
       </div>
+
+      {/* Wide — as wide as the screen allows, and back. Same tile as Close;
+          the icons are near YouTube's theatre-mode ones (a wide frame to widen,
+          a narrower one to go back). */}
+      {onToggleWide && (
+        <button
+          onClick={onToggleWide}
+          className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 self-stretch px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 border-r border-gray-200 dark:border-gray-600 transition-colors duration-150 focus:outline-none"
+          title={isWide ? '元の幅に戻す' : '横に広げる'}
+          aria-pressed={isWide}
+        >
+          {isWide ? <Square className="w-3.5 h-3.5" /> : <RectangleHorizontal className="w-3.5 h-3.5" />}
+          <span className="text-[9px] font-bold leading-none uppercase tracking-tighter">{isWide ? 'Narrow' : 'Wide'}</span>
+        </button>
+      )}
+
+      {/* Max — the whole screen: this want on its own page, as the card
+          menu's "Open w" opens it. A fullscreen icon, as YouTube's. */}
+      {showMax && (
+        <button
+          onClick={() => openWantApp(want)}
+          className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 self-stretch px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 border-r border-gray-200 dark:border-gray-600 transition-colors duration-150 focus:outline-none"
+          title="単独のページで開く（Open w）"
+        >
+          <Maximize className="w-3.5 h-3.5" />
+          <span className="text-[9px] font-bold leading-none uppercase tracking-tighter">Max</span>
+        </button>
+      )}
 
       {/* Close button — full-height tile style */}
       <button

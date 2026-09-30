@@ -2,6 +2,7 @@ import React from 'react';
 import { Play, PlayCircle, Square, Trash2, Pause, RotateCcw, Settings, X, Archive, ArchiveRestore, Tag, ExternalLink } from 'lucide-react';
 import { Want } from '@/types/want';
 import { OverlayActionGrid, OverlayItem } from '@/components/overlay';
+import { openWantApp } from '@/utils/wantUtils';
 
 const COLS = 3;
 const ARCHIVE_LABEL = 'mywant.io/archived';
@@ -90,11 +91,7 @@ export const QuickActionsOverlay: React.FC<QuickActionsOverlayProps> = ({
     {
       icon: <ExternalLink className="w-5 h-5 text-white" />,
       label: 'Open w',
-      onClick: () => {
-        const id = want.metadata?.id || want.id;
-        if (id) window.open(`/w/${id}`, '_blank', 'noopener,noreferrer');
-        onClose();
-      },
+      onClick: () => { openWantApp(want); onClose(); },
       tone: 'info' as const,
       delay: 180,
     },
