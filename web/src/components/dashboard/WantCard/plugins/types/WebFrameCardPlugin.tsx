@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react';
-import { ExternalLink, RefreshCw } from 'lucide-react';
+import { ExternalLink, Minus, Plus, RefreshCw } from 'lucide-react';
 import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { Want } from '@/types/want';
 import { myDeviceId } from '@/hooks/useDeviceSession';
+import { writeWantState } from '@/api/wantState';
 
 /**
  * Hosts that refuse to be framed as-is but have a way in. Mirrored by
@@ -26,6 +27,30 @@ function toEmbeddableUrl(raw: string): string {
   } catch {
     return raw;
   }
+}
+
+/**
+ * How large the page is drawn inside the card. A card is a small window onto a
+ * page laid out for a whole screen, so by default the page is shown at half
+ * size — laid out as if the card were twice as wide, then scaled down — and
+ * more of it fits. Kept per want in the `zoom` state field, so a card someone
+ * has zoomed stays that way.
+ *
+ * Web want types do not declare `zoom`, so the server files it under
+ * hidden_state; writeWantState shows it in current until the server's copy
+ * arrives. Read from either.
+ */
+const DEFAULT_ZOOM = 0.5;
+const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1];
+
+function readZoom(want: Want): number {
+  const raw = Number(want.state?.current?.zoom ?? want.hidden_state?.zoom);
+  return Number.isFinite(raw) && raw >= ZOOM_STEPS[0] && raw <= 1 ? raw : DEFAULT_ZOOM;
+}
+
+function stepZoom(zoom: number, dir: 1 | -1): number {
+  const next = dir > 0 ? ZOOM_STEPS.find(z => z > zoom + 0.001) : [...ZOOM_STEPS].reverse().find(z => z < zoom - 0.001);
+  return next ?? zoom;
 }
 
 /**
@@ -187,6 +212,14 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
   const standalone = !onEnterInnerFocus;
   const live = standalone || !!isInnerFocused;
 
+  // On its own (/w/:id) the page has the whole screen, so it is drawn as is.
+  const zoom = standalone ? 1 : readZoom(want);
+  const wantId = want.metadata?.id || want.id || '';
+  const setZoom = (e: React.MouseEvent, next: number) => {
+    e.stopPropagation();
+    if (wantId && next !== zoom) writeWantState(wantId, { zoom: next });
+  };
+
   // Filling the framed page. Once per (page, values): on the frame's first load,
   // and again when the values change — not on every load, which would type the
   // values back over a page the person has since moved on to inside the frame.
@@ -326,6 +359,33 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
     <div className="flex flex-col w-full h-full min-h-0 bg-white dark:bg-gray-900">
       <div className="flex items-center gap-1.5 px-2 py-1 bg-black/80 flex-shrink-0">
         <span className="flex-1 text-[0.6rem] font-mono text-white/60 truncate">{url}</span>
+        {!standalone && (
+          <>
+            <button
+              onClick={(e) => setZoom(e, stepZoom(zoom, -1))}
+              disabled={zoom <= ZOOM_STEPS[0]}
+              className="p-0.5 rounded text-white/60 hover:text-white disabled:opacity-30 transition-colors"
+              title="縮小"
+            >
+              <Minus className="w-3 h-3" />
+            </button>
+            <button
+              onClick={(e) => setZoom(e, DEFAULT_ZOOM)}
+              className="min-w-[2.2em] text-[0.6rem] font-mono text-white/60 hover:text-white transition-colors"
+              title={`${Math.round(DEFAULT_ZOOM * 100)}% に戻す`}
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button
+              onClick={(e) => setZoom(e, stepZoom(zoom, 1))}
+              disabled={zoom >= 1}
+              className="p-0.5 rounded text-white/60 hover:text-white disabled:opacity-30 transition-colors"
+              title="拡大"
+            >
+              <Plus className="w-3 h-3" />
+            </button>
+          </>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -346,7 +406,7 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
           <ExternalLink className="w-3 h-3" />
         </button>
       </div>
-      <div className="relative flex-1 min-h-0 flex">
+      <div className="relative flex-1 min-h-0 flex overflow-hidden">
         <iframe
           data-inner-focus
           data-inner-focus-default
@@ -354,8 +414,17 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
           src={src}
           name={frameName}
           onLoad={() => { frameFill.current.loadedSrc = src; fillFrame(); }}
-          className="flex-1 w-full min-h-0 border-0"
-          style={{ pointerEvents: live ? 'auto' : 'none' }}
+          className={zoom === 1 ? 'flex-1 w-full min-h-0 border-0' : 'absolute left-0 top-0 border-0'}
+          // Laid out 1/zoom times the card's size, then scaled back down into it.
+          style={{
+            pointerEvents: live ? 'auto' : 'none',
+            ...(zoom === 1 ? {} : {
+              width: `${100 / zoom}%`,
+              height: `${100 / zoom}%`,
+              transform: `scale(${zoom})`,
+              transformOrigin: '0 0',
+            }),
+          }}
           loading="lazy"
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           title={want.metadata?.name ?? 'web'}
