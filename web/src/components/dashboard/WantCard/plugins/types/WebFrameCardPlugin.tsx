@@ -1,10 +1,17 @@
-import React, { createContext, useContext, useEffect, useRef } from 'react';
-import { ExternalLink, Minus, Plus, RefreshCw } from 'lucide-react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { ExternalLink, Globe, Map as MapIcon, Minus, Plus, RefreshCw } from 'lucide-react';
 import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { Want } from '@/types/want';
 import { myDeviceId } from '@/hooks/useDeviceSession';
 import { writeWantState } from '@/api/wantState';
+import { useOverlayDesign } from '@/components/overlay';
+import { useDarkMode } from '@/hooks/useDarkMode';
+import { classNames } from '@/utils/helpers';
+import { controlPillVars, ensureControlPillCss, CONTROL_PILL_LABELS } from '@/shared/controlPill';
+
+// The page's bar is drawn as the control pill is (see WebFrameBar).
+if (typeof document !== 'undefined') ensureControlPillCss(document);
 
 /**
  * Hosts that refuse to be framed as-is but have a way in. Mirrored by
@@ -213,7 +220,10 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
   const live = standalone || !!isInnerFocused;
 
   // On its own (/w/:id) the page has the whole screen, so it is drawn as is.
-  const zoom = standalone ? 1 : readZoom(want);
+  // An expanded card is live like that page but still a card on the board —
+  // it has a way back out (onExitInnerFocus) — so it keeps the card's zoom.
+  const onOwnPage = standalone && !onExitInnerFocus;
+  const zoom = onOwnPage ? 1 : readZoom(want);
   const wantId = want.metadata?.id || want.id || '';
   const setZoom = (e: React.MouseEvent, next: number) => {
     e.stopPropagation();
@@ -226,8 +236,9 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
   const frameFill = useRef({ loadedSrc: '', sent: '' });
   const fillKey = `${src}\n${valuesKey}`;
   // The frame's own name, so the extension fills this card's frame and not
-  // another card's showing the same page with different values.
-  const frameName = `mywant-web-${want.metadata?.id || want.id || typeName}`;
+  // another card's showing the same page with different values. A live frame
+  // (expanded, /w/:id) has one of its own, apart from the board card's.
+  const frameName = `mywant-web-${want.metadata?.id || want.id || typeName}${standalone ? '-live' : ''}`;
   const fillFrame = () => {
     const st = frameFill.current;
     if (st.loadedSrc !== src || st.sent === fillKey) return;
@@ -245,6 +256,56 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fillFrame(); }, [fillKey]);
+
+  // Browse or Canvas inside a live frame, as the pill switches them on a page
+  // of its own: Canvas brings the CursorMan into the page — its marks shaded,
+  // Z mode, the arrows its — and Browse is the page as itself. The extension
+  // does it (background.js's frameViewOf), since no pill runs in a frame; it
+  // is told again on each of the frame's loads, which start the page afresh.
+  // The CursorMan's own b / c / R1 in the frame come back here as
+  // MYWANT_FRAME_VIEW_SET, this being where the switch is.
+  const design = useOverlayDesign();
+  const isDark = useDarkMode();
+  const hasExtension = document.documentElement.dataset.mywantExtension === 'true';
+  const viewable = standalone && hasExtension;
+  const [canvas, setCanvas] = useState(false);
+  const sendView = (on: boolean) => {
+    if (!viewable) return;
+    window.postMessage({ source: 'mywant-gui', type: 'MYWANT_FRAME_VIEW', frameName, canvas: on }, window.location.origin);
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (frameFill.current.loadedSrc) sendView(canvas); }, [canvas, viewable]);
+  useEffect(() => {
+    if (!viewable) return;
+    const onMessage = (e: MessageEvent) => {
+      const m = e.data;
+      if (!m || m.source !== 'mywant-ext' || m.type !== 'MYWANT_FRAME_VIEW_SET') return;
+      if (!iframeRef.current || e.source !== iframeRef.current.contentWindow) return;
+      setCanvas(!!m.canvas);
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [viewable]);
+  // b / c here too, as the pill hears them on a page of its own: b Browse,
+  // c Canvas. In the capture phase, ahead of the board's own c (its canvas
+  // mode), while this page is what is in front. Not while typing, not with a
+  // modifier. With the frame focused, the keys are the frame's — the CursorMan
+  // there, or the stand-in pill's c, sends them back as MYWANT_FRAME_VIEW_SET.
+  useEffect(() => {
+    if (!viewable) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || e.isComposing || e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key !== 'b' && key !== 'c') return;
+      const t = document.activeElement as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setCanvas(key === 'c');
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [viewable]);
 
   // React 18 does not pass `inert` through, so it is set on the element.
   useEffect(() => {
@@ -357,55 +418,6 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
 
   return (
     <div className="flex flex-col w-full h-full min-h-0 bg-white dark:bg-gray-900">
-      <div className="flex items-center gap-1.5 px-2 py-1 bg-black/80 flex-shrink-0">
-        <span className="flex-1 text-[0.6rem] font-mono text-white/60 truncate">{url}</span>
-        {!standalone && (
-          <>
-            <button
-              onClick={(e) => setZoom(e, stepZoom(zoom, -1))}
-              disabled={zoom <= ZOOM_STEPS[0]}
-              className="p-0.5 rounded text-white/60 hover:text-white disabled:opacity-30 transition-colors"
-              title="縮小"
-            >
-              <Minus className="w-3 h-3" />
-            </button>
-            <button
-              onClick={(e) => setZoom(e, DEFAULT_ZOOM)}
-              className="min-w-[2.2em] text-[0.6rem] font-mono text-white/60 hover:text-white transition-colors"
-              title={`${Math.round(DEFAULT_ZOOM * 100)}% に戻す`}
-            >
-              {Math.round(zoom * 100)}%
-            </button>
-            <button
-              onClick={(e) => setZoom(e, stepZoom(zoom, 1))}
-              disabled={zoom >= 1}
-              className="p-0.5 rounded text-white/60 hover:text-white disabled:opacity-30 transition-colors"
-              title="拡大"
-            >
-              <Plus className="w-3 h-3" />
-            </button>
-          </>
-        )}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            // A reload is a fresh page: fill it again.
-            frameFill.current = { loadedSrc: '', sent: '' };
-            if (iframeRef.current) iframeRef.current.src = src;
-          }}
-          className="p-0.5 rounded text-white/60 hover:text-white transition-colors"
-          title="再読み込み"
-        >
-          <RefreshCw className="w-3 h-3" />
-        </button>
-        <button
-          onClick={openRealSite}
-          className="p-0.5 rounded text-white/60 hover:text-white transition-colors"
-          title="実サイトを新しいタブで開く"
-        >
-          <ExternalLink className="w-3 h-3" />
-        </button>
-      </div>
       <div className="relative flex-1 min-h-0 flex overflow-hidden">
         <iframe
           data-inner-focus
@@ -413,7 +425,7 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
           ref={iframeRef}
           src={src}
           name={frameName}
-          onLoad={() => { frameFill.current.loadedSrc = src; fillFrame(); }}
+          onLoad={() => { frameFill.current.loadedSrc = src; fillFrame(); sendView(canvas); }}
           className={zoom === 1 ? 'flex-1 w-full min-h-0 border-0' : 'absolute left-0 top-0 border-0'}
           // Laid out 1/zoom times the card's size, then scaled back down into it.
           style={{
@@ -438,6 +450,87 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
             onClick={() => onEnterInnerFocus?.()}
           />
         )}
+        {/* The page's controls: a control pill (shared/controlPill) in the
+            overlay design this person picked — the header pill's height, icons
+            and words — only as wide as its cells, floating in the page's top
+            right corner so it costs the page no height. On its own page
+            (/w/:id) it keeps clear of the notification bell there
+            (WantPushToggle). */}
+        <div
+          className={classNames('mwp-pill absolute top-1 z-10 shadow-lg', isDark && 'mwp-dark', onOwnPage ? 'right-[56px]' : 'right-1')}
+          style={{ ...(controlPillVars(design.portable) as React.CSSProperties), height: 40 }}
+        >
+          <div className="mwp-row">
+            {viewable && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setCanvas(c => !c); }}
+                className="mwp-cell mwp-start"
+                title={canvas ? 'キャンバスモード（タップでブラウズへ・b）' : 'ブラウズモード（タップでキャンバスへ・c）'}
+                aria-pressed={canvas}
+              >
+                <span className="mwp-icon">{canvas ? <MapIcon /> : <Globe />}</span>
+                <span className="mwp-label">{canvas ? CONTROL_PILL_LABELS.canvas : CONTROL_PILL_LABELS.browse}</span>
+              </button>
+            )}
+            {!onOwnPage && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => setZoom(e, stepZoom(zoom, -1))}
+                  disabled={zoom <= ZOOM_STEPS[0]}
+                  className={classNames('mwp-cell !min-w-[36px] !px-1', viewable ? 'mwp-divided' : 'mwp-start')}
+                  title="縮小"
+                  aria-label="縮小"
+                >
+                  <span className="mwp-icon"><Minus /></span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => setZoom(e, DEFAULT_ZOOM)}
+                  className="mwp-cell !min-w-[44px] !px-1"
+                  title={`${Math.round(DEFAULT_ZOOM * 100)}% に戻す`}
+                >
+                  <span className="font-mono text-[12px] font-bold leading-none">{Math.round(zoom * 100)}%</span>
+                  <span className="mwp-label">{CONTROL_PILL_LABELS.zoom}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => setZoom(e, stepZoom(zoom, 1))}
+                  disabled={zoom >= 1}
+                  className="mwp-cell !min-w-[36px] !px-1"
+                  title="拡大"
+                  aria-label="拡大"
+                >
+                  <span className="mwp-icon"><Plus /></span>
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                // A reload is a fresh page: fill it again.
+                frameFill.current = { loadedSrc: '', sent: '' };
+                if (iframeRef.current) iframeRef.current.src = src;
+              }}
+              className={classNames('mwp-cell', viewable || !onOwnPage ? 'mwp-divided' : 'mwp-start')}
+              title="再読み込み"
+            >
+              <span className="mwp-icon"><RefreshCw /></span>
+              <span className="mwp-label">{CONTROL_PILL_LABELS.reload}</span>
+            </button>
+            <button
+              type="button"
+              onClick={openRealSite}
+              className="mwp-cell mwp-divided mwp-end"
+              title="実サイトを新しいタブで開く"
+            >
+              <span className="mwp-icon"><ExternalLink /></span>
+              <span className="mwp-label">{CONTROL_PILL_LABELS.open}</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
