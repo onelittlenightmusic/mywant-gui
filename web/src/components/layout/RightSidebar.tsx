@@ -511,9 +511,12 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   // a band of empty sheet — shows. Barely, in Safari, where the inset is the
   // home indicator's 34px; plainly in an app whose tab bar the page runs
   // under, where the inset is the whole tab bar.
+  //
+  // A header at the bottom carries the safe area inside it (Header's spacer),
+  // so --header-height already counts it and the inset is not added again.
   const sheetEdgeOffset = mobileSheetBottom
     ? (isBottom
-      ? 'calc(env(safe-area-inset-bottom, 0px) + var(--header-height, 0px))'
+      ? 'var(--header-height, 0px)'
       : 'env(safe-area-inset-bottom, 0px)')
     : (isBottom
       ? 'env(safe-area-inset-top, 0px)'
@@ -554,8 +557,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         top: isBottom
           ? 'env(safe-area-inset-top, 0px)'
           : 'calc(env(safe-area-inset-top, 0px) + var(--header-height, 0px))',
+        // The bottom header's height includes the safe area (see sheetEdgeOffset).
         bottom: isBottom
-          ? 'calc(env(safe-area-inset-bottom, 0px) + var(--header-height, 0px))'
+          ? 'var(--header-height, 0px)'
           : 'env(safe-area-inset-bottom, 0px)',
         height: 'auto',
         // The panel comes in off the right edge and leaves the same way, at the
