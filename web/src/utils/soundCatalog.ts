@@ -34,19 +34,19 @@ export interface SoundDef {
 export const SOUND_CATALOG = {
   // ── Moving around the board ──────────────────────────────────────────────
   gridMove: {
-    what: 'Short tick.',
+    what: 'One pebble (tick).',
     when: 'One grid step while dragging a want with the keyboard.',
     play: gridMove,
   },
   buttonPress: {
-    what: 'A low, short clunk (コトッ).',
+    what: 'One pebble (press).',
     when: 'A footstep presses a button-form want (direction/going/gear) down into its socket.',
     play: buttonPress,
   },
 
   // ── Putting things on the board ──────────────────────────────────────────
   wantPlaced: {
-    what: 'A settling thud.',
+    what: 'One pebble (place).',
     when: 'A want is set down on the canvas.',
     play: wantPlaced,
   },
@@ -54,12 +54,12 @@ export const SOUND_CATALOG = {
 
   // ── Cards opening and closing ────────────────────────────────────────────
   cardOpen: {
-    what: 'Whoosh, upward.',
+    what: 'One pebble (open).',
     when: 'A card opens.',
     play: (c: AudioContext) => whoosh(c, 'up'),
   },
   cardClose: {
-    what: 'Whoosh, downward.',
+    what: 'One pebble (close).',
     when: 'A card closes.',
     play: (c: AudioContext) => whoosh(c, 'down'),
   },
@@ -80,50 +80,50 @@ export const SOUND_CATALOG = {
 
   // ── Who holds the keys ───────────────────────────────────────────────────
   handoverIn: {
-    what: 'A short rising pair.',
+    what: 'One pebble (in).',
     when: 'The board hands the keys to a panel.',
     play: handoverIn,
   },
   handoverOut: {
-    what: 'The same pair, falling.',
+    what: 'One pebble (out).',
     when: 'A panel gives the keys back to the board.',
     play: handoverOut,
   },
   confirmIn: {
-    what: 'A crisp inward tone.',
+    what: 'One pebble (confirm).',
     when: 'Going into something — A on a card, entering inner focus.',
     play: confirmIn,
   },
   hapticClick: {
-    what: 'A tiny click.',
+    what: 'One pebble (tick), fainter.',
     when: 'Small confirmations that want a tick rather than a tune.',
     play: hapticClick,
   },
 
   // ── Something happened ───────────────────────────────────────────────────
   sparkle: {
-    what: 'A bright scatter.',
+    what: 'One pebble (done).',
     when: 'A flourish on the canvas — an effect firing.',
     play: sparkle,
   },
   chime: {
-    what: 'Ascending bell arpeggio (キラーん).',
+    what: 'One pebble (done), a touch louder.',
     when: 'Something pleasant completed, in passing.',
     play: chime,
   },
   ring: {
-    what: 'One struck desk bell (チーン), held about a second.',
-    when: 'A coding agent hands the turn back. Aimed at somebody not looking at the screen, which is why it is one strike and not an arpeggio.',
+    what: 'Three taps of one pebble, a gap before the last — the loudest thing here.',
+    when: 'A coding agent hands the turn back. Aimed at somebody not looking at the screen, which is why it has a rhythm nothing else has.',
     play: ring,
   },
   // ── The global control pill ──────────────────────────────────────────────
   pillExpand: {
-    what: 'A breath of air going up (シュッ) — filtered noise, not a tone.',
+    what: 'One pebble (open), faint.',
     when: 'The shrunk global control pill (phone width) opens out of its status sign.',
     play: pillExpand,
   },
   pillShrink: {
-    what: 'The same breath, going down and a little shorter.',
+    what: 'One pebble (close), faint.',
     when: 'The open global control pill folds back into its status sign — by a tap on the sign, a tap elsewhere, or Escape.',
     play: pillShrink,
   },
