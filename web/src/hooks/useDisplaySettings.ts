@@ -1,6 +1,7 @@
 import { useCharacterStore } from '@/stores/characterStore';
 import { setSoundEnabledFlag } from '@/utils/sounds';
 import type { CharacterDisplay } from '@/types/character';
+import { nativeHost } from '@/lib/nativeHost';
 
 /**
  * How the app looks and sounds, for whoever is using it.
@@ -61,14 +62,20 @@ export function useDisplaySettings(): typeof DISPLAY_DEFAULTS {
   return { ...DISPLAY_DEFAULTS, ...(me?.display ?? {}) };
 }
 
-/** Where the header sits. */
+/**
+ * Where the header sits. Framed by a native app there is no header (the app
+ * draws its controls, see lib/nativeHost), so it is "top" with no height: the
+ * edges belong to the app, and everything measured from them goes by the safe
+ * area alone.
+ */
 export function useHeaderPosition(): HeaderPosition {
-  return useDisplaySettings().header_position;
+  const position = useDisplaySettings().header_position;
+  return nativeHost ? 'top' : position;
 }
 
 /** True when the header is along the bottom — the shape most callers want. */
 export function useHeaderAtBottom(): boolean {
-  return useDisplaySettings().header_position === 'bottom';
+  return useHeaderPosition() === 'bottom';
 }
 
 /** Which icon family category/type icons are drawn from. */

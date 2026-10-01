@@ -9,6 +9,7 @@ import { AppHeaderHost } from '@/components/layout/AppHeaderHost';
 import { SeedFlightOverlay } from '@/components/common/SeedFlightOverlay';
 import { useExtensionHooks } from '@/extensions/registry';
 import { useSystemPauseSync } from '@/hooks/useSystemPauseSync';
+import { nativeHost } from '@/lib/nativeHost';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -56,9 +57,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div
         className={classNames(
           "app-scroll-hide flex-1 flex flex-col relative min-w-0",
-          isBottom ? "pb-16 sm:pb-20" : "pt-16 sm:pt-20"
+          // Room for the header — none when an app frames the page and draws
+          // its controls itself (lib/nativeHost): the page takes the screen.
+          nativeHost ? "" : isBottom ? "pb-16 sm:pb-20" : "pt-16 sm:pt-20"
         )}
-        style={isBottom ? {} : { marginTop: 'env(safe-area-inset-top, 0px)' }}
+        style={isBottom || nativeHost ? {} : { marginTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className={classNames(
           "flex-1 flex flex-col min-w-0",

@@ -18,6 +18,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Slot } from '@/extensions/Slot';
 import { extensionMenu } from '@/extensions/registry';
 import { useOriginReveal, anchoredRevealStyle } from '@/components/ui/originReveal';
+import { nativeHost, postToHost, onHostPress, iconName, type HostButton } from '@/lib/nativeHost';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { useDarkMode } from '@/hooks/useDarkMode';
@@ -243,7 +244,9 @@ export const Header: React.FC<HeaderProps> = ({
   const anyNavBadge = hasAnyNavBadge(navBadges);
 
   const isBottom = useHeaderAtBottom();
-  const compact = useCompactHeader();
+  // Framed by an app, the buttons are drawn natively, each in a cell of its
+  // own — so the three creates never need to share one.
+  const compact = useCompactHeader() && !nativeHost;
   const wide = useWideHeader();
   // Which of the three creates the one ＋ is currently offering.
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
@@ -580,8 +583,10 @@ export const Header: React.FC<HeaderProps> = ({
     if (useAttentionStore.getState().items.length > 0) {
       btns.push({ id: 'pill-attention', label: 'Alert', action: () => goToAttention(useAttentionStore.getState().items[0], navigate) });
     }
-    btns.push({ id: 'pill-bell', label: 'News', action: () => { setMenuOpen(true); setFocusedIdx(0); } });
-    if (onInteractSubmit) {
+    // Framed by an app, neither is a button: the menu they open is the app's
+    // own (see the host effect below), and talking is the app's chat tab.
+    if (!nativeHost) btns.push({ id: 'pill-bell', label: 'News', action: () => { setMenuOpen(true); setFocusedIdx(0); } });
+    if (onInteractSubmit && !nativeHost) {
       btns.push({
         id: 'pill-talk', label: 'Talk', action: () => {
           if (window.innerWidth >= 1024) (document.querySelector('[data-global-control-pill] [data-interact-input]') as HTMLInputElement | null)?.focus();
@@ -618,6 +623,59 @@ export const Header: React.FC<HeaderProps> = ({
   // whose deps must not churn every render.
   const hBtnsRef = useRef(0);
   hBtnsRef.current = hBtns.length;
+
+  // ── Framed by an app: the buttons and the menu, told to it ──────────────────
+  // The header is not drawn (see lib/nativeHost); the app draws these instead
+  // and sends a press back by id, which runs the very action the header's own
+  // button would have. Each with the Lucide name of the icon it has here, and
+  // whether it is lit.
+  const paused = useSystemPauseStore(s => s.paused);
+  const hostActionsRef = useRef<Record<string, () => void>>({});
+  const hostLastRef = useRef('');
+  useEffect(() => {
+    if (!nativeHost) return;
+    const look: Record<string, [string, boolean?]> = {
+      'pill-pause': [paused ? 'Play' : 'Pause', !!paused],
+      'pill-attention': ['TriangleAlert'],
+      want: [iconName(CreateIcon, 'Heart'), isAddWantActive],
+      thing: ['Circle', isAddThingActive],
+      global: ['Globe', showGlobalState],
+      import: ['Upload'],
+      select: ['ListChecks', showSelectMode],
+      page: [iconName(pageAction?.icon, 'Circle'), pageAction?.active],
+      pad: ['Gamepad2', showPad],
+    };
+    const actions: Record<string, () => void> = {};
+    const buttons: HostButton[] = [];
+    for (const b of hBtns) {
+      const [icon, active] = look[b.id] ?? ['Circle'];
+      buttons.push({ id: b.id, label: b.label, icon, active: !!active });
+      actions[b.id] = b.action;
+    }
+    // Not one of the walked cells, but a button all the same.
+    if (onMinimapToggle) {
+      buttons.push({ id: 'minimap', label: 'Minimap', icon: 'Map', active: showMinimap });
+      actions.minimap = onMinimapToggle;
+    }
+    const menu: HostButton[] = navEntries().map(entry => {
+      const id = `menu:${entry.id}`;
+      actions[id] = () => {
+        if (entry.href) navigate(entry.href);
+        else if (entry.id === 'settings') setIsSettingsOpen(true);
+        else if (entry.id === 'help') setIsHelpOpen(true);
+      };
+      return { id, label: entry.label, icon: iconName(entry.icon, 'Circle'), active: location.pathname === entry.href };
+    });
+    hostActionsRef.current = actions;
+    const message = { type: 'header' as const, buttons, menu };
+    const json = JSON.stringify(message);
+    if (json === hostLastRef.current) return;
+    hostLastRef.current = json;
+    postToHost(message);
+  });
+  useEffect(() => {
+    if (nativeHost) onHostPress(id => hostActionsRef.current[id]?.());
+  }, []);
   // Slots 1..N map onto hBtns; slot 0 is the hamburger, slot -1 is "not here".
   const headerFocusIdx = headerNavIdx >= 1 ? headerNavIdx - 1 : -1;
   const isHeaderFocused = headerFocusIdx >= 0;
@@ -750,6 +808,8 @@ export const Header: React.FC<HeaderProps> = ({
       ref={headerRef}
       className={classNames(
         "bg-slate-100 dark:bg-gray-900 px-3 sm:px-6 py-2 sm:py-4 fixed left-0 right-0 z-[9001]",
+        // Framed by an app: not drawn, and so 0 tall — --header-height with it.
+        nativeHost && "hidden",
         isBottom ? "bottom-0 border-t border-gray-200 dark:border-gray-700" : "border-b border-gray-200 dark:border-gray-700",
       )}
       style={isBottom ? {} : { top: 'env(safe-area-inset-top, 0px)' }}
