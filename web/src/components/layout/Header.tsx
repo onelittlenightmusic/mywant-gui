@@ -18,7 +18,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Slot } from '@/extensions/Slot';
 import { extensionMenu } from '@/extensions/registry';
 import { useOriginReveal, anchoredRevealStyle } from '@/components/ui/originReveal';
-import { nativeHost, postToHost, onHostPress, iconName, type HostButton } from '@/lib/nativeHost';
+import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, type HostButton } from '@/lib/nativeHost';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { useDarkMode } from '@/hooks/useDarkMode';
@@ -646,6 +646,7 @@ export const Header: React.FC<HeaderProps> = ({
   // The setting itself: useHeaderAtBottom says "top" whenever an app frames
   // the page, and this is what the app's own bar goes by.
   const headerSetting = useDisplaySettings().header_position;
+  const hostCardActions = useHostCardStore(s => s.actions);
   const hostActionsRef = useRef<Record<string, () => void>>({});
   const hostLastRef = useRef('');
   useEffect(() => {
@@ -685,8 +686,12 @@ export const Header: React.FC<HeaderProps> = ({
         active: location.pathname === entry.href, href: entry.href ?? undefined,
       };
     });
+    const card: HostButton[] = hostCardActions.map(a => {
+      actions[a.id] = a.run;
+      return { id: a.id, label: a.label, icon: a.icon };
+    });
     hostActionsRef.current = actions;
-    const message = { type: 'header' as const, buttons, menu, position: headerSetting === 'bottom' ? 'bottom' as const : 'top' as const };
+    const message = { type: 'header' as const, buttons, menu, card, position: headerSetting === 'bottom' ? 'bottom' as const : 'top' as const };
     const json = JSON.stringify(message);
     if (json === hostLastRef.current) return;
     hostLastRef.current = json;

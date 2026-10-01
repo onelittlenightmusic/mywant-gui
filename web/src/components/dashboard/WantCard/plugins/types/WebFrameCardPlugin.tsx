@@ -12,6 +12,7 @@ import { Slot } from '@/extensions/Slot';
 import { extensionSlot } from '@/extensions/registry';
 import { classNames } from '@/utils/helpers';
 import { controlPillVars, ensureControlPillCss, CONTROL_PILL_LABELS } from '@/shared/controlPill';
+import { useHostCardActions } from '@/lib/nativeHost';
 
 // The page's bar is drawn as the control pill is (see WebFrameBar).
 if (typeof document !== 'undefined') ensureControlPillCss(document);
@@ -485,6 +486,14 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
     };
   }, [standalone, isInnerFocused, onExitInnerFocus]);
 
+  // The card in hand offers its real site to an app framing the page, which
+  // draws the button natively (lib/nativeHost): inside the app there is no
+  // extension, so no pill over the page, and a tap on the card only selects it.
+  useHostCardActions(want.metadata?.id ?? want.metadata?.name ?? 'web',
+    url && (isFocused || isExpanded)
+      ? [{ id: 'card:open', label: '開く', icon: 'ExternalLink', run: () => openWebWant(want) }]
+      : null);
+
   if (!url) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 p-4">
@@ -611,6 +620,16 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
                   <span className="mwp-label">{canvas ? CONTROL_PILL_LABELS.canvas : CONTROL_PILL_LABELS.browse}</span>
                 </button>
               )}
+              {/* The real site, in a tab of its own — see openWebWant. */}
+              <button
+                type="button"
+                onClick={openRealSite}
+                className="mwp-cell mwp-divided mwp-end"
+                title="実サイトを新しいタブで開く"
+              >
+                <span className="mwp-icon"><ExternalLink /></span>
+                <span className="mwp-label">開く</span>
+              </button>
             </div>
           </div>
         )}

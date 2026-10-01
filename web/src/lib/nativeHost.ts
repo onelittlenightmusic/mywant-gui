@@ -1,3 +1,6 @@
+import { useEffect, useRef } from 'react';
+import { create } from 'zustand';
+
 /**
  * The GUI framed by a native app — an iPhone app showing it in a web view.
  *
@@ -34,6 +37,9 @@ export interface HostMessage {
   type: 'header';
   buttons: HostButton[];
   menu: HostButton[];
+  /** What can be done with the card in hand (the selected or expanded one) —
+   *  drawn by the app ahead of the header's buttons. See useHostCardActions. */
+  card: HostButton[];
   /** Where this person keeps the header (their character's display setting):
    *  the app puts its own bar there. */
   position: 'top' | 'bottom';
@@ -67,4 +73,55 @@ export function onHostPress(handler: (id: string) => void): void {
 /** A Lucide component's name, for the app to map to a glyph of its own. */
 export function iconName(icon: { displayName?: string } | undefined, fallback: string): string {
   return icon?.displayName ?? fallback;
+}
+
+// ── What can be done with the card in hand ─────────────────────────────────
+//
+// A card can have actions of its own that the page draws inside it — a web
+// want's page opens in a new tab from a button over the page. Framed by an
+// app those are hard to reach (a frame drawn at half size, a tap that only
+// selects), so the card in hand hands them over as well, and the app draws
+// them beside the header's buttons. One card at a time: the one selected or
+// expanded, the last to register.
+
+export interface HostCardAction {
+  id: string;
+  label: string;
+  icon: string;
+  run: () => void;
+}
+
+interface HostCardState {
+  owner: string | null;
+  actions: HostCardAction[];
+  set: (owner: string, actions: HostCardAction[]) => void;
+  clear: (owner: string) => void;
+}
+
+export const useHostCardStore = create<HostCardState>((set, get) => ({
+  owner: null,
+  actions: [],
+  set: (owner, actions) => set({ owner, actions }),
+  clear: owner => { if (get().owner === owner) set({ owner: null, actions: [] }); },
+}));
+
+/**
+ * Hand the app this card's actions while `actions` is non-null (the card is
+ * the one in hand); take them back when it stops being, or goes. Nothing at
+ * all outside an app.
+ */
+export function useHostCardActions(owner: string, actions: HostCardAction[] | null): void {
+  // The latest closures, without re-registering on every render.
+  const latest = useRef(actions);
+  latest.current = actions;
+  const shape = actions ? JSON.stringify(actions.map(a => [a.id, a.label, a.icon])) : '';
+  useEffect(() => {
+    if (!nativeHost || !shape) return;
+    const now = latest.current ?? [];
+    useHostCardStore.getState().set(owner, now.map(a => ({
+      ...a,
+      run: () => latest.current?.find(x => x.id === a.id)?.run(),
+    })));
+    return () => useHostCardStore.getState().clear(owner);
+  }, [owner, shape]);
 }
