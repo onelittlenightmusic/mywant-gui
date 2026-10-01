@@ -664,7 +664,10 @@ export const Header: React.FC<HeaderProps> = ({
         else if (entry.id === 'settings') setIsSettingsOpen(true);
         else if (entry.id === 'help') setIsHelpOpen(true);
       };
-      return { id, label: entry.label, icon: iconName(entry.icon, 'Circle'), active: location.pathname === entry.href };
+      return {
+        id, label: entry.label, icon: iconName(entry.icon, 'Circle'),
+        active: location.pathname === entry.href, href: entry.href ?? undefined,
+      };
     });
     hostActionsRef.current = actions;
     const message = { type: 'header' as const, buttons, menu };
