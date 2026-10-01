@@ -505,23 +505,27 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   // is measured from the offset the previous one actually painted.
   useLayoutEffect(() => { prevSheetYRef.current = sheetY; }, [sheetY]);
 
+  // Where the phone's sheet stands off the edge it slides from. Shut, it has
+  // to travel this far as well as its own height: moved by only 100% it stops
+  // with its top this far short of the edge, and that strip — the grabber and
+  // a band of empty sheet — shows. Barely, in Safari, where the inset is the
+  // home indicator's 34px; plainly in an app whose tab bar the page runs
+  // under, where the inset is the whole tab bar.
+  const sheetEdgeOffset = mobileSheetBottom
+    ? (isBottom
+      ? 'calc(env(safe-area-inset-bottom, 0px) + var(--header-height, 0px))'
+      : 'env(safe-area-inset-bottom, 0px)')
+    : (isBottom
+      ? 'env(safe-area-inset-top, 0px)'
+      : 'calc(env(safe-area-inset-top, 0px) + var(--header-height, 0px))');
+
   const sidebarStyle: React.CSSProperties = isMobileSheet
     ? {
         left: 0,
         right: 0,
         ...(mobileSheetBottom
-          ? {
-              bottom: isBottom
-                ? 'calc(env(safe-area-inset-bottom, 0px) + var(--header-height, 0px))'
-                : 'env(safe-area-inset-bottom, 0px)',
-              top: 'auto',
-            }
-          : {
-              top: isBottom
-                ? 'env(safe-area-inset-top, 0px)'
-                : 'calc(env(safe-area-inset-top, 0px) + var(--header-height, 0px))',
-              bottom: 'auto',
-            }),
+          ? { bottom: sheetEdgeOffset, top: 'auto' }
+          : { top: sheetEdgeOffset, bottom: 'auto' }),
         // Nearly full height on a phone. 40vh meant a detail sheet showed a
         // couple of rows and everything else was a scroll away, on the one form
         // factor with the least room to scroll in. The strip left at the top is
@@ -534,7 +538,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           : '40vh',
         transform: isOpen
           ? `translateY(${swipe.offset}px)`
-          : (mobileSheetBottom ? 'translateY(100%)' : 'translateY(-100%)'),
+          : (mobileSheetBottom
+            ? `translateY(calc(100% + ${sheetEdgeOffset}))`
+            : `translateY(calc(-100% - ${sheetEdgeOffset}))`),
         // No animation while a finger is on it, or the sheet lags the drag.
         // Otherwise its own duration rather than the shared token — the panel
         // and the sheet move at one speed, which is not one time (see sheetMs).
