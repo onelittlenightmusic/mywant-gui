@@ -13,8 +13,9 @@
  *   page → app   window.webkit.messageHandlers.mywantHost.postMessage(msg)
  *   app  → page  window.__mywantHost.press(id)
  *
- * The app's buttons float over the top of the page; it sets the CSS variable
- * --host-inset-top to how tall they are, for what has to stay clear of them.
+ * The app's buttons float over the page, along the top or just above its tab
+ * bar — wherever this person keeps the header. It sets --host-inset-top or
+ * --host-inset-bottom to how tall they are, for what has to stay clear.
  */
 
 export interface HostButton {
@@ -33,6 +34,9 @@ export interface HostMessage {
   type: 'header';
   buttons: HostButton[];
   menu: HostButton[];
+  /** Where this person keeps the header (their character's display setting):
+   *  the app puts its own bar there. */
+  position: 'top' | 'bottom';
 }
 
 interface HostBridge {

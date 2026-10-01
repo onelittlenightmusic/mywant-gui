@@ -517,7 +517,8 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   const sheetEdgeOffset = mobileSheetBottom
     ? (isBottom
       ? 'var(--header-height, 0px)'
-      : 'env(safe-area-inset-bottom, 0px)')
+      // A framing app's bar along the bottom, when it has one there.
+      : 'calc(env(safe-area-inset-bottom, 0px) + var(--host-inset-bottom, 0px))')
     : (isBottom
       ? 'env(safe-area-inset-top, 0px)'
       : 'calc(env(safe-area-inset-top, 0px) + var(--header-height, 0px))');

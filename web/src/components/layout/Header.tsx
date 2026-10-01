@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
+import { useHeaderAtBottom, useDisplaySettings } from '@/hooks/useDisplaySettings';
 import { Plus, Heart, ListChecks, Map, Bot, Globe, Menu, X, Zap, BookOpen, Activity, Settings, Trophy, HelpCircle, Smartphone, Circle, Layers, Upload, Gamepad2, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -630,6 +630,9 @@ export const Header: React.FC<HeaderProps> = ({
   // button would have. Each with the Lucide name of the icon it has here, and
   // whether it is lit.
   const paused = useSystemPauseStore(s => s.paused);
+  // The setting itself: useHeaderAtBottom says "top" whenever an app frames
+  // the page, and this is what the app's own bar goes by.
+  const headerSetting = useDisplaySettings().header_position;
   const hostActionsRef = useRef<Record<string, () => void>>({});
   const hostLastRef = useRef('');
   useEffect(() => {
@@ -670,7 +673,7 @@ export const Header: React.FC<HeaderProps> = ({
       };
     });
     hostActionsRef.current = actions;
-    const message = { type: 'header' as const, buttons, menu };
+    const message = { type: 'header' as const, buttons, menu, position: headerSetting === 'bottom' ? 'bottom' as const : 'top' as const };
     const json = JSON.stringify(message);
     if (json === hostLastRef.current) return;
     hostLastRef.current = json;
