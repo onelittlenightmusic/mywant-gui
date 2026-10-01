@@ -10,6 +10,7 @@
 // mac/Chrome only (WebHID is Chromium-only).
 
 import { parseHidGamepadReport, isHidGamepad, makeControllerResolver, NormalizedControllerState } from '@/shared/hidGamepad';
+import { hostOwnsController, hostControllerFrame } from '@/lib/nativeHost';
 
 // WebHID lib types aren't in the default TS DOM lib — treat the API loosely.
 type AnyHidDevice = any;
@@ -145,6 +146,9 @@ export function lendController(to: string | null): void {
 /** The current controller state (WebHID-preferred, Gamepad-API fallback); none while lent. */
 export function getControllerState(): NormalizedControllerState | null {
   if (lentTo) return null;
+  // Framed by an app that reads the controller itself: its frames only, never
+  // the Gamepad API as well (see lib/nativeHost).
+  if (hostOwnsController) return hostControllerFrame();
   return resolver.getState();
 }
 

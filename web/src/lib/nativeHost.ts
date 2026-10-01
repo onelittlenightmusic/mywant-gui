@@ -53,6 +53,9 @@ export interface HostMessage {
 interface HostBridge {
   platform?: string;
   press?: (id: string) => void;
+  /** The app reads the controller itself and hands the page its state. */
+  ownsController?: boolean;
+  controller?: (frame: { buttons: boolean[]; axes: number[] }) => void;
 }
 
 declare global {
@@ -72,6 +75,28 @@ export interface HostChoice {
   type: 'choose';
   id: string;
   href?: string;
+}
+
+// ── The controller, read by the app ─────────────────────────────────────────
+//
+// In a web view a page sees a gamepad only after one of its buttons has been
+// pressed while that page was showing, and an app keeps a page per tab: each
+// time the tab changed, the first press went to waking the gamepad up and did
+// nothing (measured — Select on the Want tab, pads=0 until it). An app that
+// says it owns the controller reads it natively and hands the page the state
+// in the standard mapping, to the page that is showing only; then this page
+// reads that and never the Gamepad API, so there is one source and no first
+// press lost. What the buttons mean stays here (useInputActions).
+
+export const hostOwnsController: boolean = nativeHost && !!window.__mywantHost?.ownsController;
+let hostFrame: { buttons: boolean[]; axes: number[] } | null = null;
+if (hostOwnsController && window.__mywantHost) {
+  window.__mywantHost.controller = frame => { hostFrame = frame; };
+}
+
+/** The controller as the app last handed it over (null before it has). */
+export function hostControllerFrame(): { buttons: boolean[]; axes: number[] } | null {
+  return hostFrame;
 }
 
 /** Hand a message to the app. Nothing happens without one. */
