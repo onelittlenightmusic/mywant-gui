@@ -224,6 +224,14 @@ const _lastPlayedAt = new Map<SoundEvent, number>();
 const DEDUPE_MS = 30;
 
 /**
+ * How late a sound may start and still be the sound of its moment — for one
+ * asked for while the context was suspended (see playSound). Long enough for a
+ * resume that the same key press unlocked, short of anything a person would
+ * hear as belonging to something earlier.
+ */
+const STALE_MS = 150;
+
+/**
  * How long a sound takes from being asked for to being heard, in ms — the
  * audio context's own report where the browser gives one (outputLatency +
  * baseLatency), else a typical figure. For playing a sound early so that it
@@ -287,9 +295,19 @@ export function playSound(event: SoundEvent): void {
     return;
   }
 
+  // Not running yet: wait for it — but only for a moment.
+  //
+  // Before the page has seen a key or a click the browser holds the context
+  // suspended, and every sound asked for meanwhile used to wait here and then
+  // play the instant it was let go: five pebbles from the last few seconds in
+  // one crack, on the first key pressed. A sound belongs to its moment; one
+  // that cannot be heard in it is dropped, not saved up.
+  const askedAt = now;
   ensureRunning()
     .then((c) => {
       if (!c) return;
+      const late = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - askedAt;
+      if (late > STALE_MS) return;
       try {
         def.play(c);
         // Say what was played, for anything that needs to observe it.
