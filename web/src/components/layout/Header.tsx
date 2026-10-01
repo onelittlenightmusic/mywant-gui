@@ -568,6 +568,20 @@ export const Header: React.FC<HeaderProps> = ({
     chooseEntry();
   }, [focusedIdx, navigate, chooseEntry]);
 
+  // ── Add Want / Add Thing: one choice, two answers ───────────────────────────
+  // Like a segmented control, or the tabs along the bottom of a phone: one of
+  // them at a time. Each still closes its own panel when pressed again; pressed
+  // while the other's panel is open, it closes that one first — both lit at
+  // once read as two panels open, which is never what was meant.
+  const createWant = useCallback(() => {
+    if (isAddThingActive) onCreateThing?.();
+    onCreateWant();
+  }, [isAddThingActive, onCreateThing, onCreateWant]);
+  const createThing = useCallback(() => {
+    if (isAddWantActive) onCreateWant();
+    onCreateThing?.();
+  }, [isAddWantActive, onCreateWant, onCreateThing]);
+
   // ── Header button list (dynamic — only buttons that are present) ─────────────
   // 'want' (Add Want) is listed first so it's always the button the Y button /
   // header-focus-entry lands on, regardless of which other buttons are shown.
@@ -601,7 +615,9 @@ export const Header: React.FC<HeaderProps> = ({
     if (!hideCreateButton && compact) {
       btns.push({ id: 'create', label: 'New', action: () => setCreateMenuOpen(v => !v) });
     } else if (!hideCreateButton) {
-      btns.push({ id: 'want', label: createButtonLabel.replace(/^(Add|New)\s+/i, ''), action: onCreateWant });
+      btns.push({ id: 'want', label: createButtonLabel.replace(/^(Add|New)\s+/i, ''), action: createWant });
+      // Beside it, as the pair is drawn: the other answer to the same choice.
+      if (onCreateThing) btns.push({ id: 'thing', label: 'Thing', action: createThing });
     }
     if (onGlobalStateToggle) {
       btns.push({ id: 'global', label: 'Global', action: onGlobalStateToggle });
@@ -609,14 +625,11 @@ export const Header: React.FC<HeaderProps> = ({
     if (onImport)             btns.push({ id: 'import', label: 'Import', action: onImport });
     if (onToggleSelectMode)   btns.push({ id: 'select', label: 'Select', action: onToggleSelectMode });
     if (pageAction)           btns.push({ id: 'page', label: pageAction.label, action: pageAction.onClick });
-    if (!hideCreateButton && !compact) {
-      if (onCreateThing) btns.push({ id: 'thing', label: 'Thing', action: onCreateThing });
-    }
     // Last, so it is the far right of the row and the last stop of a rightward
     // walk through it.
     if (onPadToggle) btns.push({ id: 'pad', label: 'Pad', action: onPadToggle });
     return btns;
-  }, [onGlobalStateToggle, onImport, onToggleSelectMode, pageAction, hideCreateButton, onCreateThing, onCreateWant, createButtonLabel, onPadToggle, compact, attentionCount, onInteractSubmit, navigate]);
+  }, [onGlobalStateToggle, onImport, onToggleSelectMode, pageAction, hideCreateButton, onCreateThing, createWant, createThing, createButtonLabel, onPadToggle, compact, attentionCount, onInteractSubmit, navigate]);
 
   const hBtns = headerButtons();
   // Stable handle to the current control count for the header-cursor callbacks,
@@ -1115,52 +1128,22 @@ export const Header: React.FC<HeaderProps> = ({
             </Tooltip>
           )}
 
-          {/* Add Thing — in the thing's own amber-orange, and carrying the same
-              circle every remembered value wears, so the button looks like what
-              it makes. */}
-          {!compact && !hideCreateButton && onCreateThing && (
-            <>
-              <Tooltip label={isAddThingActive ? 'Close Add Thing' : 'Add Thing'} shortcut="t" below={!isBottom} forceVisible={isHeaderFocused && hBtns[headerFocusIdx]?.id === 'thing'}>
-                <button
-                  onClick={() => onCreateThing()}
-                  data-header-btn-id="thing"
-                onPointerDown={cellTick}
-                  data-robot-target="add_thing_btn"
-                  className={classNames(
-                    "flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-3 h-full transition-all duration-150 focus:outline-none",
-                    // Lit while its panel is open, the way Add Want is. The two
-                    // buttons do the same kind of thing — open a panel that the
-                    // same press closes again — and a button that shows that
-                    // beside one that does not reads as two different gestures.
-                    // In the thing's own orange rather than the primary, because
-                    // the unlit state is orange too and a button should not
-                    // change what it is about by being pressed.
-                    isAddThingActive
-                      ? "bg-orange-500 text-white hover:brightness-110 active:opacity-80"
-                      : "text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20",
-                    isHeaderFocused && hBtns[headerFocusIdx]?.id === 'thing' && 'ring-2 ring-inset ring-sky-400'
-                  )}
-                >
-                  <span className="relative inline-flex flex-shrink-0">
-                    <Circle className="h-6 w-6 sm:h-8 sm:w-8" />
-                    <Plus className="h-4 w-4 sm:h-5 sm:w-5 absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2" style={{ strokeWidth: 3 }} />
-                  </span>
-                  <span className="text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">Thing</span>
-                </button>
-              </Tooltip>
-            </>
-          )}
           {/* Add Note has no button. The row carried three create buttons side
               by side and a note is not a third kind of thing — it is a want of
               type `note`, so Add Want makes one like it makes any other. What
               came off is the shortcut, not the capability. */}
+          {/* Add Want and Add Thing, framed as one segmented control: one
+              choice with two answers, and only one lit at a time (see
+              createWant / createThing). Want first, as in the walk order. */}
+          {!compact && !hideCreateButton && (
+          <div className="flex h-full items-stretch rounded-xl overflow-hidden ring-1 ring-inset ring-gray-300 dark:ring-gray-700 mx-1">
           {/* Create — separated by a thin line. Labelled "Add Want" unless the
               page creates something else (createButtonLabel/createButtonIcon). */}
           {!compact && !hideCreateButton && (
             <>
               <Tooltip label={isAddWantActive ? `Close ${createButtonLabel}` : createButtonLabel} shortcut="a" below={!isBottom} forceVisible={isHeaderFocused && hBtns[headerFocusIdx]?.id === 'want'}>
                 <button
-                  onClick={() => onCreateWant()}
+                  onClick={createWant}
                   data-header-btn-id="want"
                 onPointerDown={cellTick}
                   data-robot-target="add_want_btn"
@@ -1188,6 +1171,43 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               </Tooltip>
             </>
+          )}
+          {/* Add Thing — in the thing's own amber-orange, and carrying the same
+              circle every remembered value wears, so the button looks like what
+              it makes. */}
+          {!compact && !hideCreateButton && onCreateThing && (
+            <>
+              <Tooltip label={isAddThingActive ? 'Close Add Thing' : 'Add Thing'} shortcut="t" below={!isBottom} forceVisible={isHeaderFocused && hBtns[headerFocusIdx]?.id === 'thing'}>
+                <button
+                  onClick={createThing}
+                  data-header-btn-id="thing"
+                onPointerDown={cellTick}
+                  data-robot-target="add_thing_btn"
+                  className={classNames(
+                    "flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-3 h-full transition-all duration-150 focus:outline-none",
+                    // Lit while its panel is open, the way Add Want is. The two
+                    // buttons do the same kind of thing — open a panel that the
+                    // same press closes again — and a button that shows that
+                    // beside one that does not reads as two different gestures.
+                    // In the thing's own orange rather than the primary, because
+                    // the unlit state is orange too and a button should not
+                    // change what it is about by being pressed.
+                    isAddThingActive
+                      ? "bg-orange-500 text-white hover:brightness-110 active:opacity-80"
+                      : "text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20",
+                    isHeaderFocused && hBtns[headerFocusIdx]?.id === 'thing' && 'ring-2 ring-inset ring-sky-400'
+                  )}
+                >
+                  <span className="relative inline-flex flex-shrink-0">
+                    <Circle className="h-6 w-6 sm:h-8 sm:w-8" />
+                    <Plus className="h-4 w-4 sm:h-5 sm:w-5 absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2" style={{ strokeWidth: 3 }} />
+                  </span>
+                  <span className="text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">Thing</span>
+                </button>
+              </Tooltip>
+            </>
+          )}
+          </div>
           )}
           {/* One cell for both ways of making something, where the row has no
               space for two.
@@ -1234,8 +1254,8 @@ export const Header: React.FC<HeaderProps> = ({
                     }}
                   >
                     {([
-                      ['want',  createButtonLabel, CreateIcon,  createsWant ? 'text-pink-500' : 'text-primary-600 dark:text-primary-400', onCreateWant],
-                      ['thing', 'Add Thing',       Circle,      'text-orange-500 dark:text-orange-400',   onCreateThing],
+                      ['want',  createButtonLabel, CreateIcon,  createsWant ? 'text-pink-500' : 'text-primary-600 dark:text-primary-400', createWant],
+                      ['thing', 'Add Thing',       Circle,      'text-orange-500 dark:text-orange-400',   onCreateThing ? createThing : undefined],
                     ] as const).map(([id, label, Icon, tone, action]) => action ? (
                       <button
                         key={id}

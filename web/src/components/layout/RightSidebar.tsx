@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
+import { useHeaderAtBottom, useDisplaySettings } from '@/hooks/useDisplaySettings';
+import { nativeHost } from '@/lib/nativeHost';
 import { useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
 import { PanelCloseButton } from '@/components/sidebar/PanelCloseButton';
@@ -468,7 +469,13 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     bottom: 0,
   };
 
-  const mobileSheetBottom = isMobileSheet && (isBottom || mobileForceBottom);
+  // Framed by an app there is no header, so isBottom is false — but the app
+  // keeps its own bar where this person keeps the header, and the sheet comes
+  // from that side as it always has: up from the bottom for a bottom header,
+  // not down over the top of the screen.
+  const headerSetting = useDisplaySettings().header_position;
+  const hostBarAtBottom = nativeHost && headerSetting === 'bottom';
+  const mobileSheetBottom = isMobileSheet && (isBottom || mobileForceBottom || hostBarAtBottom);
   const swipe = useSheetSwipeDismiss({
     fromBottom: mobileSheetBottom,
     enabled: isMobileSheet && isOpen,
@@ -521,7 +528,8 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       : 'calc(env(safe-area-inset-bottom, 0px) + var(--host-inset-bottom, 0px))')
     : (isBottom
       ? 'env(safe-area-inset-top, 0px)'
-      : 'calc(env(safe-area-inset-top, 0px) + var(--header-height, 0px))');
+      // Below a framing app's bar along the top, when it has one there.
+      : 'calc(env(safe-area-inset-top, 0px) + var(--header-height, 0px) + var(--host-inset-top, 0px))');
 
   const sidebarStyle: React.CSSProperties = isMobileSheet
     ? {
