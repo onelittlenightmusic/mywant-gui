@@ -1,3 +1,4 @@
+import { nativeHost } from '@/lib/nativeHost';
 // Reading and setting the browser extension's active context (which server it
 // talks to) from the dashboard, so that a profile can be registered without
 // opening chrome://extensions.
@@ -43,6 +44,15 @@ const RETRYABLE = new Set(['MYWANT_QUERY_CONTEXT', 'MYWANT_LIST_CONTEXTS']);
 
 /** Resolves null when no extension answers, which is also how "not installed" looks. */
 function ask<T>(type: string, payload: Record<string, unknown> = {}): Promise<T | null> {
+  // Framed by an app that keeps profiles the way the extension does
+  // (mywant-fm-swift): the same questions go to it, and it answers in the
+  // extension's shapes, so the Extension page manages the app's profiles.
+  const host = nativeHost ? window.webkit?.messageHandlers?.mywantExtension : undefined;
+  if (host) {
+    return Promise.resolve(host.postMessage({ type, ...payload }) as unknown as Promise<T>)
+      .then(v => (v ?? null) as T | null)
+      .catch(() => null);
+  }
   return new Promise((resolve) => {
     const requestId = Math.random().toString(36).slice(2);
     let done = false;
