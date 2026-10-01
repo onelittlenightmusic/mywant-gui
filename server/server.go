@@ -102,12 +102,6 @@ func New(config Config) *Server {
 	// PUTs the PNG; we serve it back at a stable URL. See want_home_icon.go.
 	s.mux.HandleFunc("/w-home-icon/", s.handleWantHomeIcon)
 
-	// Tools for an on-device model on another device — see fm.go. Served
-	// here, not proxied: they are this process's, built on the backend's API.
-	s.mux.HandleFunc("/api/v1/fm/manifest", s.handleFMManifest)
-	s.mux.HandleFunc("/api/v1/fm/call", s.handleFMCall)
-	s.mux.HandleFunc("/api/v1/fm/said", s.handleFMSaid)
-
 	// Static files (embedded React SPA)
 	fs := http.FileServer(web.GetFileSystem(true))
 	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
