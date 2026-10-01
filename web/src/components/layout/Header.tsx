@@ -558,6 +558,13 @@ export const Header: React.FC<HeaderProps> = ({
   const confirmFocusedItem = useCallback(() => {
     if (focusedIdx < 0 || focusedIdx >= navEntries().length) return;
     const entry = navEntries()[focusedIdx];
+    // Framed by an app, its menu is what is showing: the app decides where the
+    // choice goes — a page it has a tab for opens there, not in this one.
+    if (nativeHost) {
+      postToHost({ type: 'choose', id: `menu:${entry.id}`, href: entry.href ?? undefined });
+      chooseEntry();
+      return;
+    }
     if (entry.href) {
       navigate(entry.href);
     } else if (entry.id === 'settings') {
@@ -690,8 +697,18 @@ export const Header: React.FC<HeaderProps> = ({
       actions[a.id] = a.run;
       return { id: a.id, label: a.label, icon: a.icon };
     });
+    // The menu closed from the app's side (its sheet swiped away): the header
+    // cursor lets go with it, as Back would.
+    actions['host:menu-close'] = () => { closeMenu(); setHeaderNavIdx(-1); setFocusedIdx(-1); };
+    // The header cursor, for the app to draw: Select still walks it here, in
+    // the one place the gamepad's meaning lives — the app only shows it.
+    const focus = {
+      slot: headerNavIdx === 0 ? 'menu' : headerNavIdx >= 1 ? (hBtns[headerNavIdx - 1]?.id ?? null) : null,
+      menu: menuOpen,
+      menuIndex: menuOpen ? focusedIdx : -1,
+    };
     hostActionsRef.current = actions;
-    const message = { type: 'header' as const, buttons, menu, card, position: headerSetting === 'bottom' ? 'bottom' as const : 'top' as const };
+    const message = { type: 'header' as const, buttons, menu, card, focus, position: headerSetting === 'bottom' ? 'bottom' as const : 'top' as const };
     const json = JSON.stringify(message);
     if (json === hostLastRef.current) return;
     hostLastRef.current = json;

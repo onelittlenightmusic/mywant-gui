@@ -40,6 +40,11 @@ export interface HostMessage {
   /** What can be done with the card in hand (the selected or expanded one) —
    *  drawn by the app ahead of the header's buttons. See useHostCardActions. */
   card: HostButton[];
+  /** Where the header cursor is (Select / Alt+Enter walks it — the gamepad's
+   *  way into the header): on the hamburger ("menu"), on a button (its id), or
+   *  nowhere; whether the menu is open, and on which entry. The app draws the
+   *  ring on its own buttons and opens its own menu to match. */
+  focus: { slot: string | null; menu: boolean; menuIndex: number };
   /** Where this person keeps the header (their character's display setting):
    *  the app puts its own bar there. */
   position: 'top' | 'bottom';
@@ -60,8 +65,17 @@ declare global {
 /** True when a native app frames this page. */
 export const nativeHost: boolean = typeof window !== 'undefined' && !!window.__mywantHost;
 
+/** A menu entry chosen with the header cursor (A on it): the app decides —
+ *  a page it holds a tab for opens in that tab; anything else it sends back
+ *  as a press of the entry's id. */
+export interface HostChoice {
+  type: 'choose';
+  id: string;
+  href?: string;
+}
+
 /** Hand a message to the app. Nothing happens without one. */
-export function postToHost(message: HostMessage): void {
+export function postToHost(message: HostMessage | HostChoice): void {
   window.webkit?.messageHandlers?.mywantHost?.postMessage(message);
 }
 
