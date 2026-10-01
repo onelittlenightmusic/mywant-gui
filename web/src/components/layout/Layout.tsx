@@ -1,6 +1,5 @@
 import React from 'react';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
-import { classNames } from '@/utils/helpers';
 import { useConfigStore } from '@/stores/configStore';
 import { useAppBackgroundUrl } from '@/hooks/useAppBackgroundStyle';
 import { AppSidebarHost } from '@/components/layout/AppSidebarHost';
@@ -55,18 +54,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* App-root Header — persistent across routes; pages feed it via useAppHeader. */}
       <AppHeaderHost />
       <div
-        className={classNames(
-          "app-scroll-hide flex-1 flex flex-col relative min-w-0",
-          // Room for the header — none when an app frames the page and draws
-          // its controls itself (lib/nativeHost): the page takes the screen.
-          nativeHost ? "" : isBottom ? "pb-16 sm:pb-20" : "pt-16 sm:pt-20"
-        )}
-        style={isBottom || nativeHost ? {} : { marginTop: 'env(safe-area-inset-top, 0px)' }}
+        className="app-scroll-hide flex-1 flex flex-col relative min-w-0"
+        // Room for the header, as tall as it measures (--header-height, from
+        // Header). It was a guess — pb-20 / pt-20 at sm, 80px — and the header
+        // came out 61px, leaving a strip of nothing between it and the board.
+        // A header along the bottom carries the safe area inside it, so its
+        // height is all the room it needs. None when an app frames the page
+        // and draws its controls itself (lib/nativeHost): the page takes the
+        // screen.
+        style={nativeHost ? {} : isBottom
+          ? { paddingBottom: 'var(--header-height, 5rem)' }
+          : { paddingTop: 'var(--header-height, 5rem)', marginTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        <div className={classNames(
-          "flex-1 flex flex-col min-w-0",
-          isBottom ? "pb-safe" : ""
-        )} style={isBottom ? { paddingBottom: 'env(safe-area-inset-bottom)' } : {}}>
+        <div className="flex-1 flex flex-col min-w-0">
           {children}
         </div>
       </div>
