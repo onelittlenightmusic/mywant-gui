@@ -21,6 +21,9 @@ import {
 } from './WantTypeVisuals';
 import { useCharacterStore } from '@/stores/characterStore';
 
+/** Where the panel's top stands when the header is along the top. */
+const MINIMAP_TOP_EDGE = 'calc(env(safe-area-inset-top, 0px) + var(--header-height, 4rem) + var(--host-inset-top, 0px))';
+
 // ── Existing minimap card components ─────────────────────────────────────────
 
 interface WantMinimapProps {
@@ -259,9 +262,17 @@ export const WantMinimap = forwardRef<WantMinimapRef, WantMinimapProps>(({
         // is on makes the panel come from the control, the way the pad and the
         // menus do.
         "lg:translate-y-0 lg:translate-x-0",
+        // Shut, it travels its own height AND the distance it stands off the
+        // edge (--minimap-edge, below). By its height alone it stopped that
+        // far short, under the header — hidden by the header where there is
+        // one, a translucent band across the top where an app frames the page
+        // and there is none.
         isOpen
           ? "translate-y-0"
-          : classNames(isHeaderBottom ? "translate-y-full" : "-translate-y-full", "lg:translate-y-0"),
+          : classNames(
+            isHeaderBottom ? "translate-y-[calc(100%_+_var(--minimap-edge))]" : "translate-y-[calc(-100%_-_var(--minimap-edge))]",
+            "lg:translate-y-0",
+          ),
         "z-30"
       )}
       // The one stable handle on this panel, for the same reason the detail
@@ -270,10 +281,15 @@ export const WantMinimap = forwardRef<WantMinimapRef, WantMinimapProps>(({
       // surface that holds the keys and click something behind it.
       data-minimap-panel="true"
       style={{
-        top: isHeaderBottom ? 'env(safe-area-inset-top, 0px)' : 'calc(env(safe-area-inset-top, 0px) + 4rem)',
-        bottom: 'env(safe-area-inset-bottom, 0px)',
+        // Under the header as tall as it is (no longer a fixed 4rem), and
+        // under a framing app's bar along the top (lib/nativeHost).
+        top: isHeaderBottom ? 'env(safe-area-inset-top, 0px)' : MINIMAP_TOP_EDGE,
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--host-inset-bottom, 0px))',
         display: 'flex',
         flexDirection: 'column',
+        ['--minimap-edge' as string]: isHeaderBottom
+          ? 'calc(env(safe-area-inset-bottom, 0px) + var(--host-inset-bottom, 0px))'
+          : MINIMAP_TOP_EDGE,
       }}
     >
       {/* The frame that says the keys are here.
