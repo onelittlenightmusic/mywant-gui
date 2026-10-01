@@ -536,8 +536,13 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         // behind it, and gives the backdrop somewhere to be tapped.
         // dvh, not vh — vh on iOS is the height with the URL bar hidden, so a
         // 100vh sheet sits partly under the browser chrome.
+        //
+        // Less the edge it stands on, too: its bottom is lifted by that much
+        // (sheetEdgeOffset), and a sheet as tall as the screen above a lifted
+        // bottom ran off the top — its close button with it, under the status
+        // bar, once the bottom header grew by an app's tab bar.
         height: mobileSheetBottom
-          ? 'calc(100dvh - env(safe-area-inset-top, 0px) - 56px)'
+          ? `calc(100dvh - env(safe-area-inset-top, 0px) - 56px - ${sheetEdgeOffset})`
           : '40vh',
         transform: isOpen
           ? `translateY(${swipe.offset}px)`
