@@ -18,7 +18,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Slot } from '@/extensions/Slot';
 import { extensionMenu } from '@/extensions/registry';
 import { useOriginReveal, anchoredRevealStyle } from '@/components/ui/originReveal';
-import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, useHostPanelStore, useHostSheetStore, type HostButton } from '@/lib/nativeHost';
+import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, useHostPanelStore, useHostSheetStore, useHostFloatStore, type HostButton } from '@/lib/nativeHost';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { useDarkMode } from '@/hooks/useDarkMode';
@@ -656,6 +656,7 @@ export const Header: React.FC<HeaderProps> = ({
   const hostCardActions = useHostCardStore(s => s.actions);
   const hostPanel = useHostPanelStore(s => s.panel);
   const hostSheet = useHostSheetStore(s => s.sheet);
+  const hostFloat = useHostFloatStore(s => s.cards);
   const hostActionsRef = useRef<Record<string, () => void>>({});
   const hostLastRef = useRef('');
   useEffect(() => {
@@ -714,14 +715,22 @@ export const Header: React.FC<HeaderProps> = ({
       menuIndex: menuOpen ? focusedIdx : -1,
     };
     hostActionsRef.current = actions;
-    const message = { type: 'header' as const, buttons, menu, card, focus, panel: hostPanel, sheet: hostSheet, position: headerSetting === 'bottom' ? 'bottom' as const : 'top' as const };
+    const message = { type: 'header' as const, buttons, menu, card, focus, panel: hostPanel, sheet: hostSheet, float: hostFloat, position: headerSetting === 'bottom' ? 'bottom' as const : 'top' as const };
     const json = JSON.stringify(message);
     if (json === hostLastRef.current) return;
     hostLastRef.current = json;
     postToHost(message);
   });
   useEffect(() => {
-    if (nativeHost) onHostPress(id => hostActionsRef.current[id]?.());
+    if (nativeHost) onHostPress(id => {
+      // A corner card's: float:<act>:<kind>:<id> (see useHostFloatStore).
+      if (id.startsWith('float:')) {
+        const [, act, kind, ...rest] = id.split(':');
+        useHostFloatStore.getState().act?.(act, kind as 'want' | 'thing', rest.join(':'));
+        return;
+      }
+      hostActionsRef.current[id]?.();
+    });
   }, []);
   // Slots 1..N map onto hBtns; slot 0 is the hamburger, slot -1 is "not here".
   const headerFocusIdx = headerNavIdx >= 1 ? headerNavIdx - 1 : -1;

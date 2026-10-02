@@ -49,6 +49,9 @@ export interface HostMessage {
   panel: HostPanel | null;
   /** A panel the app shows as a sheet of its own, from this route. */
   sheet: HostSheet | null;
+  /** The corner cards for what is underfoot, front first, for the app to draw
+   *  natively (useHostFloatStore). Empty when there are none. */
+  float: HostFloatCard[];
   /** Where this person keeps the header (their character's display setting):
    *  the app puts its own bar there. */
   position: 'top' | 'bottom';
@@ -127,8 +130,12 @@ export function hostInsets(): { top: number; bottom: number } {
 /** A panel page (see nativePanelPage) whose panel has closed itself. */
 export interface HostSheetDone { type: 'sheet-done' }
 
+/** Something done on a card page (nativeCardPage) that belongs to the board:
+ *  the app hands it to the board's page as "float:<act>:<kind>:<id>". */
+export interface HostCardAct { type: 'card-act'; act: string; kind: HostFloatCard['kind']; id: string }
+
 /** Hand a message to the app. Nothing happens without one. */
-export function postToHost(message: HostMessage | HostChoice | HostSheetDone): void {
+export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct): void {
   window.webkit?.messageHandlers?.mywantHost?.postMessage(message);
 }
 
@@ -248,7 +255,8 @@ export const useHostPanelStore = create<HostPanelState>((set, get) => ({
 
 /** This page IS such a panel, inside an app's sheet: draw the panel, full. */
 export const nativePanelPage: boolean =
-  nativeHost && typeof location !== 'undefined' && location.pathname.startsWith('/panel/');
+  nativeHost && typeof location !== 'undefined' && location.pathname.startsWith('/panel/')
+  && !location.pathname.startsWith('/panel/card/');
 
 export interface HostSheet {
   /** The route of this app the sheet shows, e.g. /panel/want/<id>. */
@@ -270,4 +278,36 @@ export const useHostSheetStore = create<HostSheetState>((set) => ({
   close: null,
   set: (sheet, close) => set({ sheet, close }),
   clear: () => set({ sheet: null, close: null }),
+}));
+
+// ── The corner card, drawn by the app ───────────────────────────────────────
+//
+// On a phone the board shows a card for what is underfoot in its corner
+// (CanvasFocusFloatCard). Framed by an app, the board does not draw it: it
+// hands over which cards they are (front first), and the app draws the frame
+// — its corner, its stack, its arrival — natively, with a small web view in
+// it showing the card itself from a route of this app (/panel/card/<kind>/<id>,
+// nativeCardPage). Being native, the card is what the details sheet grows out
+// of and shrinks back into. What is done on the card that belongs to the board
+// (opening its details, bringing a card forward, editing...) comes back to
+// the board as "float:<act>:<kind>:<id>" presses.
+
+export interface HostFloatCard { kind: 'want' | 'thing'; id: string }
+
+/** This page IS a corner card, inside the app's frame: draw the card, full. */
+export const nativeCardPage: boolean =
+  nativeHost && typeof location !== 'undefined' && location.pathname.startsWith('/panel/card/');
+
+interface HostFloatState {
+  cards: HostFloatCard[];
+  act: ((act: string, kind: HostFloatCard['kind'], id: string) => void) | null;
+  set: (cards: HostFloatCard[], act: HostFloatState['act']) => void;
+  clear: () => void;
+}
+
+export const useHostFloatStore = create<HostFloatState>((set) => ({
+  cards: [],
+  act: null,
+  set: (cards, act) => set({ cards, act }),
+  clear: () => set({ cards: [], act: null }),
 }));

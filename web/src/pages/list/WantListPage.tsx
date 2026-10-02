@@ -1,5 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { postToHost } from '@/lib/nativeHost';
+import { WantCard } from '@/components/dashboard/WantCard/WantCard';
+import { ThingCard } from '@/components/dashboard/ThingCard';
 import { useMarkJumpStore } from '@/stores/markJumpStore';
 import { hasExtensionRoute } from '@/extensions/registry';
 import { classNames } from '@/utils/helpers';
@@ -35,7 +38,13 @@ export const WantListPage: React.FC<{
    * list drawn — the panel is the page (AppSidebarHost, nativePanelPage).
    */
   panel?: boolean;
-}> = ({ panel = false }) => {
+  /**
+   * Run as one corner card on its own (/panel/card/<want|thing>/<id>), inside
+   * an app's native card frame (lib/nativeHost, nativeCardPage): the card,
+   * filling the page, its board-side actions handed to the app.
+   */
+  card?: boolean;
+}> = ({ panel = false, card = false }) => {
   const board = useNoBoard();
   const { isCanvasDragging, setIsCanvasDragging, isCanvasDraggingRef, wantCanvasRef, cursorManPosRef, cursorManFocusedWantIdRef, canvasCenterX, canvasCenterY } = board;
   const ws = useWorkspace({ board });
@@ -344,6 +353,63 @@ export const WantListPage: React.FC<{
 
   if (panel) return null;
 
+  if (card) {
+    const kind = panelRoute.kind === 'thing' ? 'thing' as const : 'want' as const;
+    const id = panelRoute.id ?? '';
+    // What belongs to the board — opening its details, editing, the agents
+    // view — goes to the app, which hands it to the board's page.
+    const act = (a: string) => postToHost({ type: 'card-act', act: a, kind, id });
+    if (kind === 'thing') {
+      const t = thingRecords.find(r => r.id === id);
+      return (
+        <HostCardFrame>
+          {t && (
+            <ThingCard
+              record={t}
+              selected
+              className="!scale-100 !h-full"
+              onView={() => act('open')}
+              onAddWant={() => act('add-want')}
+              onDelete={(r) => { void deleteThingRecord(r); }}
+            />
+          )}
+        </HostCardFrame>
+      );
+    }
+    const w = wants.find(x => (x.metadata?.id || x.id) === id);
+    return (
+      <HostCardFrame>
+        {w && (
+          <WantCard
+            want={w}
+            selected
+            selectedWant={w}
+            onView={() => act('open')}
+            className="!scale-100 !h-full"
+            onViewAgents={() => act('agents')}
+            onViewResults={() => act('results')}
+            onViewChat={() => act('chat')}
+            onEdit={() => act('edit')}
+            onDelete={handleDirectDeleteWant}
+            onSuspend={handleSuspendWant}
+            onResume={handleResumeWant}
+            onShowReactionConfirmation={handleShowReactionConfirmation}
+            index={0}
+            stackCount={0}
+            expandedParents={expandedParents}
+            onToggleExpand={handleToggleExpand}
+            maximizedWantId={null}
+            onMaximizeChange={(mid) => { if (mid) act('maximize'); }}
+            isSelectMode={false}
+            onCreateWant={handleCreateWant}
+            canvasMode
+            confirmEntersInnerFocus
+          />
+        )}
+      </HostCardFrame>
+    );
+  }
+
   return (
     <>
       <WorkspaceHeaderOverlay ws={ws} />
@@ -433,5 +499,26 @@ export const WantListPage: React.FC<{
       <WorkspaceModals ws={ws} canvasPlacementPos={null} />
       <DragOverlay ghostState={reorder.ghost} />
     </>
+  );
+};
+
+/**
+ * A corner card filling its page: drawn at the size the board draws its
+ * corner cards before shrinking them (CanvasFocusFloatCard, 420×260), and
+ * shrunk to the page's width — the app's frame is that shape.
+ */
+const HostCardFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [width, setWidth] = React.useState(() => window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return (
+    <div className="fixed inset-0 overflow-hidden bg-white dark:bg-gray-900">
+      <div style={{ width: 420, height: 260, transform: `scale(${width / 420})`, transformOrigin: 'top left' }}>
+        {children}
+      </div>
+    </div>
   );
 };
