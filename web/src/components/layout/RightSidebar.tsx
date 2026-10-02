@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useHeaderAtBottom, useDisplaySettings } from '@/hooks/useDisplaySettings';
-import { nativeHost } from '@/lib/nativeHost';
+import { nativeHost, HOST_PANEL_BAR, HOST_PANEL_GRIP, useHostPanelStore, iconName } from '@/lib/nativeHost';
 import { useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
 import { PanelCloseButton } from '@/components/sidebar/PanelCloseButton';
@@ -512,6 +512,41 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   // is measured from the offset the previous one actually painted.
   useLayoutEffect(() => { prevSheetYRef.current = sheetY; }, [sheetY]);
 
+  // Framed by an app, a phone sheet gives its frame — grabber, icon and
+  // title, close — to the app, which draws it natively along the sheet's top
+  // (lib/nativeHost, useHostPanelStore). The sheet keeps the content, leaves
+  // HOST_PANEL_BAR empty at its top for the app's bar, and says where its top
+  // is once it has arrived; the app's close comes back here.
+  const hostFrame = nativeHost && isMobileSheet;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const hostOwner = useRef(`panel-${Math.random().toString(36).slice(2)}`);
+  useEffect(() => {
+    if (!hostFrame) return;
+    const owner = hostOwner.current;
+    if (!isOpen) { useHostPanelStore.getState().clear(owner); return; }
+    const publish = () => {
+      const el = containerRef.current;
+      if (!el) return;
+      useHostPanelStore.getState().set(owner, {
+        title: title ?? '',
+        icon: iconName(TitleIcon as { displayName?: string } | undefined, ''),
+        top: Math.round(el.getBoundingClientRect().top),
+        bare: chromeless,
+      }, () => onCloseRef.current());
+    };
+    // Once it has slid in, where it stands; and again when the page resizes.
+    const settled = setTimeout(publish, sheetMs + 40);
+    window.addEventListener('resize', publish);
+    return () => {
+      clearTimeout(settled);
+      window.removeEventListener('resize', publish);
+      useHostPanelStore.getState().clear(owner);
+    };
+    // sheetMs is read once per opening, as it was when the slide began.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hostFrame, isOpen, title, TitleIcon, chromeless]);
+
   // Where the phone's sheet stands off the edge it slides from. Shut, it has
   // to travel this far as well as its own height: moved by only 100% it stops
   // with its top this far short of the edge, and that strip — the grabber and
@@ -629,7 +664,8 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           }
         } : undefined}
         style={{ ...sidebarStyle, '--mw-focus-color': focusColor } as React.CSSProperties}
-        {...(isMobileSheet ? swipe.handlers : {})}
+        // The app's bar closes a framed sheet with a drag of its own.
+        {...(isMobileSheet && !hostFrame ? swipe.handlers : {})}
       >
         {/* Sidebar-focus frame — the twin of the canvas's frame in WantCanvas,
             same character colour and same inset glow, so the pair reads as one
@@ -679,7 +715,17 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             thing saying "pull me down", so it is drawn large enough to read as
             a control rather than as trim: a wider, thicker bar with room around
             it, which is also the touch target. */}
-        {isMobileSheet && mobileSheetBottom && (
+        {/* The strip the app's bar is drawn over, when the app draws the frame. */}
+        {hostFrame && <div aria-hidden className="flex-shrink-0" style={{ height: chromeless ? HOST_PANEL_GRIP : HOST_PANEL_BAR }} />}
+        {/* What a panel adds to its header (a selected want's status and
+            Reload) is the page's own, so it stays — a row of its own under the
+            app's bar. */}
+        {hostFrame && !chromeless && headerActions && (
+          <div className="flex-shrink-0 flex items-stretch justify-end relative z-20 border-b border-gray-200 dark:border-gray-700" style={{ minHeight: 44 }}>
+            {headerActions}
+          </div>
+        )}
+        {isMobileSheet && mobileSheetBottom && !hostFrame && (
           <div
             className="flex-shrink-0 flex justify-center pt-2.5 pb-2 cursor-pointer relative z-20"
             onClick={onClose}
@@ -692,7 +738,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 
         {/* Header. Absent for a panel that says what it is by itself — see
             `chromeless`. */}
-        {!chromeless && (
+        {!chromeless && !hostFrame && (
         <div
           className={classNames(
             'flex-shrink-0 bg-white dark:bg-gray-900 flex items-stretch justify-between z-20 relative',
@@ -722,7 +768,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 
         {/* Grab handle — mobile sheet only (bottom handle when the sheet is
             docked to the top) */}
-        {isMobileSheet && !mobileSheetBottom && (
+        {isMobileSheet && !mobileSheetBottom && !hostFrame && (
           <div
             className="flex-shrink-0 flex justify-center pt-1 pb-2 cursor-pointer"
             onClick={onClose}

@@ -49,6 +49,7 @@ import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { WantCardLayout } from './WantCardLayout';
 import { RecipeSlideDeck, type RecipeSlideDeckHandle } from './parts/RecipeSlideDeck';
 import { writeWantState } from '@/api/wantState';
+import { hostInsets } from '@/lib/nativeHost';
 
 // Persists iframe URLs across component remounts (canvas/list view switches)
 const _iframeUrlMap = new Map<string, string>();
@@ -316,10 +317,15 @@ export const WantCard: React.FC<WantCardProps> = ({
   const [expandWide, setExpandWide] = useState(false);
   const getTargetRect = useCallback(() => {
     const room = window.innerWidth - EXPAND_PAD * 2;
-    const height = window.innerHeight * 0.82;
+    // Framed by an app, clear of what it lays over the page — its floating bar
+    // and its tab bar (lib/nativeHost): placed by the window alone, the card's
+    // close / Wide / Max went under the app's bar. Nothing outside an app.
+    const inset = hostInsets();
+    const top = Math.max(EXPAND_PAD, window.innerHeight * 0.06) + inset.top;
+    const height = Math.min(window.innerHeight * 0.82, window.innerHeight - inset.bottom - EXPAND_PAD - top);
     const w = Math.min(expandWide ? wideExpandWidth(room, height) : EXPAND_MAX_W, room);
     return {
-      top: Math.max(EXPAND_PAD, window.innerHeight * 0.06),
+      top,
       left: Math.max(EXPAND_PAD, (window.innerWidth - w) / 2),
       width: w,
       height,

@@ -45,6 +45,8 @@ export interface HostMessage {
    *  nowhere; whether the menu is open, and on which entry. The app draws the
    *  ring on its own buttons and opens its own menu to match. */
   focus: { slot: string | null; menu: boolean; menuIndex: number };
+  /** The panel (a phone sheet) that is open, whose frame the app draws. */
+  panel: HostPanel | null;
   /** Where this person keeps the header (their character's display setting):
    *  the app puts its own bar there. */
   position: 'top' | 'bottom';
@@ -97,6 +99,25 @@ if (hostOwnsController && window.__mywantHost) {
 /** The controller as the app last handed it over (null before it has). */
 export function hostControllerFrame(): { buttons: boolean[]; axes: number[] } | null {
   return hostFrame;
+}
+
+/**
+ * How much of the top and bottom of the page an app framing it covers, in px:
+ * its floating bar (--host-inset-top / --host-inset-bottom) and, at the
+ * bottom, the safe area its tab bar sits in. Zero for both outside an app.
+ * For what is placed by measuring rather than by CSS — a maximized card.
+ */
+export function hostInsets(): { top: number; bottom: number } {
+  if (!nativeHost || typeof document === 'undefined') return { top: 0, bottom: 0 };
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;' +
+    'padding-top:calc(env(safe-area-inset-top, 0px) + var(--host-inset-top, 0px));' +
+    'padding-bottom:calc(env(safe-area-inset-bottom, 0px) + var(--host-inset-bottom, 0px));';
+  document.body.appendChild(probe);
+  const cs = getComputedStyle(probe);
+  const out = { top: parseFloat(cs.paddingTop) || 0, bottom: parseFloat(cs.paddingBottom) || 0 };
+  probe.remove();
+  return out;
 }
 
 /** Hand a message to the app. Nothing happens without one. */
@@ -164,3 +185,44 @@ export function useHostCardActions(owner: string, actions: HostCardAction[] | nu
     return () => useHostCardStore.getState().clear(owner);
   }, [owner, shape]);
 }
+
+// ── The open panel's frame, drawn by the app ────────────────────────────────
+//
+// A panel (RightSidebar as a phone sheet) keeps its content here and gives up
+// its frame — the grabber, the title and its icon, the close button — to an
+// app framing the page, which draws them natively at the sheet's top edge.
+// The sheet leaves that strip empty for it (HOST_PANEL_BAR) and says where
+// its top is once it has arrived; a press on the app's close comes back as
+// "panel:close". One panel at a time: the last to open.
+
+/** The height of the strip a framed sheet leaves for the app's bar, in px. */
+export const HOST_PANEL_BAR = 48;
+/** The strip for a panel that heads itself (chromeless): the grabber only. */
+export const HOST_PANEL_GRIP = 20;
+
+export interface HostPanel {
+  title: string;
+  /** A Lucide icon name, or "" for none. */
+  icon: string;
+  /** The sheet's top edge, in page px, where the app draws its bar. */
+  top: number;
+  /** The panel heads itself (its own close, its own row): the app draws the
+   *  grabber and nothing else, in HOST_PANEL_GRIP. */
+  bare: boolean;
+}
+
+interface HostPanelState {
+  owner: string | null;
+  panel: HostPanel | null;
+  close: (() => void) | null;
+  set: (owner: string, panel: HostPanel, close: () => void) => void;
+  clear: (owner: string) => void;
+}
+
+export const useHostPanelStore = create<HostPanelState>((set, get) => ({
+  owner: null,
+  panel: null,
+  close: null,
+  set: (owner, panel, close) => set({ owner, panel, close }),
+  clear: owner => { if (get().owner === owner) set({ owner: null, panel: null, close: null }); },
+}));
