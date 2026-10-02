@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { postToHost } from '@/lib/nativeHost';
+import { useThingStore } from '@/stores/thingStore';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
 import { ThingCard } from '@/components/dashboard/ThingCard';
 import { useMarkJumpStore } from '@/stores/markJumpStore';
@@ -333,6 +334,13 @@ export const WantListPage: React.FC<{
     useMarkJumpStore.getState().consume();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markJumpRequest]);
+
+  // A thing's card page needs the things, which this page loads only on a
+  // board (usePanelRequests).
+  const fetchThings = useThingStore(st => st.fetchThings);
+  useEffect(() => {
+    if (card && thingRecords.length === 0) void fetchThings();
+  }, [card, thingRecords.length, fetchThings]);
 
   // The panel the route names, opened — once the want it names is loaded.
   const panelRoute = useParams<{ kind?: string; id?: string }>();
