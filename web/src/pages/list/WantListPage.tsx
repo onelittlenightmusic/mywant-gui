@@ -359,7 +359,7 @@ export const WantListPage: React.FC<{
         <div
           ref={cardListScrollRef}
           className={classNames(
-            "flex-1 flex flex-col overflow-hidden transition-colors duration-200 overflow-y-auto lg:pr-[480px]",
+            "host-scroll-edges flex-1 flex flex-col overflow-hidden transition-colors duration-200 overflow-y-auto lg:pr-[480px]",
             isGlobalDragOver && "bg-blue-50 dark:bg-blue-900/20 border-4 border-dashed border-blue-400 border-inset"
           )}
         >

@@ -71,6 +71,8 @@ declare global {
 
 /** True when a native app frames this page. */
 export const nativeHost: boolean = typeof window !== 'undefined' && !!window.__mywantHost;
+// For the stylesheet: the page goes edge to edge (styles/index.css).
+if (nativeHost && typeof document !== 'undefined') document.documentElement.classList.add('native-host');
 
 /** A menu entry chosen with the header cursor (A on it): the app decides —
  *  a page it holds a tab for opens in that tab; anything else it sends back

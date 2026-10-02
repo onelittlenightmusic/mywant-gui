@@ -305,6 +305,20 @@
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
+
+  /* Framed by an app (lib/nativeHost): the page takes the whole screen, under
+     the status bar and the tab bar too. What must stay clear of them keeps
+     clear itself (env(safe-area-inset-*), --host-inset-*). */
+  html.native-host body {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  /* A page's own scrolling list, in an app: starts below the status bar and
+     scrolls under it, and its end clears the pill and the tab bar. */
+  html.native-host .host-scroll-edges {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: calc(env(safe-area-inset-bottom) + var(--host-inset-bottom, 0px));
+  }
 }
 
 @layer components {

@@ -234,7 +234,7 @@ export const ThingPage: React.FC = () => {
         )}
       </HeaderOverlay>
 
-      <main className="flex-1 overflow-y-auto bg-transparent lg:mr-[480px]">
+      <main className="host-scroll-edges flex-1 overflow-y-auto bg-transparent lg:mr-[480px]">
         <div className="p-3 sm:p-6 pb-24">
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md flex items-center justify-between">
