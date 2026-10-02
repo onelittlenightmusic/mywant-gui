@@ -278,16 +278,40 @@ export interface HostSheet {
 interface HostSheetState {
   sheet: HostSheet | null;
   close: (() => void) | null;
-  set: (sheet: HostSheet, close: () => void) => void;
-  clear: () => void;
+  owner: string | null;
+  set: (owner: string, sheet: HostSheet, close: () => void) => void;
+  /** Only the one who asked for the sheet can take it back. */
+  clear: (owner: string) => void;
 }
 
-export const useHostSheetStore = create<HostSheetState>((set) => ({
+export const useHostSheetStore = create<HostSheetState>((set, get) => ({
   sheet: null,
   close: null,
-  set: (sheet, close) => set({ sheet, close }),
-  clear: () => set({ sheet: null, close: null }),
+  owner: null,
+  set: (owner, sheet, close) => set({ owner, sheet, close }),
+  clear: (owner) => { if (get().owner === owner) set({ owner: null, sheet: null, close: null }); },
 }));
+
+/**
+ * Ask a framing app to show a panel as a sheet of its own, from its route
+ * (null: no sheet), and be told when the person closes it there. Whoever
+ * calls this draws nothing for the panel itself while it is the app's.
+ */
+export function useHostSheet(route: string | null, title: string, icon: string, close: () => void): void {
+  const owner = useRef(`sheet-${Math.random().toString(36).slice(2)}`).current;
+  const closeRef = useRef(close);
+  closeRef.current = close;
+  useEffect(() => {
+    if (!route) { useHostSheetStore.getState().clear(owner); return; }
+    useHostSheetStore.getState().set(owner, { route, title, icon }, () => closeRef.current());
+  }, [owner, route, title, icon]);
+  useEffect(() => () => useHostSheetStore.getState().clear(owner), [owner]);
+}
+
+/** Framed by an app on a phone, where panels are the app's sheets. */
+export function hostSheetsOn(): boolean {
+  return nativeHost && !nativePanelPage && typeof window !== 'undefined' && window.innerWidth < 640;
+}
 
 // ── The corner card, drawn by the app ───────────────────────────────────────
 //

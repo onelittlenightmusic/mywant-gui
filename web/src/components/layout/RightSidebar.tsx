@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
-import { nativeHost, HOST_PANEL_BAR, HostFramedPanel, useHostPanelStore, iconName } from '@/lib/nativeHost';
+import { nativeHost, nativePanelPage, postToHost, HOST_PANEL_BAR, HostFramedPanel, useHostPanelStore, iconName } from '@/lib/nativeHost';
 import { useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
 import { PanelCloseButton } from '@/components/sidebar/PanelCloseButton';
@@ -514,7 +514,15 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   // (lib/nativeHost, useHostPanelStore). The sheet keeps the content, leaves
   // HOST_PANEL_BAR empty at its top for the app's bar, and says where its top
   // is once it has arrived; the app's close comes back here.
-  const hostFrame = nativeHost && isMobileSheet;
+  const hostFrame = nativeHost && isMobileSheet && !nativePanelPage;
+  // On a panel page, the panel closing itself (a want made, a form cancelled)
+  // is the app's sheet's cue to go.
+  const hostWasOpen = useRef(false);
+  useEffect(() => {
+    if (!nativePanelPage) return;
+    if (isOpen) hostWasOpen.current = true;
+    else if (hostWasOpen.current) { hostWasOpen.current = false; postToHost({ type: 'sheet-done' }); }
+  }, [isOpen]);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const hostOwner = useRef(`panel-${Math.random().toString(36).slice(2)}`);
@@ -638,6 +646,17 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         transition: 'transform var(--motion-base) var(--ease-settle)',
         boxShadow: '-4px 0 12px rgba(0,0,0,0.06)',
       };
+
+  // A panel page inside an app's sheet (nativePanelPage): the panel is the
+  // page, the sheet its frame — no slide, no grabber, no close of its own.
+  if (nativePanelPage) {
+    return isOpen ? (
+      <div data-sidebar="true" ref={containerRef} className="fixed inset-0 flex flex-col overflow-hidden bg-white dark:bg-gray-900"
+        style={{ ...backgroundStyle, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}>
+        <HostFramedPanel.Provider value={true}>{children}</HostFramedPanel.Provider>
+      </div>
+    ) : null;
+  }
 
   return (
     <>

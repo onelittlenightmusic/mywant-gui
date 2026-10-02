@@ -192,18 +192,29 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
     </div>
   ) : null;
 
+  // Where the character stands, for a panel opened on a page of its own.
+  const hereQuery = () => {
+    const p = cursorManPosRef.current
+      ?? (canvasCenterX !== undefined && canvasCenterY !== undefined ? { x: canvasCenterX, y: canvasCenterY } : null);
+    return p ? `?x=${p.x}&y=${p.y}` : '';
+  };
+
   useAppSidebar({
     // On a phone, selecting a card is focus — not "show me everything". The
     // sheet covers the list it was chosen from, so it opens when asked for
     // (Enter, or a second tap), exactly as it does on the board.
     open: detailPanelOpen,
-    // The panels that stand on a page of their own, for an app to open as a
-    // sheet of its own: Global, and a want's details. The forms and the thing
-    // panels stay drawn here.
+    // Every panel stands on a page of its own, for an app to open as a sheet
+    // of its own (lib/nativeHost) — all but a group's, whose panel is the
+    // board's. What a panel reads off the board (where the character stands,
+    // for a thing pinned underfoot or lined up from there) goes with it.
     hostRoute: sidebar.showGlobal ? '/panel/global'
-      : (!addingThing && !editingThing && !cursorGroup && selectedWant)
-        ? `/panel/want/${encodeURIComponent(selectedWant.metadata?.id || selectedWant.id || '')}`
-        : undefined,
+      : addingThing ? `/panel/add-thing${hereQuery()}`
+      : editingThing ? `/panel/edit-thing/${encodeURIComponent(editingThing.id)}`
+      : cursorGroup ? undefined
+      : selectedWant ? `/panel/want/${encodeURIComponent(selectedWant.metadata?.id || selectedWant.id || '')}`
+      : cursorThingRecord ? `/panel/thing/${encodeURIComponent(cursorThingRecord.id)}${hereQuery()}`
+      : undefined,
     mobileForceBottom: isMobileCanvas,
     disableBackdropClick: expandedChain.length > 0,
     title: sidebar.showGlobal ? 'Global'

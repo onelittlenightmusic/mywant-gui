@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { postToHost, HostFramedPanel } from '@/lib/nativeHost';
 import { useThingStore } from '@/stores/thingStore';
+import { requestThingEdit } from '@/stores/thingEditStore';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
 import { ThingCard } from '@/components/dashboard/ThingCard';
 import { useMarkJumpStore } from '@/stores/markJumpStore';
@@ -47,6 +48,14 @@ export const WantListPage: React.FC<{
   card?: boolean;
 }> = ({ panel = false, card = false }) => {
   const board = useNoBoard();
+  const panelRoute = useParams<{ kind?: string; id?: string }>();
+  const panelThingId = panel && panelRoute.kind === 'thing' ? panelRoute.id ?? null : null;
+  // A panel opened on its own page is told where the character stands (x, y):
+  // a thing is pinned there, or lined up from there.
+  if (panel && board.cursorManPosRef.current === null) {
+    const q = new URLSearchParams(location.search);
+    if (q.has('x') && q.has('y')) board.cursorManPosRef.current = { x: Number(q.get('x')), y: Number(q.get('y')) };
+  }
   const { isCanvasDragging, setIsCanvasDragging, isCanvasDraggingRef, wantCanvasRef, cursorManPosRef, cursorManFocusedWantIdRef, canvasCenterX, canvasCenterY } = board;
   const ws = useWorkspace({ board });
   const {
@@ -214,7 +223,8 @@ export const WantListPage: React.FC<{
     regularWants,
     sidebar,
     cursorFocusedWantId: null,
-    cursorFocusedThingId: null,
+    // A thing's panel on its own page (/panel/thing/<id>) is that thing's.
+    cursorFocusedThingId: panelThingId,
     thingRecords,
     detailsAskedFor,
     detailsDismissed,
@@ -339,15 +349,36 @@ export const WantListPage: React.FC<{
   // board (usePanelRequests).
   const fetchThings = useThingStore(st => st.fetchThings);
   useEffect(() => {
-    if (card && thingRecords.length === 0) void fetchThings();
-  }, [card, thingRecords.length, fetchThings]);
+    if ((card || panel) && thingRecords.length === 0) void fetchThings();
+  }, [card, panel, thingRecords.length, fetchThings]);
 
-  // The panel the route names, opened — once the want it names is loaded.
-  const panelRoute = useParams<{ kind?: string; id?: string }>();
+  // The panel the route names, opened — once what it names is loaded.
   useEffect(() => {
     if (!panel) return;
     if (panelRoute.kind === 'global') {
       if (!sidebar.showGlobal) sidebar.toggleGlobal();
+      return;
+    }
+    if (panelRoute.kind === 'add-thing') { setAddingThing(true); return; }
+    if (panelRoute.kind === 'add-want') {
+      const owner = new URLSearchParams(location.search).get('owner');
+      const parent = owner ? wants.find(w => (w.metadata?.id || w.id) === owner) : undefined;
+      if (owner && !parent) return; // not loaded yet
+      if (!sidebar.showForm) handleCreateWant(parent);
+      return;
+    }
+    if (panelRoute.kind === 'edit-want' && panelRoute.id) {
+      const w = wants.find(x => (x.metadata?.id || x.id) === panelRoute.id);
+      if (w && !sidebar.showForm) handleEditWant(w);
+      return;
+    }
+    if (panelRoute.kind === 'edit-thing' && panelRoute.id) {
+      const t = thingRecords.find(r => r.id === panelRoute.id);
+      if (t) requestThingEdit(t);
+      return;
+    }
+    if (panelRoute.kind === 'thing' && panelRoute.id) {
+      setDetailsRequestedFor(panelRoute.id);
       return;
     }
     if (panelRoute.kind === 'want' && panelRoute.id) {
@@ -357,9 +388,13 @@ export const WantListPage: React.FC<{
       setDetailsRequestedFor(panelRoute.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panel, panelRoute.kind, panelRoute.id, wants.length]);
+  }, [panel, panelRoute.kind, panelRoute.id, wants.length, thingRecords.length]);
 
-  if (panel) return null;
+  // A form's panel page draws the form (WorkspaceModals holds it); the
+  // others' panels are AppSidebarHost's.
+  if (panel) return panelRoute.kind === 'add-want' || panelRoute.kind === 'edit-want'
+    ? <WorkspaceModals ws={ws} canvasPlacementPos={null} />
+    : null;
 
   if (card) {
     const kind = panelRoute.kind === 'thing' ? 'thing' as const : 'want' as const;

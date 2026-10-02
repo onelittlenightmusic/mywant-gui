@@ -3,7 +3,9 @@ import { RightSidebar } from '@/components/layout/RightSidebar';
 import { SwapTransition } from '@/components/common/SwapTransition';
 import { useAppSidebarStore } from '@/stores/appSidebarStore';
 import { PanelShell } from '@/components/sidebar/PanelIdentityRow';
-import { nativeHost, nativePanelPage, postToHost, useHostSheetStore, iconName, HostFramedPanel } from '@/lib/nativeHost';
+import { useThingStore } from '@/stores/thingStore';
+import { useWantStore } from '@/stores/wantStore';
+import { nativePanelPage, postToHost, useHostSheet, hostSheetsOn, iconName, HostFramedPanel } from '@/lib/nativeHost';
 
 /**
  * The single, app-root instance of the detail/summary RightSidebar. It lives in
@@ -26,20 +28,19 @@ export const AppSidebarHost: React.FC = () => {
 
   // Framed by an app on a phone, a panel that stands on a page of its own is
   // the app's sheet, opened from its route (lib/nativeHost) — not drawn here.
-  const asSheet = nativeHost && !nativePanelPage && window.innerWidth < 640
-    && !!descriptor?.open && !!descriptor?.hostRoute;
-  const onCloseRef = React.useRef(descriptor?.onClose);
-  onCloseRef.current = descriptor?.onClose;
-  const sheetRoute = asSheet ? descriptor?.hostRoute ?? '' : '';
-  const sheetTitle = descriptor?.title ?? '';
-  const sheetIcon = iconName(descriptor?.titleIcon as { displayName?: string } | undefined, '');
-  React.useEffect(() => {
-    if (!sheetRoute) { useHostSheetStore.getState().clear(); return; }
-    useHostSheetStore.getState().set(
-      { route: sheetRoute, title: sheetTitle, icon: sheetIcon },
-      () => onCloseRef.current?.(),
-    );
-  }, [sheetRoute, sheetTitle, sheetIcon]);
+  const asSheet = hostSheetsOn() && !!descriptor?.open && !!descriptor?.hostRoute;
+  useHostSheet(
+    asSheet ? descriptor?.hostRoute ?? null : null,
+    descriptor?.title ?? '',
+    iconName(descriptor?.titleIcon as { displayName?: string } | undefined, ''),
+    () => {
+      descriptor?.onClose?.();
+      // What the sheet's own page changed — a thing added, a want edited —
+      // was changed there, so this page reads it again.
+      void useThingStore.getState().fetchThings();
+      void useWantStore.getState().fetchWants();
+    },
+  );
 
   // This page is such a panel, inside the app's sheet: when it closes itself
   // (a want deleted from it, say), the app is told, and lets the sheet go.
@@ -67,6 +68,9 @@ export const AppSidebarHost: React.FC = () => {
   // The panel page: the panel and nothing else, the whole page — the app's
   // sheet is its frame (its close included, so the panel's own is not drawn).
   if (nativePanelPage) {
+    // Nothing at all while closed: a form's panel page draws its form itself
+    // (RightSidebar), and an empty page over it would hide it.
+    if (!descriptor?.open) return null;
     return (
       // Its end clears the sheet's rounded corners, the home indicator, and
       // the app's shrunk tab bar and pill kept over the sheet.

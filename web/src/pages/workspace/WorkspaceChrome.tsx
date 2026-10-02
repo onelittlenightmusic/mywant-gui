@@ -7,6 +7,7 @@ import { SaveAsRecipeModal } from '@/components/modals/SaveAsRecipeModal';
 import { isDraftWant } from '@/types/draft';
 import type { Recommendation } from '@/types/interact';
 import type { useWorkspace } from './useWorkspace';
+import { useHostSheet, hostSheetsOn } from '@/lib/nativeHost';
 
 type Workspace = ReturnType<typeof useWorkspace>;
 
@@ -73,9 +74,27 @@ export const WorkspaceModals: React.FC<{
   canvasPlacementPos: { x: number; y: number } | null;
 }> = ({ ws, canvasPlacementPos }) => {
   const { selectedWant } = ws;
+  // Framed by an app on a phone, the form is the app's sheet (useHostSheet),
+  // opened on its own page — the plain cases: adding a want (under a parent
+  // or not), editing one. A form seeded with something that cannot go in an
+  // address (a thing, a recommendation, parameters) is still drawn here.
+  const plainForm = ws.sidebar.showForm && !ws.showRecommendationForm && !ws.wantSeed
+    && !ws.initialFormParams && !ws.initialFormImports && !ws.initialFormTypeId
+    && ws.initialFormItemType === 'want-type';
+  const formAsSheet = hostSheetsOn() && plainForm;
+  const ownerId = ws.ownerWant ? (ws.ownerWant.metadata?.id || ws.ownerWant.id || '') : '';
+  const editId = ws.editingWant ? (ws.editingWant.metadata?.id || ws.editingWant.id || '') : '';
+  useHostSheet(
+    !formAsSheet ? null
+      : editId ? `/panel/edit-want/${encodeURIComponent(editId)}`
+      : `/panel/add-want${ownerId ? `?owner=${encodeURIComponent(ownerId)}` : ''}`,
+    editId ? 'Edit' : 'Add Want',
+    'Heart',
+    () => { ws.handleCloseModals(); void ws.fetchWants(); },
+  );
   return (
     <>
-      <WantForm ref={ws.wantFormRef} isOpen={ws.sidebar.showForm} onClose={ws.handleCloseModals} editingWant={ws.editingWant} ownerWant={ws.ownerWant} initialTypeId={ws.initialFormTypeId} initialParams={ws.initialFormParams} initialImports={ws.initialFormImports} initialItemType={ws.initialFormItemType} mode={ws.showRecommendationForm ? 'recommendation' : (ws.editingWant ? 'edit' : 'create')} recommendations={(selectedWant && isDraftWant(selectedWant) ? ((selectedWant.state?.current?.proposed_recommendations as Recommendation[]) || (selectedWant.state?.current?.recommendations as Recommendation[]) || []) : [])} selectedRecommendation={ws.selectedRecommendation} onRecommendationSelect={ws.setSelectedRecommendation} onRecommendationDeploy={ws.handleRecommendationDeploy} formSituation={ws.formSituation} onSituationChange={ws.setFormSituation} canvasPlacementPos={canvasPlacementPos} seed={ws.wantSeed} onBackToThing={() => { ws.handleCloseModals(); ws.navigate('/thing'); }} />
+      <WantForm ref={ws.wantFormRef} isOpen={ws.sidebar.showForm && !formAsSheet} onClose={ws.handleCloseModals} editingWant={ws.editingWant} ownerWant={ws.ownerWant} initialTypeId={ws.initialFormTypeId} initialParams={ws.initialFormParams} initialImports={ws.initialFormImports} initialItemType={ws.initialFormItemType} mode={ws.showRecommendationForm ? 'recommendation' : (ws.editingWant ? 'edit' : 'create')} recommendations={(selectedWant && isDraftWant(selectedWant) ? ((selectedWant.state?.current?.proposed_recommendations as Recommendation[]) || (selectedWant.state?.current?.recommendations as Recommendation[]) || []) : [])} selectedRecommendation={ws.selectedRecommendation} onRecommendationSelect={ws.setSelectedRecommendation} onRecommendationDeploy={ws.handleRecommendationDeploy} formSituation={ws.formSituation} onSituationChange={ws.setFormSituation} canvasPlacementPos={canvasPlacementPos} seed={ws.wantSeed} onBackToThing={() => { ws.handleCloseModals(); ws.navigate('/thing'); }} />
       <SaveAsRecipeModal
         isOpen={ws.showSaveRecipeModal}
         want={ws.saveRecipeTarget}
