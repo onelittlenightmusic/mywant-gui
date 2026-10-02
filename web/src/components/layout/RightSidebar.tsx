@@ -787,7 +787,8 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         {/* Content */}
         <div
           className={`flex-1 h-full px-0 py-0 relative z-10 ${overflowHidden ? 'overflow-hidden' : 'overflow-y-auto'}`}
-          style={hostFrame && mobileSheetBottom ? { paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : undefined}
+          // Clear of the app's shrunk tab bar and pill, kept over the panel (72).
+          style={hostFrame && mobileSheetBottom ? { paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 72px)' } : undefined}
         >
           <div className="h-full sidebar-compact">
             <HostFramedPanel.Provider value={hostFrame}>
