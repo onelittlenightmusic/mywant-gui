@@ -1,4 +1,5 @@
-import { createContext, useEffect, useRef } from 'react';
+import { createContext, useEffect, useRef, useState } from 'react';
+import type { RefCallback } from 'react';
 import { create } from 'zustand';
 
 /**
@@ -130,12 +131,20 @@ export function hostInsets(): { top: number; bottom: number } {
 /** A panel page (see nativePanelPage) whose panel has closed itself. */
 export interface HostSheetDone { type: 'sheet-done' }
 
+/** Where a panel page (nativePanelPage) left room for its subject's card, for
+ *  the app to put its native card frame there (null: no room any more). In
+ *  the page's own coordinates, kept up to date as it scrolls. */
+export interface HostCardSlot {
+  type: 'card-slot';
+  slot: { kind: HostFloatCard['kind']; id: string; x: number; y: number; w: number; h: number } | null;
+}
+
 /** Something done on a card page (nativeCardPage) that belongs to the board:
  *  the app hands it to the board's page as "float:<act>:<kind>:<id>". */
 export interface HostCardAct { type: 'card-act'; act: string; kind: HostFloatCard['kind']; id: string }
 
 /** Hand a message to the app. Nothing happens without one. */
-export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct): void {
+export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot): void {
   window.webkit?.messageHandlers?.mywantHost?.postMessage(message);
 }
 
@@ -311,3 +320,37 @@ export const useHostFloatStore = create<HostFloatState>((set) => ({
   set: (cards, act) => set({ cards, act }),
   clear: () => set({ cards: [], act: null }),
 }));
+
+/**
+ * Leave room for a subject's card on a panel page inside an app's sheet: the
+ * app draws the card there natively — the same card frame the corner card is
+ * (useHostFloatStore) — and is told where the room is, and again whenever the
+ * panel scrolls or the room changes size.
+ */
+export function useHostCardSlot(kind: HostFloatCard['kind'], id: string): RefCallback<HTMLElement> {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!el) return;
+    let frame = 0;
+    const send = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect();
+        postToHost({ type: 'card-slot', slot: { kind, id, x: r.left, y: r.top, w: r.width, h: r.height } });
+      });
+    };
+    send();
+    const resize = new ResizeObserver(send);
+    resize.observe(el);
+    window.addEventListener('scroll', send, { capture: true, passive: true });
+    window.addEventListener('resize', send);
+    return () => {
+      cancelAnimationFrame(frame);
+      resize.disconnect();
+      window.removeEventListener('scroll', send, { capture: true });
+      window.removeEventListener('resize', send);
+      postToHost({ type: 'card-slot', slot: null });
+    };
+  }, [el, kind, id]);
+  return setEl;
+}

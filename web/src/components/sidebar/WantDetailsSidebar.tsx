@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { nativePanelPage, useHostCardSlot } from '@/lib/nativeHost';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
 import { Settings, Eye, Database, Check, History, MessageSquare, ArrowDownUp } from 'lucide-react';
 import { Want, WantExecutionStatus } from '@/types/want';
@@ -632,6 +633,11 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
           }}
           className="relative h-full rounded-xl outline-none"
         >
+          {/* In an app's sheet the card is the app's native card frame, put
+              over the room left here for it (useHostCardSlot). */}
+          {nativePanelPage ? (
+            <HostCardSlot id={wantDetails.metadata?.id || wantDetails.id || ''} />
+          ) : (
           <WantCard
             want={wantDetails}
             // NOT selected: the quick-action overlay opens on right-click (or
@@ -660,6 +666,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
             index={0}
             className="h-full w-full"
           />
+          )}
 
           {/* The highlight, on its own layer over the card.
               As a box-shadow on the wrapper it was invisible: the card fills
@@ -868,4 +875,10 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
 
     </>
   );
+};
+
+/** The room an app's native card frame is put over (see useHostCardSlot). */
+const HostCardSlot: React.FC<{ id: string }> = ({ id }) => {
+  const ref = useHostCardSlot('want', id);
+  return <div ref={ref} className="h-full w-full rounded-xl" />;
 };
