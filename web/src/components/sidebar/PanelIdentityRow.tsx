@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
+import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { PanelCloseButton } from './PanelCloseButton';
 
 /**
@@ -122,7 +122,7 @@ export const PanelShell: React.FC<{
   actions?: React.ReactNode;
   children: React.ReactNode;
 }> = ({ title, onClose, actions, children }) => {
-  const isBottom = useHeaderAtBottom();
+  const isBottom = usePanelAtBottom();
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   return (
     <PanelActionsSlot.Provider value={{ el: slot, placement: isBottom ? 'bar' : 'row' }}>

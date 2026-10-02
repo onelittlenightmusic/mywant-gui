@@ -1,6 +1,6 @@
 /** The History tab — past parameter, state and log snapshots. */
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
+import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { Bot, FileText, Database, History } from 'lucide-react';
 import { Want } from '@/types/want';
 import { useConfigStore } from '@/stores/configStore';
@@ -121,7 +121,7 @@ export const HistoryTab: React.FC<{
   setHistorySubTab: (t: HistorySubTab) => void;
 }> = ({ want, results, historySubTab, setHistorySubTab }) => {
   const config = useConfigStore(state => state.config);
-  const isBottom = useHeaderAtBottom();
+  const isBottom = usePanelAtBottom();
 
   /**
    * Up and down read the list, here for the same reason they do in the thing

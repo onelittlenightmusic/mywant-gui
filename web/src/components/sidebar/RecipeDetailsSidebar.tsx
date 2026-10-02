@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
+import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { RecipeCard } from '@/components/dashboard/RecipeCard';
 import { BookOpen, Settings, List, FileText, Play, Lightbulb } from 'lucide-react';
 import { SidebarTabBar } from '@/components/common/SidebarTabBar';
@@ -52,7 +52,7 @@ export const RecipeDetailsSidebar: React.FC<RecipeDetailsSidebarProps> = ({
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [deploying, setDeploying] = useState(false);
   const config = useConfigStore(s => s.config);
-  const isBottom = useHeaderAtBottom();
+  const isBottom = usePanelAtBottom();
 
   const tabs = React.useMemo(() => {
     const baseTabs = [

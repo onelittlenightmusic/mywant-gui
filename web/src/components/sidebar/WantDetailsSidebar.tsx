@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { nativePanelPage, useHostCardSlot } from '@/lib/nativeHost';
-import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
+import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { Settings, Eye, Database, Check, History, MessageSquare, ArrowDownUp } from 'lucide-react';
 import { Want, WantExecutionStatus } from '@/types/want';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -444,7 +444,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
 
   // Must be before early return to keep hook order consistent
   const config = useConfigStore(state => state.config);
-  const isBottom = useHeaderAtBottom();
+  const isBottom = usePanelAtBottom();
 
   // Ref used by the gamepad hook below to access tabs/index defined after the
   // early return, without violating Rules of Hooks.

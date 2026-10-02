@@ -9,7 +9,7 @@ import { CharacterDisplaySettings } from './CharacterDisplaySettings';
 import { SubTabBar } from '@/components/sidebar/SubTabBar';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useSpatialFocusNav } from '@/hooks/useSpatialFocusNav';
-import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
+import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { Slot } from '@/extensions/Slot';
 import type { CharacterDisplay } from '@/types/character';
 import { CardStatusRow, CardStatusItem } from '@/components/sidebar/CardStatusRow';
@@ -48,7 +48,7 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
   // scroll: who this character is, and how they like the app — related, but not
   // read at the same time, and the settings half is nine groups deep.
   const [tab, setTab] = useState<'about' | 'display'>('about');
-  const isBottom = useHeaderAtBottom();
+  const isBottom = usePanelAtBottom();
 
   // L1/R1 walk the tabs, the same bumpers that walk the want sheet's. A sheet
   // that can only be tabbed with a finger is a sheet the gamepad has to be put

@@ -367,6 +367,7 @@ export const WantListPage: React.FC<{
     // What belongs to the board — opening its details, editing, the agents
     // view — goes to the app, which hands it to the board's page.
     const act = (a: string) => postToHost({ type: 'card-act', act: a, kind, id });
+    const maximizedCard = new URLSearchParams(location.search).has('max');
     if (kind === 'thing') {
       const t = thingRecords.find(r => r.id === id);
       return (
@@ -385,8 +386,12 @@ export const WantListPage: React.FC<{
       );
     }
     const w = wants.find(x => (x.metadata?.id || x.id) === id);
+    // Maximized, the card places itself over the whole page; a scaled frame
+    // around it would be what it measured instead (a transform holds fixed
+    // children), so it gets the page as it is.
+    const Frame = maximizedCard ? HostCardPage : HostCardFrame;
     return (
-      <HostCardFrame>
+      <Frame>
         {w && (
           <WantCard
             want={w}
@@ -406,15 +411,18 @@ export const WantListPage: React.FC<{
             stackCount={0}
             expandedParents={expandedParents}
             onToggleExpand={handleToggleExpand}
-            maximizedWantId={null}
-            onMaximizeChange={(mid) => { if (mid) act('maximize'); }}
+            // Maximizing is the app's: it opens the card full screen, natively,
+            // as this same page with ?max=1 — where the card is drawn
+            // maximized, and putting it back asks the app to close it.
+            maximizedWantId={maximizedCard ? id : null}
+            onMaximizeChange={(mid) => act(mid ? 'maximize' : 'unmaximize')}
             isSelectMode={false}
             onCreateWant={handleCreateWant}
             canvasMode
             confirmEntersInnerFocus
           />
         )}
-      </HostCardFrame>
+      </Frame>
     );
   }
 
@@ -532,3 +540,8 @@ const HostCardFrame: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     </div>
   );
 };
+
+/** A maximized card's page: the page as it is, for the card to fill. */
+const HostCardPage: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="fixed inset-0 bg-white dark:bg-gray-900">{children}</div>
+);

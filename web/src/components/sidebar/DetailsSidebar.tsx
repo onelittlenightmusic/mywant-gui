@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
+import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { LucideIcon } from 'lucide-react';
 import { classNames } from '@/utils/helpers';
 import { useConfigStore } from '@/stores/configStore';
@@ -36,7 +36,7 @@ export const DetailsSidebar: React.FC<DetailsSidebarProps> = ({
   onTabChange,
 }) => {
   const config = useConfigStore(state => state.config);
-  const isBottom = useHeaderAtBottom();
+  const isBottom = usePanelAtBottom();
   const [activeTab, setActiveTab] = useState(defaultTab || tabs[0]?.id || '');
 
   useEffect(() => {

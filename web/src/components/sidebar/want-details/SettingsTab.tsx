@@ -1,6 +1,6 @@
 /** The Settings tab — the want's own YAML, edited as a form or as text. */
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
+import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { Settings, AlertTriangle, Save, Edit, Check } from 'lucide-react';
 import { Want, WhenSpec } from '@/types/want';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -91,7 +91,7 @@ export const SettingsTab: React.FC<{
   // by WantDetailsSidebar so the common sub-tab (B+L1/R1) handler can drive all sub-tabs.
 
   const config = useConfigStore(state => state.config);
-  const isBottom = useHeaderAtBottom();
+  const isBottom = usePanelAtBottom();
 
   // Section collapsed states (kept for compatibility, not used when hideHeader=true)
   const [isParametersCollapsed, setIsParametersCollapsed] = useState(true);

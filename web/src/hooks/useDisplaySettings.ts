@@ -78,6 +78,16 @@ export function useHeaderAtBottom(): boolean {
   return useHeaderPosition() === 'bottom';
 }
 
+/**
+ * Whether a panel keeps its tabs (and what goes with them) along the bottom —
+ * this person's setting, read as it is. Unlike useHeaderAtBottom, not forced
+ * to the top by an app framing the page: the app draws no header of the
+ * page's, but the panels inside its sheets are still laid out the person's way.
+ */
+export function usePanelAtBottom(): boolean {
+  return useDisplaySettings().header_position === 'bottom';
+}
+
 /** Which icon family category/type icons are drawn from. */
 export function useIconFont(): IconFont {
   return useDisplaySettings().icon_font;

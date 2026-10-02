@@ -11,7 +11,7 @@ import { useSidebarFocusStore } from '@/stores/sidebarFocusStore';
 import { usePanelTabs } from '@/hooks/usePanelTabs';
 import { useCardGridNavigation } from '@/hooks/useCardGridNavigation';
 import { handBackToGrid } from '@/stores/focusOwner';
-import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
+import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { classNames } from '@/utils/helpers';
 import { CardStatusRow, CardStatusItem } from './CardStatusRow';
 import { useConstellationStore, membersById } from '@/stores/constellationStore';
@@ -166,7 +166,7 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
   });
   // Where the tab bar goes, and therefore which way the panel is stacked —
   // the same question the want panel asks (see useHeaderAtBottom).
-  const isBottom = useHeaderAtBottom();
+  const isBottom = usePanelAtBottom();
   const constellations = useConstellationStore((s) => s.constellations);
   const constellationsByMember = React.useMemo(() => membersById(constellations, 'thing'), [constellations]);
   const eventsByRecord = useThingStore((s) => s.eventsByRecord);
