@@ -1,5 +1,6 @@
 import { openWebWant } from './plugins/types/WebFrameCardPlugin';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
+import { HostFramedPanel } from '@/lib/nativeHost';
 import { useDisplaySettings } from '@/hooks/useDisplaySettings';
 import { useIconFont } from '@/hooks/useDisplaySettings';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
@@ -514,6 +515,7 @@ export const WantCard: React.FC<WantCardProps> = ({
    * inside the panel was silent.
    */
   const isMaximized = !!wantId && maximizedWantId === wantId;
+  const hostFramed = useContext(HostFramedPanel);
   const prevMaximizedRef = useRef(false);
   useEffect(() => {
     if (isMaximized === prevMaximizedRef.current) return;
@@ -1402,8 +1404,9 @@ export const WantCard: React.FC<WantCardProps> = ({
         {/* Type gradient background at 70% opacity (same as the card tile) */}
         <div className="absolute inset-0 z-0 pointer-events-none"
              style={{ ...typeGradientStyle, opacity: 0.7 }} />
-        {/* Header — shared component, expanded mode */}
-        <WantCardHeader
+        {/* Header — shared component, expanded mode. Not in an app's native
+            card frame, which draws its own Max and Close (HostFramedPanel). */}
+        {!hostFramed && <WantCardHeader
           want={want}
           isFullScreen={isFullScreen}
           groupNames={wantGroupNames}
@@ -1411,7 +1414,7 @@ export const WantCard: React.FC<WantCardProps> = ({
           isWide={expandWide}
           onToggleWide={canWiden || expandWide ? () => setExpandWide(w => !w) : undefined}
           showMax
-        />
+        />}
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-hidden relative">
           {iframeUrl ? (

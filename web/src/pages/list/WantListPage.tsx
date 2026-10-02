@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { postToHost } from '@/lib/nativeHost';
+import { postToHost, HostFramedPanel } from '@/lib/nativeHost';
 import { useThingStore } from '@/stores/thingStore';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
 import { ThingCard } from '@/components/dashboard/ThingCard';
@@ -532,16 +532,20 @@ const HostCardFrame: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }, []);
   return (
     <div className="fixed inset-0 overflow-hidden bg-white dark:bg-gray-900">
+      <HostFramedPanel.Provider value={true}>
       {/* 420 wide, shrunk to the page's width, and as tall as the page is at
           that scale: the frame may be another shape (a sheet's card row). */}
       <div style={{ width: 420, height: size.h * 420 / size.w, transform: `scale(${size.w / 420})`, transformOrigin: 'top left' }}>
         {children}
       </div>
+      </HostFramedPanel.Provider>
     </div>
   );
 };
 
 /** A maximized card's page: the page as it is, for the card to fill. */
 const HostCardPage: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="fixed inset-0 bg-white dark:bg-gray-900">{children}</div>
+  <div className="fixed inset-0 bg-white dark:bg-gray-900">
+    <HostFramedPanel.Provider value={true}>{children}</HostFramedPanel.Provider>
+  </div>
 );
