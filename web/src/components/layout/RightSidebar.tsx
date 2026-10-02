@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { useHeaderAtBottom, useDisplaySettings } from '@/hooks/useDisplaySettings';
+import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
 import { nativeHost, HOST_PANEL_BAR, HostFramedPanel, useHostPanelStore, iconName } from '@/lib/nativeHost';
 import { useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
@@ -469,13 +469,10 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     bottom: 0,
   };
 
-  // Framed by an app there is no header, so isBottom is false — but the app
-  // keeps its own bar where this person keeps the header, and the sheet comes
-  // from that side as it always has: up from the bottom for a bottom header,
-  // not down over the top of the screen.
-  const headerSetting = useDisplaySettings().header_position;
-  const hostBarAtBottom = nativeHost && headerSetting === 'bottom';
-  const mobileSheetBottom = isMobileSheet && (isBottom || mobileForceBottom || hostBarAtBottom);
+  // Framed by an app, a sheet always rises from the bottom, as the app's own
+  // sheets do: its controls ride on its tab bar, at the bottom, whatever this
+  // person's header setting.
+  const mobileSheetBottom = isMobileSheet && (isBottom || mobileForceBottom || nativeHost);
   const swipe = useSheetSwipeDismiss({
     fromBottom: mobileSheetBottom,
     enabled: isMobileSheet && isOpen,
@@ -531,7 +528,10 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       useHostPanelStore.getState().set(owner, {
         title: title ?? '',
         icon: iconName(TitleIcon as { displayName?: string } | undefined, ''),
-        top: Math.round(el.getBoundingClientRect().top),
+        // Where it rests, not where the slide has it at this moment: the
+        // transform is left out (offsetTop), so a slide still settling cannot
+        // put the bar below the sheet's edge.
+        top: Math.round(el.offsetTop),
         bare: false,
       }, () => onCloseRef.current());
     };
