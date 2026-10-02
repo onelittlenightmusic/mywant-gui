@@ -316,7 +316,14 @@ export const WantCard: React.FC<WantCardProps> = ({
   // where that is worth a button (canWiden). Back to the usual width each time
   // the card is expanded.
   const [expandWide, setExpandWide] = useState(false);
+  // Inside an app's native card frame (HostFramedPanel), which is itself
+  // what grows when the card is maximized.
+  const hostFramed = useContext(HostFramedPanel);
   const getTargetRect = useCallback(() => {
+    // The frame has already grown to the size the card should be: the
+    // maximized card is the whole page, exactly over the card it replaces —
+    // anything smaller left that card showing around it.
+    if (hostFramed) return { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight };
     const room = window.innerWidth - EXPAND_PAD * 2;
     // Framed by an app, clear of what it lays over the page — its floating bar
     // and its tab bar (lib/nativeHost): placed by the window alone, the card's
@@ -331,7 +338,7 @@ export const WantCard: React.FC<WantCardProps> = ({
       width: w,
       height,
     };
-  }, [expandWide]);
+  }, [expandWide, hostFramed]);
   const canWiden = wideExpandWidth(window.innerWidth - EXPAND_PAD * 2, window.innerHeight * 0.82) >= EXPAND_MAX_W + WIDE_MIN_GAIN;
 
   const handleExpand = useCallback(() => {
@@ -515,7 +522,6 @@ export const WantCard: React.FC<WantCardProps> = ({
    * inside the panel was silent.
    */
   const isMaximized = !!wantId && maximizedWantId === wantId;
-  const hostFramed = useContext(HostFramedPanel);
   const prevMaximizedRef = useRef(false);
   useEffect(() => {
     if (isMaximized === prevMaximizedRef.current) return;
@@ -1397,7 +1403,9 @@ export const WantCard: React.FC<WantCardProps> = ({
           width:  (expandAnimated ? getTargetRect().width  : originRect?.width)  ?? 0,
           height: (expandAnimated ? getTargetRect().height : originRect?.height) ?? 0,
           transition: 'top 300ms cubic-bezier(0.4,0,0.2,1), left 300ms cubic-bezier(0.4,0,0.2,1), width 300ms cubic-bezier(0.4,0,0.2,1), height 300ms cubic-bezier(0.4,0,0.2,1)',
-          borderRadius: expandAnimated ? '0.75rem' : '0.5rem',
+          borderRadius: hostFramed ? 0 : expandAnimated ? '0.75rem' : '0.5rem',
+          // The app's frame rounds and shadows it.
+          ...(hostFramed ? { boxShadow: 'none', transition: 'none' } : {}),
         }}
         onClick={handleExpandedOverlayClick}
       >
