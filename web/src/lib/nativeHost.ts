@@ -203,7 +203,7 @@ export function useHostCardActions(owner: string, actions: HostCardAction[] | nu
 // "panel:close". One panel at a time: the last to open.
 
 /** The height of the strip a framed sheet leaves for the app's bar, in px. */
-export const HOST_PANEL_BAR = 48;
+export const HOST_PANEL_BAR = 20;
 /**
  * True inside a sheet whose frame the app draws: a panel's own close
  * (PanelCloseButton) is not drawn there — the app's bar has the close, for

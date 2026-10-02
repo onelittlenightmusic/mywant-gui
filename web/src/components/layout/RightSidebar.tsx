@@ -532,7 +532,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         // transform is left out (offsetTop), so a slide still settling cannot
         // put the bar below the sheet's edge.
         top: Math.round(el.offsetTop),
-        bare: false,
+        bare: true,
       }, () => onCloseRef.current());
     };
     // Once it has slid in, where it stands; and again when the page resizes.

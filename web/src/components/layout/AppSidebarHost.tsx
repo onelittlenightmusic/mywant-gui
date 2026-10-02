@@ -68,7 +68,10 @@ export const AppSidebarHost: React.FC = () => {
   // sheet is its frame (its close included, so the panel's own is not drawn).
   if (nativePanelPage) {
     return (
-      <div className="fixed inset-0 overflow-auto bg-white dark:bg-gray-900" style={descriptor?.backgroundStyle}>
+      // Its end clears the sheet's rounded bottom corners and the home
+      // indicator, so the last row is never cut off by the curve.
+      <div className="fixed inset-0 overflow-auto bg-white dark:bg-gray-900"
+        style={{ ...descriptor?.backgroundStyle, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
         <HostFramedPanel.Provider value={true}>
           {descriptor?.open ? content : null}
         </HostFramedPanel.Provider>
