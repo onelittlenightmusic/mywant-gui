@@ -595,15 +595,20 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         height: mobileSheetBottom
           ? `calc(100dvh - env(safe-area-inset-top, 0px) - 56px - ${sheetEdgeOffset})`
           : '40vh',
+        // An app framing the page drags the sheet by its own grabber, drawn
+        // over the sheet's top: it says how far as --host-sheet-drag.
         transform: isOpen
-          ? `translateY(${swipe.offset}px)`
+          ? (hostFrame ? `translateY(calc(${swipe.offset}px + var(--host-sheet-drag, 0px)))` : `translateY(${swipe.offset}px)`)
           : (mobileSheetBottom
             ? `translateY(calc(100% + ${sheetEdgeOffset}))`
             : `translateY(calc(-100% - ${sheetEdgeOffset}))`),
         // No animation while a finger is on it, or the sheet lags the drag.
         // Otherwise its own duration rather than the shared token — the panel
         // and the sheet move at one speed, which is not one time (see sheetMs).
-        transition: swipe.dragging ? 'none' : `transform ${sheetMs}ms var(--ease-settle)`,
+        transition: swipe.dragging ? 'none'
+          // ...and none while the app's grabber is being dragged.
+          : hostFrame ? `var(--host-sheet-transition, transform ${sheetMs}ms var(--ease-settle))`
+          : `transform ${sheetMs}ms var(--ease-settle)`,
         touchAction: 'pan-y',
         borderRadius: mobileSheetBottom ? '12px 12px 0 0' : '0 0 12px 12px',
         boxShadow: mobileSheetBottom ? '0 -4px 20px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.15)',
