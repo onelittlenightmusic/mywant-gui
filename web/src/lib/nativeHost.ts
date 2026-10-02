@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { createContext, useEffect, useRef } from 'react';
 import { create } from 'zustand';
 
 /**
@@ -47,6 +47,8 @@ export interface HostMessage {
   focus: { slot: string | null; menu: boolean; menuIndex: number };
   /** The panel (a phone sheet) that is open, whose frame the app draws. */
   panel: HostPanel | null;
+  /** A panel the app shows as a sheet of its own, from this route. */
+  sheet: HostSheet | null;
   /** Where this person keeps the header (their character's display setting):
    *  the app puts its own bar there. */
   position: 'top' | 'bottom';
@@ -120,8 +122,11 @@ export function hostInsets(): { top: number; bottom: number } {
   return out;
 }
 
+/** A panel page (see nativePanelPage) whose panel has closed itself. */
+export interface HostSheetDone { type: 'sheet-done' }
+
 /** Hand a message to the app. Nothing happens without one. */
-export function postToHost(message: HostMessage | HostChoice): void {
+export function postToHost(message: HostMessage | HostChoice | HostSheetDone): void {
   window.webkit?.messageHandlers?.mywantHost?.postMessage(message);
 }
 
@@ -197,8 +202,12 @@ export function useHostCardActions(owner: string, actions: HostCardAction[] | nu
 
 /** The height of the strip a framed sheet leaves for the app's bar, in px. */
 export const HOST_PANEL_BAR = 48;
-/** The strip for a panel that heads itself (chromeless): the grabber only. */
-export const HOST_PANEL_GRIP = 20;
+/**
+ * True inside a sheet whose frame the app draws: a panel's own close
+ * (PanelCloseButton) is not drawn there — the app's bar has the close, for
+ * every panel, including the ones that head themselves.
+ */
+export const HostFramedPanel = createContext(false);
 
 export interface HostPanel {
   title: string;
@@ -206,8 +215,7 @@ export interface HostPanel {
   icon: string;
   /** The sheet's top edge, in page px, where the app draws its bar. */
   top: number;
-  /** The panel heads itself (its own close, its own row): the app draws the
-   *  grabber and nothing else, in HOST_PANEL_GRIP. */
+  /** Unused now (every framed panel gets the app's full bar); kept false. */
   bare: boolean;
 }
 
@@ -225,4 +233,39 @@ export const useHostPanelStore = create<HostPanelState>((set, get) => ({
   close: null,
   set: (owner, panel, close) => set({ owner, panel, close }),
   clear: owner => { if (get().owner === owner) set({ owner: null, panel: null, close: null }); },
+}));
+
+// ── Panels as the app's own sheets ──────────────────────────────────────────
+//
+// A panel that can stand on a page of its own (a want's details, Global) is
+// not drawn here at all when an app frames the page: the app opens a real
+// sheet — its slide, its drag, its heights, the board still usable behind it
+// — with a second web view in it showing just that panel, from a route of
+// this app's (/panel/want/<id>, /panel/global). The panel's content is the
+// same components; only where it is drawn changes.
+
+/** This page IS such a panel, inside an app's sheet: draw the panel, full. */
+export const nativePanelPage: boolean =
+  nativeHost && typeof location !== 'undefined' && location.pathname.startsWith('/panel/');
+
+export interface HostSheet {
+  /** The route of this app the sheet shows, e.g. /panel/want/<id>. */
+  route: string;
+  title: string;
+  /** A Lucide icon name, or "". */
+  icon: string;
+}
+
+interface HostSheetState {
+  sheet: HostSheet | null;
+  close: (() => void) | null;
+  set: (sheet: HostSheet, close: () => void) => void;
+  clear: () => void;
+}
+
+export const useHostSheetStore = create<HostSheetState>((set) => ({
+  sheet: null,
+  close: null,
+  set: (sheet, close) => set({ sheet, close }),
+  clear: () => set({ sheet: null, close: null }),
 }));

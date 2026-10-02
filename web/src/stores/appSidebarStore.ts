@@ -15,6 +15,12 @@ export interface AppSidebarDescriptor {
   /** Unique per provider instance so a stale page can only clear its own entry. */
   ownerId: string;
   open: boolean;
+  /**
+   * A route of this app that shows this panel on its own (see
+   * lib/nativeHost, nativePanelPage). Framed by an app, a panel with one is
+   * opened as the app's own sheet from it rather than drawn here.
+   */
+  hostRoute?: string;
   title?: string;
   titleIcon?: LucideIcon | AnyIconComponent;
   titleIconClassName?: string;

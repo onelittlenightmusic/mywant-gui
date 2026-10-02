@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { classNames } from '@/utils/helpers';
 import { CONTROL, CONTROL_ICON_CLASS } from '@/design/controls';
+import { HostFramedPanel } from '@/lib/nativeHost';
 
 /**
  * The way out of a panel. One button, wherever it is drawn.
@@ -25,7 +26,11 @@ export const PanelCloseButton: React.FC<{
   /** Skipped in the keyboard order where the frame already handles that. */
   tabIndex?: number;
   className?: string;
-}> = ({ onClick, tabIndex, className }) => (
+}> = ({ onClick, tabIndex, className }) => {
+  // In a sheet an app frames, the close is the app's (its bar, drawn
+  // natively) — one way out, wherever the panel would have put its own.
+  if (React.useContext(HostFramedPanel)) return null;
+  return (
   <button
     onClick={onClick}
     tabIndex={tabIndex}
@@ -40,4 +45,5 @@ export const PanelCloseButton: React.FC<{
   >
     <X className={CONTROL_ICON_CLASS.md} />
   </button>
-);
+  );
+};

@@ -194,6 +194,8 @@ function App() {
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<WantListPage />} />
+              {/* A panel on its own, for an app's sheet (lib/nativeHost). */}
+              <Route path="/panel/:kind/:id?" element={<WantListPage panel />} />
               <Route path="/agents" element={<AgentsPage />} />
               <Route path="/recipes" element={<RecipePage />} />
               <Route path="/want-types" element={<WantTypePage />} />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useHeaderAtBottom, useDisplaySettings } from '@/hooks/useDisplaySettings';
-import { nativeHost, HOST_PANEL_BAR, HOST_PANEL_GRIP, useHostPanelStore, iconName } from '@/lib/nativeHost';
+import { nativeHost, HOST_PANEL_BAR, HostFramedPanel, useHostPanelStore, iconName } from '@/lib/nativeHost';
 import { useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
 import { PanelCloseButton } from '@/components/sidebar/PanelCloseButton';
@@ -532,7 +532,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         title: title ?? '',
         icon: iconName(TitleIcon as { displayName?: string } | undefined, ''),
         top: Math.round(el.getBoundingClientRect().top),
-        bare: chromeless,
+        bare: false,
       }, () => onCloseRef.current());
     };
     // Once it has slid in, where it stands; and again when the page resizes.
@@ -556,7 +556,14 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   //
   // A header at the bottom carries the safe area inside it (Header's spacer),
   // so --header-height already counts it and the inset is not added again.
-  const sheetEdgeOffset = mobileSheetBottom
+  //
+  // Framed by an app, a sheet from the bottom goes all the way down: the app
+  // puts its tab bar aside and folds its pill while a panel is open, so there
+  // is nothing to stand clear of (its content keeps clear of the home
+  // indicator — see the content's padding below).
+  const sheetEdgeOffset = mobileSheetBottom && nativeHost && isMobileSheet
+    ? '0px'
+    : mobileSheetBottom
     ? (isBottom
       ? 'var(--header-height, 0px)'
       // A framing app's bar along the bottom, when it has one there.
@@ -716,7 +723,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             a control rather than as trim: a wider, thicker bar with room around
             it, which is also the touch target. */}
         {/* The strip the app's bar is drawn over, when the app draws the frame. */}
-        {hostFrame && <div aria-hidden className="flex-shrink-0" style={{ height: chromeless ? HOST_PANEL_GRIP : HOST_PANEL_BAR }} />}
+        {hostFrame && <div aria-hidden className="flex-shrink-0" style={{ height: HOST_PANEL_BAR }} />}
         {/* What a panel adds to its header (a selected want's status and
             Reload) is the page's own, so it stays — a row of its own under the
             app's bar. */}
@@ -778,9 +785,14 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         )}
 
         {/* Content */}
-        <div className={`flex-1 h-full px-0 py-0 relative z-10 ${overflowHidden ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        <div
+          className={`flex-1 h-full px-0 py-0 relative z-10 ${overflowHidden ? 'overflow-hidden' : 'overflow-y-auto'}`}
+          style={hostFrame && mobileSheetBottom ? { paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : undefined}
+        >
           <div className="h-full sidebar-compact">
-            {(isOpen || contentsMounted) && children}
+            <HostFramedPanel.Provider value={hostFrame}>
+              {(isOpen || contentsMounted) && children}
+            </HostFramedPanel.Provider>
           </div>
         </div>
       </div>

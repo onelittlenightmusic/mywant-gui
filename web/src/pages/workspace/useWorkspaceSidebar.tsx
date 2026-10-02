@@ -197,6 +197,13 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
     // sheet covers the list it was chosen from, so it opens when asked for
     // (Enter, or a second tap), exactly as it does on the board.
     open: detailPanelOpen,
+    // The panels that stand on a page of their own, for an app to open as a
+    // sheet of its own: Global, and a want's details. The forms and the thing
+    // panels stay drawn here.
+    hostRoute: sidebar.showGlobal ? '/panel/global'
+      : (!addingThing && !editingThing && !cursorGroup && selectedWant)
+        ? `/panel/want/${encodeURIComponent(selectedWant.metadata?.id || selectedWant.id || '')}`
+        : undefined,
     mobileForceBottom: isMobileCanvas,
     disableBackdropClick: expandedChain.length > 0,
     title: sidebar.showGlobal ? 'Global'

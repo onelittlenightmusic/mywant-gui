@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { useMarkJumpStore } from '@/stores/markJumpStore';
 import { hasExtensionRoute } from '@/extensions/registry';
 import { classNames } from '@/utils/helpers';
@@ -27,7 +28,14 @@ import { WorkspaceHeaderOverlay, WorkspaceModals } from '../workspace/WorkspaceC
  * Shares its workspace (useWorkspace) with the canvas page. There is no board
  * here, so the workspace is handed a still one (useNoBoard).
  */
-export const WantListPage: React.FC = () => {
+export const WantListPage: React.FC<{
+  /**
+   * Run as one panel on its own (/panel/want/<id>, /panel/global), inside an
+   * app's sheet: the same workspace, the panel opened from the route, and no
+   * list drawn — the panel is the page (AppSidebarHost, nativePanelPage).
+   */
+  panel?: boolean;
+}> = ({ panel = false }) => {
   const board = useNoBoard();
   const { isCanvasDragging, setIsCanvasDragging, isCanvasDraggingRef, wantCanvasRef, cursorManPosRef, cursorManFocusedWantIdRef, canvasCenterX, canvasCenterY } = board;
   const ws = useWorkspace({ board });
@@ -316,6 +324,25 @@ export const WantListPage: React.FC = () => {
     useMarkJumpStore.getState().consume();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markJumpRequest]);
+
+  // The panel the route names, opened — once the want it names is loaded.
+  const panelRoute = useParams<{ kind?: string; id?: string }>();
+  useEffect(() => {
+    if (!panel) return;
+    if (panelRoute.kind === 'global') {
+      if (!sidebar.showGlobal) sidebar.toggleGlobal();
+      return;
+    }
+    if (panelRoute.kind === 'want' && panelRoute.id) {
+      const want = wants.find(w => (w.metadata?.id || w.id) === panelRoute.id);
+      if (!want) return;
+      handleViewWant(want, { toggle: false });
+      setDetailsRequestedFor(panelRoute.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panel, panelRoute.kind, panelRoute.id, wants.length]);
+
+  if (panel) return null;
 
   return (
     <>

@@ -3,6 +3,7 @@ import { RightSidebar } from '@/components/layout/RightSidebar';
 import { SwapTransition } from '@/components/common/SwapTransition';
 import { useAppSidebarStore } from '@/stores/appSidebarStore';
 import { PanelShell } from '@/components/sidebar/PanelIdentityRow';
+import { nativeHost, nativePanelPage, postToHost, useHostSheetStore, iconName, HostFramedPanel } from '@/lib/nativeHost';
 
 /**
  * The single, app-root instance of the detail/summary RightSidebar. It lives in
@@ -23,9 +24,61 @@ export const AppSidebarHost: React.FC = () => {
    */
   const shelled = !!descriptor?.chromeless && !descriptor?.ownIdentity;
 
+  // Framed by an app on a phone, a panel that stands on a page of its own is
+  // the app's sheet, opened from its route (lib/nativeHost) — not drawn here.
+  const asSheet = nativeHost && !nativePanelPage && window.innerWidth < 640
+    && !!descriptor?.open && !!descriptor?.hostRoute;
+  const onCloseRef = React.useRef(descriptor?.onClose);
+  onCloseRef.current = descriptor?.onClose;
+  const sheetRoute = asSheet ? descriptor?.hostRoute ?? '' : '';
+  const sheetTitle = descriptor?.title ?? '';
+  const sheetIcon = iconName(descriptor?.titleIcon as { displayName?: string } | undefined, '');
+  React.useEffect(() => {
+    if (!sheetRoute) { useHostSheetStore.getState().clear(); return; }
+    useHostSheetStore.getState().set(
+      { route: sheetRoute, title: sheetTitle, icon: sheetIcon },
+      () => onCloseRef.current?.(),
+    );
+  }, [sheetRoute, sheetTitle, sheetIcon]);
+
+  // This page is such a panel, inside the app's sheet: when it closes itself
+  // (a want deleted from it, say), the app is told, and lets the sheet go.
+  const wasOpen = React.useRef(false);
+  React.useEffect(() => {
+    if (!nativePanelPage) return;
+    if (descriptor?.open) wasOpen.current = true;
+    else if (wasOpen.current) { wasOpen.current = false; postToHost({ type: 'sheet-done' }); }
+  }, [descriptor?.open]);
+
+  const content = (() => {
+    const body = descriptor?.content ?? null;
+    const inner = shelled ? (
+      <PanelShell title={descriptor?.title ?? ''} onClose={() => descriptor?.onClose?.()}>
+        {body}
+      </PanelShell>
+    ) : body;
+    return descriptor?.contentKey ? (
+      <SwapTransition swapKey={descriptor.contentKey} order={descriptor.contentOrder}>
+        {inner}
+      </SwapTransition>
+    ) : inner;
+  })();
+
+  // The panel page: the panel and nothing else, the whole page — the app's
+  // sheet is its frame (its close included, so the panel's own is not drawn).
+  if (nativePanelPage) {
+    return (
+      <div className="fixed inset-0 overflow-auto bg-white dark:bg-gray-900" style={descriptor?.backgroundStyle}>
+        <HostFramedPanel.Provider value={true}>
+          {descriptor?.open ? content : null}
+        </HostFramedPanel.Provider>
+      </div>
+    );
+  }
+
   return (
     <RightSidebar
-      isOpen={!!descriptor?.open}
+      isOpen={!!descriptor?.open && !asSheet}
       onClose={() => descriptor?.onClose?.()}
       title={descriptor?.title}
       titleIcon={descriptor?.titleIcon}
@@ -43,21 +96,7 @@ export const AppSidebarHost: React.FC = () => {
       mobileForceBottom={descriptor?.mobileForceBottom}
       className={descriptor?.className}
     >
-      {(() => {
-        // Inside the swap, so the row travels with the panel it names — which
-        // is what the two panels that already carried one did.
-        const body = descriptor?.content ?? null;
-        const inner = shelled ? (
-          <PanelShell title={descriptor?.title ?? ''} onClose={() => descriptor?.onClose?.()}>
-            {body}
-          </PanelShell>
-        ) : body;
-        return descriptor?.contentKey ? (
-          <SwapTransition swapKey={descriptor.contentKey} order={descriptor.contentOrder}>
-            {inner}
-          </SwapTransition>
-        ) : inner;
-      })()}
+      {content}
     </RightSidebar>
   );
 };
