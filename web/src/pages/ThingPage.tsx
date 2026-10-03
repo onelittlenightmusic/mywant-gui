@@ -185,8 +185,13 @@ export const ThingPage: React.FC = () => {
       label: 'Filter',
       icon: Waypoints,
       onClick: () => setFilterOpen(v => !v),
-      active: filterOpen || !!constellationFilter,
-      tooltip: '星座で絞り込む',
+      // Lit while its panel is open, as every panel's button is. A filter in
+      // effect with the panel closed says so another way — the button's
+      // colour here, a filled glyph in an app — or it looked stuck pressed.
+      active: filterOpen,
+      toneClass: constellationFilter ? 'text-sky-500 dark:text-sky-400' : undefined,
+      hostIcon: constellationFilter ? 'WaypointsFilled' : undefined,
+      tooltip: constellationFilter ? '星座で絞り込み中' : '星座で絞り込む',
     },
   });
 

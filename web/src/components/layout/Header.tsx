@@ -95,6 +95,9 @@ export interface HeaderPageAction {
    *  even before it is pressed (Installed is green). */
   toneClass?: string;
   tooltip?: string;
+  /** The icon a framing app draws it with, when not the Lucide one's own name
+   *  — a state the colour says here (toneClass), said there by the glyph. */
+  hostIcon?: string;
 }
 
 /**
@@ -673,7 +676,7 @@ export const Header: React.FC<HeaderProps> = ({
       global: ['Globe', showGlobalState],
       import: ['Upload'],
       select: ['ListChecks', showSelectMode],
-      page: [iconName(pageAction?.icon, 'Circle'), pageAction?.active],
+      page: [pageAction?.hostIcon ?? iconName(pageAction?.icon, 'Circle'), pageAction?.active],
       pad: ['Gamepad2', showPad],
     };
     const actions: Record<string, () => void> = {};
