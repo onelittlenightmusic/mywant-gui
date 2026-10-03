@@ -41,7 +41,15 @@ function targetUnder(x: number, y: number, selfIndex: number): TargetHit | null 
   if (Number.isNaN(index) || index === selfIndex) return null;
 
   const rect = card.getBoundingClientRect();
-  return { index, position: x < rect.left + rect.width / 2 ? 'before' : 'after' };
+  // Cards stacked one per row (a phone): before/after is above/below the
+  // card's middle, as the destination line runs across it.
+  const stacked = rect.width > window.innerWidth * 0.6;
+  return {
+    index,
+    position: stacked
+      ? (y < rect.top + rect.height / 2 ? 'before' : 'after')
+      : (x < rect.left + rect.width / 2 ? 'before' : 'after'),
+  };
 }
 
 export function useTouchReorder({

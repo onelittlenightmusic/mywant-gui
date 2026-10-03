@@ -1,3 +1,5 @@
+import type { ReorderIndicator } from '@/components/reorderable/useReorderableGroup';
+import { classNames } from '@/utils/helpers';
 import React, { useCallback, useMemo, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Plus, Heart, Archive, ArchiveRestore } from 'lucide-react';
 import { CardCursorMan } from './CardCursorMan';
@@ -63,7 +65,7 @@ interface WantGridProps extends SelectModeProps {
   // (which layers its own "drop onto a target to connect" nesting logic on
   // top — see reorderReportGap's `inside` handling below).
   reorderContainerRef?: React.MutableRefObject<HTMLDivElement | null>;
-  reorderIndicator?: { left: number; top: number; height: number; color: string } | null;
+  reorderIndicator?: ReorderIndicator | null;
   reorderContainerProps?: {
     onDragOver: (e: React.DragEvent) => void;
     onDragLeave: (e: React.DragEvent) => void;
@@ -372,8 +374,8 @@ export const WantGrid: React.FC<WantGridProps> = ({
           useReorderableGroup (Dashboard.tsx). */}
       {reorderIndicator && (
         <div
-          className="absolute w-1 rounded-full pointer-events-none z-50 flex items-center justify-center transition-[left,top] duration-200 ease-out"
-          style={{ left: reorderIndicator.left, top: reorderIndicator.top, height: reorderIndicator.height, backgroundColor: `${reorderIndicator.color}99` }}
+          className={classNames('absolute rounded-full pointer-events-none z-50 flex items-center justify-center transition-[left,top] duration-200 ease-out', reorderIndicator.horizontal ? 'h-1' : 'w-1')}
+          style={{ left: reorderIndicator.left, top: reorderIndicator.top, height: reorderIndicator.height, width: reorderIndicator.width, backgroundColor: `${reorderIndicator.color}99` }}
         >
           <div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center p-1 shadow"

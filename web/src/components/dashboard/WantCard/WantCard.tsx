@@ -733,6 +733,7 @@ export const WantCard: React.FC<WantCardProps> = ({
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
+    if (longPress.swallowsClick()) return; // the long press opened the actions
     if (isBeingProcessed) return;
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('[role="button"]')) return;

@@ -23,16 +23,24 @@ export function useLongPress(id: string | null, { disabled = false, onCommit }: 
   // that race, just make the "you can still move" window visible instead of
   // silent.
   const [holding, setHolding] = useState(false);
+  /**
+   * The hold has committed (the card is armed to move) and the finger has not
+   * moved since: letting go now opens the quick actions. They open on the
+   * release, not the instant the hold commits — a hold that then moves is a
+   * reorder, and a menu up under the moving finger was in its way.
+   */
+  const armedRef = useRef(false);
 
   const start = (x: number, y: number) => {
     if (disabled) return;
     posRef.current = { x, y };
     setHolding(true);
+    armedRef.current = false;
     timerRef.current = setTimeout(() => {
       if (posRef.current) {
         navigator.vibrate?.(10);
         playHapticClick();
-        setQuickActionsWantId(id);
+        armedRef.current = true;
         onCommit?.(posRef.current.x, posRef.current.y);
         timerRef.current = null;
       }
@@ -46,8 +54,19 @@ export function useLongPress(id: string | null, { disabled = false, onCommit }: 
       timerRef.current = null;
     }
     posRef.current = null;
+    armedRef.current = false;
     setHolding(false);
   };
+
+  /** Let go: a committed hold that never moved opens the quick actions. */
+  const openedAtRef = useRef(0);
+  const end = () => {
+    if (armedRef.current) { setQuickActionsWantId(id); openedAtRef.current = Date.now(); }
+    cancel();
+  };
+  /** The click the release sends right after opening the actions is part of
+   *  that press, not a tap on the card. */
+  const swallowsClick = () => Date.now() - openedAtRef.current < 600;
 
   const checkMove = (x: number, y: number) => {
     if (posRef.current) {
@@ -61,11 +80,12 @@ export function useLongPress(id: string | null, { disabled = false, onCommit }: 
   return {
     onMouseDown: (e: React.MouseEvent) => { if (e.button !== 0) return; start(e.clientX, e.clientY); },
     onMouseMove: (e: React.MouseEvent) => checkMove(e.clientX, e.clientY),
-    onMouseUp: cancel,
+    onMouseUp: end,
     onTouchStart: (e: React.TouchEvent) => { const t = e.touches[0]; start(t.clientX, t.clientY); },
     onTouchMove: (e: React.TouchEvent) => { const t = e.touches[0]; checkMove(t.clientX, t.clientY); },
-    onTouchEnd: cancel,
+    onTouchEnd: end,
     cancel,
     holding,
+    swallowsClick,
   };
 }

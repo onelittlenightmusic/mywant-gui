@@ -278,10 +278,11 @@ export const EntityCard: React.FC<EntityCardProps> = ({
     firedRef.current = false;
     timerRef.current = setTimeout(() => {
       if (posRef.current) {
+        // Armed, not opened: the actions open when the finger lets go without
+        // having moved (lpEnd) — a hold that moves is a reorder.
         firedRef.current = true;
         navigator.vibrate?.(10);
         playHapticClick();
-        openActions();
         timerRef.current = null;
       }
     }, 150);
@@ -293,6 +294,12 @@ export const EntityCard: React.FC<EntityCardProps> = ({
   const lpMove = (x: number, y: number) => {
     if (!posRef.current) return;
     if (Math.hypot(x - posRef.current.x, y - posRef.current.y) > 10) lpCancel();
+  };
+  /** Let go: a hold that committed and never moved opens the actions. */
+  const lpEnd = () => {
+    if (firedRef.current && posRef.current) openActions();
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    posRef.current = null;
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -423,11 +430,11 @@ export const EntityCard: React.FC<EntityCardProps> = ({
     onContextMenu: handleContextMenu,
     onMouseDown: (e: React.MouseEvent) => { if (e.button !== 0) return; lpStart(e.clientX, e.clientY); },
     onMouseMove: (e: React.MouseEvent) => lpMove(e.clientX, e.clientY),
-    onMouseUp: lpCancel,
+    onMouseUp: lpEnd,
     onMouseLeave: lpCancel,
     onTouchStart: (e: React.TouchEvent) => { const t = e.touches[0]; lpStart(t.clientX, t.clientY); },
     onTouchMove: (e: React.TouchEvent) => { const t = e.touches[0]; lpMove(t.clientX, t.clientY); },
-    onTouchEnd: lpCancel,
+    onTouchEnd: lpEnd,
   };
 
   const noSelectStyle = {

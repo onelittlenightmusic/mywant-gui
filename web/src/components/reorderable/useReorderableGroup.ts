@@ -19,6 +19,26 @@ const DRAG_THRESHOLD = 0.15;
 
 export type ReorderPosition = 'before' | 'after';
 
+/**
+ * Where the destination line is drawn, in the container's coordinates: down
+ * the side of the card it goes before (cards side by side), or — horizontal,
+ * with a width — across the top of it (cards stacked one per row, a phone).
+ */
+export interface ReorderIndicator {
+  left: number;
+  top: number;
+  height: number;
+  color: string;
+  horizontal?: boolean;
+  width?: number;
+}
+
+/** Cards stacked one per row: each takes most of the container's width. */
+function isStacked(card: HTMLElement, container: HTMLElement | null): boolean {
+  if (!container) return false;
+  return card.getBoundingClientRect().width > container.getBoundingClientRect().width * 0.6;
+}
+
 export interface ReorderableGhostState {
   id: string;
   /** Anchor point for keyboard/gamepad mode only. In mouse mode this is null
@@ -53,7 +73,7 @@ export interface UseReorderableGroupResult<T> {
     onDragLeave: (e: React.DragEvent) => void;
   };
   getItemProps: (item: T, index: number) => ReorderableItemHandlers;
-  indicator: { left: number; top: number; height: number; color: string } | null;
+  indicator: ReorderIndicator | null;
   ghost: ReorderableGhostState | null;
   warpToEdge: (dir: NavigationDirection) => Promise<void>;
   isDragSource: (id: string) => boolean;
@@ -64,7 +84,7 @@ export interface UseReorderableGroupResult<T> {
   isKbDragSource: (id: string) => boolean;
   startDrag: (id: string) => void;
   endDrag: () => void;
-  getDragOverPosition: (cardEl: HTMLElement, clientX: number) => ReorderPosition;
+  getDragOverPosition: (cardEl: HTMLElement, clientX: number, clientY?: number) => ReorderPosition;
   reportDragOverGap: (index: number, position: ReorderPosition | null) => void;
   commitDrop: (draggedId: string, index: number, position: ReorderPosition) => Promise<void>;
 }
@@ -147,10 +167,14 @@ export function useReorderableGroup<T>({
   }, [containerRef]);
 
   // ---- Mouse: per-card before/after detection + gap-index reporting ----
-  const getDragOverPosition = useCallback((cardEl: HTMLElement, clientX: number): ReorderPosition => {
+  const getDragOverPosition = useCallback((cardEl: HTMLElement, clientX: number, clientY?: number): ReorderPosition => {
     const rect = cardEl.getBoundingClientRect();
+    // Cards stacked one per row (a phone): before/after is above/below.
+    if (clientY !== undefined && isStacked(cardEl, containerRef.current)) {
+      return clientY - rect.top < rect.height / 2 ? 'before' : 'after';
+    }
     return clientX - rect.left < rect.width / 2 ? 'before' : 'after';
-  }, []);
+  }, [containerRef]);
 
   // Called from every card's onDragOver, i.e. many times a second while a drag
   // is in flight, but the gap only actually moves when the cursor crosses a
@@ -250,7 +274,7 @@ export function useReorderableGroup<T>({
         if (!isItemDrag) return;
         e.preventDefault();
         e.stopPropagation();
-        const position = getDragOverPosition(e.currentTarget as HTMLElement, e.clientX);
+        const position = getDragOverPosition(e.currentTarget as HTMLElement, e.clientX, e.clientY);
         reportDragOverGap(index, position);
         e.dataTransfer.dropEffect = 'move';
       },
@@ -259,7 +283,7 @@ export function useReorderableGroup<T>({
         if (!draggedId) return;
         e.preventDefault();
         e.stopPropagation();
-        const position = getDragOverPosition(e.currentTarget as HTMLElement, e.clientX);
+        const position = getDragOverPosition(e.currentTarget as HTMLElement, e.clientX, e.clientY);
         endDrag();
         commitDrop(draggedId, index, position).catch(err => console.error('[useReorderableGroup] commit failed:', err));
       },
@@ -548,7 +572,7 @@ export function useReorderableGroup<T>({
   }, [items, containerRef, getId]);
 
   // ---- Destination indicator + kb ghost-anchor position ----
-  const [indicator, setIndicator] = useState<{ left: number; top: number; height: number; color: string } | null>(null);
+  const [indicator, setIndicator] = useState<ReorderIndicator | null>(null);
   useEffect(() => {
     const container = containerRef.current;
     if (effectiveDragOverGap === null || !container || items.length === 0) {
@@ -573,6 +597,21 @@ export function useReorderableGroup<T>({
     if (!el) { setIndicator(null); setKbReorderGhostPos(null); return; }
     const rect = el.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
+    if (isStacked(el, container)) {
+      // One card per row: the gap is above (or, after the last, below) the
+      // card, so the line runs across it rather than down its side.
+      const screenY = isAfterLast ? rect.bottom + 6 : rect.top - 8;
+      setIndicator({
+        left: rect.left - containerRect.left,
+        top: screenY - containerRect.top,
+        height: 4,
+        width: rect.width,
+        horizontal: true,
+        color: cursorColorRef.current,
+      });
+      setKbReorderGhostPos({ x: rect.left + rect.width / 2, y: screenY });
+      return;
+    }
     const screenX = isAfterLast ? rect.right + 6 : rect.left - 14;
     const screenY = rect.top + rect.height / 2;
     setIndicator({

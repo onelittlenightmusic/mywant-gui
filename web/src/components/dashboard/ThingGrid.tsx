@@ -1,3 +1,4 @@
+import { classNames } from '@/utils/helpers';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Type, X, Folder } from 'lucide-react';
 import { ThingRecord } from '@/types/thing';
@@ -164,8 +165,8 @@ export const ThingGrid: React.FC<MemoGridProps> = ({
           {/* Floating destination indicator (colored line + plus), same as the want grid. */}
           {reorder.indicator && (
             <div
-              className="absolute w-1 rounded-full pointer-events-none z-50 flex items-center justify-center transition-[left,top] duration-200 ease-out"
-              style={{ left: reorder.indicator.left, top: reorder.indicator.top, height: reorder.indicator.height, backgroundColor: `${reorder.indicator.color}99` }}
+              className={classNames('absolute rounded-full pointer-events-none z-50 flex items-center justify-center transition-[left,top] duration-200 ease-out', reorder.indicator.horizontal ? 'h-1' : 'w-1')}
+              style={{ left: reorder.indicator.left, top: reorder.indicator.top, height: reorder.indicator.height, width: reorder.indicator.width, backgroundColor: `${reorder.indicator.color}99` }}
             >
               <div
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center p-1 shadow"
