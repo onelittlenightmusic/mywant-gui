@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { Waypoints } from 'lucide-react';
+import { useConstellationFilter } from '@/components/sidebar/ConstellationFilterPanel';
 import { postToHost, HostFramedPanel, useHostFocusedCard, hostPanelId, useHostPanel } from '@/lib/nativeHost';
 import { usePageMinimap } from '@/components/dashboard/ItemMinimap';
 import { useThingStore } from '@/stores/thingStore';
@@ -43,6 +45,9 @@ export const WantListPage: React.FC<{
   card?: boolean;
 }> = ({ card = false }) => {
   const board = useNoBoard();
+  /** The constellation filter's panel (the header's Filter). */
+  const [filterOpen, setFilterOpen] = React.useState(false);
+  const constellationFilter = useConstellationFilter('want');
   const panelRoute = useParams<{ kind?: string; id?: string }>();
   // Run as one of the workspace's panels inside an app's sheet
   // (/dashboard?__panel=<id>, lib/nativeHost): the same workspace, the panel
@@ -248,6 +253,8 @@ export const WantListPage: React.FC<{
   // What the right-hand panel shows, and what closing it means.
   // See workspace/useWorkspaceSidebar.
   useWorkspaceSidebar({
+    filterOpen,
+    onCloseFilter: () => setFilterOpen(false),
     sidebar,
     selectedWant,
     cursorThingRecord,
@@ -317,6 +324,15 @@ export const WantListPage: React.FC<{
     // Same "only where there's a board" gate as the pad — the lamp reads
     // CursorMan's drag mode, which doesn't exist in list mode either.
     showZModeLamp: false,
+    // Narrow the list to constellations (ConstellationFilterPanel): lit while
+    // its panel is open or a filter is on.
+    pageAction: {
+      label: 'Filter',
+      icon: Waypoints,
+      onClick: () => setFilterOpen(v => !v),
+      active: filterOpen || !!constellationFilter,
+      tooltip: '星座で絞り込む',
+    },
   });
 
   // A mark pressed while the list is showing. The Global panel is here, so a
@@ -373,6 +389,7 @@ export const WantListPage: React.FC<{
     const wantById = (wid: string) => wants.find(w => (w.metadata?.id || w.id) === wid);
     switch (kind) {
       case 'global': if (!sidebar.showGlobal) sidebar.toggleGlobal(); return;
+      case 'filter': setFilterOpen(true); return;
       case 'add-thing': setAddingThing(true); return;
       case 'add-want': {
         const parent = arg ? wantById(arg) : undefined;
@@ -513,7 +530,10 @@ export const WantListPage: React.FC<{
             onClearError={clearError}
             roomForSheet={!!selectedWant || sidebar.showGlobal}
             grid={{
-              wants: wantsForGrid,
+              // Narrowed to the chosen constellations, if any.
+              wants: constellationFilter
+                ? wantsForGrid.filter(w => constellationFilter.has(w.metadata?.id || w.id || ''))
+                : wantsForGrid,
               drafts: drafts,
               onDraftClick: handleDraftClick,
               onDraftDelete: handleDraftDelete,

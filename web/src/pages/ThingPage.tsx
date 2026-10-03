@@ -1,4 +1,6 @@
 import { useHostPanel } from '@/lib/nativeHost';
+import { Waypoints } from 'lucide-react';
+import { ConstellationFilterPanel, useConstellationFilter } from '@/components/sidebar/ConstellationFilterPanel';
 import { ItemMinimap, usePageMinimap, type MinimapItem } from '@/components/dashboard/ItemMinimap';
 import { resolveLucideIcon } from '@/utils/subtypeIcons';
 import { iconEmbossFilter } from '@/components/dashboard/WantCardFace';
@@ -67,6 +69,9 @@ export const ThingPage: React.FC = () => {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [minimapOpen, setMinimapOpen] = useState(false);
+  /** The constellation filter's panel (the header's Filter). */
+  const [filterOpen, setFilterOpen] = useState(false);
+  const constellationFilter = useConstellationFilter('thing');
   /** Landed on from the map: selected, but its detail not opened (see the map). */
   const [quietId, setQuietId] = useState<string | null>(null);
   const isDarkMode = useColorMode() === 'dark';
@@ -175,6 +180,14 @@ export const ThingPage: React.FC = () => {
     onToggleSelectMode: toggleSelectMode,
     showMinimap: minimapOpen,
     onMinimapToggle: () => setMinimapOpen(v => !v),
+    // Narrow the list to constellations (ConstellationFilterPanel).
+    pageAction: {
+      label: 'Filter',
+      icon: Waypoints,
+      onClick: () => setFilterOpen(v => !v),
+      active: filterOpen || !!constellationFilter,
+      tooltip: '星座で絞り込む',
+    },
   });
 
   // The map of the things, the want list's layout (ItemMinimap): a press
@@ -230,9 +243,10 @@ export const ThingPage: React.FC = () => {
   const consumeThingEdit = useThingEditStore(s => s.consume);
 
   const panelRoute = useHostPanel(
-    adding ? '__add' : editingThing ? `__edit:${editingThing.id}` : selected ? selected.id : null,
+    filterOpen ? '__filter' : adding ? '__add' : editingThing ? `__edit:${editingThing.id}` : selected ? selected.id : null,
     (id) => {
       if (id === '__add') { setAdding(true); return; }
+      if (id === '__filter') { setFilterOpen(true); return; }
       const editId = id.startsWith('__edit:') ? id.slice(7) : null;
       const r = records.find(x => x.id === (editId ?? id));
       if (!r) return false;
@@ -244,8 +258,8 @@ export const ThingPage: React.FC = () => {
   useAppSidebar({
     // In an app on a phone, the app's own sheet (lib/nativeHost, useHostPanel).
     hostRoute: panelRoute,
-    open: !selectMode && (adding || !!editingThing || (!!selected && selected.id !== quietId)),
-    title: adding ? 'Add Thing' : editingThing ? `Edit ${editingThing.value}` : (selected ? selected.value : ''),
+    open: filterOpen || (!selectMode && (adding || !!editingThing || (!!selected && selected.id !== quietId))),
+    title: filterOpen ? 'Filter' : adding ? 'Add Thing' : editingThing ? `Edit ${editingThing.value}` : (selected ? selected.value : ''),
     // The thing detail opens on a card that already names its subject and
     // carries its own way out, exactly as it does on the board — so the frame
     // draws no header over it here either. The two surfaces show one panel; it
@@ -257,9 +271,15 @@ export const ThingPage: React.FC = () => {
     // side as the header, by the same rule, from the same component. This page
     // and the board open the same two forms; a button that sits in a different
     // place on each is two forms.
-    chromeless: true,
-    onClose: () => { setAdding(false); consumeThingEdit(); setSelectedId(null); },
-    content: adding ? (
+    chromeless: !filterOpen,
+    titleIcon: filterOpen ? Waypoints : undefined,
+    onClose: () => {
+      if (filterOpen) { setFilterOpen(false); return; }
+      setAdding(false); consumeThingEdit(); setSelectedId(null);
+    },
+    content: filterOpen ? (
+      <ConstellationFilterPanel page="thing" />
+    ) : adding ? (
       <AddThingSidebar
         onAdded={(id) => { setAdding(false); setSelectedId(id); }}
         onCancel={() => setAdding(false)}
@@ -325,7 +345,8 @@ export const ThingPage: React.FC = () => {
             </div>
           ) : (
             <ThingGrid
-              records={records}
+              // Narrowed to the chosen constellations, if any.
+              records={constellationFilter ? records.filter(r => constellationFilter.has(r.id)) : records}
               loading={loading}
               selectedId={selectedId}
               selectMode={selectMode}

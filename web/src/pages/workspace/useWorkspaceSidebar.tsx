@@ -1,6 +1,7 @@
 import { hostPanelRoute } from '@/lib/nativeHost';
+import { ConstellationFilterPanel } from '@/components/sidebar/ConstellationFilterPanel';
 import React from 'react';
-import { Globe, RefreshCw } from 'lucide-react';
+import { Globe, Waypoints, RefreshCw } from 'lucide-react';
 import { Want, WantExecutionStatus } from '@/types/want';
 import type { ThingRecord } from '@/types/thing';
 import type { WantTypeListItem } from '@/types/wantType';
@@ -49,6 +50,9 @@ export interface WorkspaceSidebarApi {
    *  ahead of the thing and the want (see useDetailTarget's cursorGroupShown). */
   cursorGroup: { name: string; panel: React.ReactNode } | null;
   addingThing: boolean;
+  /** The constellation filter is open (the want list's Filter button). */
+  filterOpen?: boolean;
+  onCloseFilter?: () => void;
   setAddingThing: (v: boolean) => void;
   editingThing: ThingRecord | null;
   consumeThingEdit: () => void;
@@ -204,13 +208,14 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
     // On a phone, selecting a card is focus — not "show me everything". The
     // sheet covers the list it was chosen from, so it opens when asked for
     // (Enter, or a second tap), exactly as it does on the board.
-    open: detailPanelOpen,
+    open: detailPanelOpen || !!api.filterOpen,
     // Every panel stands on a page of its own, for an app to open as a sheet
     // of its own (lib/nativeHost) — all but a group's, whose panel is the
     // board's. What a panel reads off the board (where the character stands,
     // for a thing pinned underfoot or lined up from there) goes with it.
     // On the want list's page (no board to load behind it); see WantListPage.
-    hostRoute: sidebar.showGlobal ? hostPanelRoute('/dashboard', 'global')
+    hostRoute: api.filterOpen ? hostPanelRoute('/dashboard', 'filter')
+      : sidebar.showGlobal ? hostPanelRoute('/dashboard', 'global')
       : addingThing ? hostPanelRoute('/dashboard', 'add-thing', here())
       : editingThing ? hostPanelRoute('/dashboard', `edit-thing:${editingThing.id}`)
       : cursorGroup ? undefined
@@ -219,7 +224,7 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
       : undefined,
     mobileForceBottom: isMobileCanvas,
     disableBackdropClick: expandedChain.length > 0,
-    title: sidebar.showGlobal ? 'Global'
+    title: api.filterOpen ? 'Filter' : sidebar.showGlobal ? 'Global'
       // Naming itself in a bar is what the detail panels stopped doing, and a
       // form is the last thing that needs it: its own first field says what it
       // makes. The header row stays, holding nothing but the way out — which is
@@ -231,7 +236,7 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
       : cursorGroup ? cursorGroup.name
       : selectedWant ? (selectedWant.metadata?.name || selectedWant.metadata?.id || 'Want Details')
       : (cursorThingRecord?.value ?? ''),
-    titleIcon: sidebar.showGlobal ? Globe : (selectedWant && !cursorGroup ? sidebarTitleIcon : undefined),
+    titleIcon: api.filterOpen ? Waypoints : sidebar.showGlobal ? Globe : (selectedWant && !cursorGroup ? sidebarTitleIcon : undefined),
     titleIconClassName: sidebar.showGlobal ? 'text-green-500' : undefined,
     titleIconStyle: sidebar.showGlobal || !selectedWant || cursorGroup
       ? undefined
@@ -240,7 +245,7 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
           sidebarWantTypes.find(t => t.name === selectedWant.metadata?.type)?.category ?? '',
           isDarkMode,
         ),
-    backgroundStyle: !sidebar.showGlobal && selectedWant && !cursorGroup ? sidebarBgStyle : undefined,
+    backgroundStyle: api.filterOpen ? undefined : !sidebar.showGlobal && selectedWant && !cursorGroup ? sidebarBgStyle : undefined,
     // The want detail says which want it is on its own card, so the frame's
     // header — name, status, close, all under a card already showing them —
     // is not drawn for it. Every other panel (Global, Add Thing, Edit Thing)
@@ -253,20 +258,21 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
     // sidebar in this layout, so a panel that kept it had its way out in a
     // different place from every panel that had given it up. One row, one
     // place, whichever panel is open; the shell supplies it (see PanelShell).
-    chromeless: !sidebar.showGlobal && !editingThing
+    chromeless: !api.filterOpen && !sidebar.showGlobal && !editingThing
       && (addingThing || !!selectedWant || !!cursorThingRecord || !!cursorGroup),
     // The want panel builds its own identity row, glued to the card inside the
     // block the phone's bottom sheet re-orders. Everything else — this page's
     // thing detail included — takes the host's. See appSidebarStore.ownIdentity.
-    ownIdentity: !!selectedWant && !cursorGroup,
+    ownIdentity: !api.filterOpen && (!!selectedWant && !cursorGroup),
     // The two forms are panels the user went and opened, so they arrive
     // holding the input and B cancels out of them — the same contract Add Want
     // has had all along (WantForm passes it directly). The detail panels
     // deliberately do not: they open by themselves as the character walks onto
     // something, and taking the stick on an arrival strands the walk.
-    claimsInputOnOpen: addingThing || !!editingThing,
-    headerActions: !sidebar.showGlobal && selectedWant && !cursorGroup ? headerActions : undefined,
+    claimsInputOnOpen: !!api.filterOpen || addingThing || !!editingThing,
+    headerActions: api.filterOpen ? undefined : !sidebar.showGlobal && selectedWant && !cursorGroup ? headerActions : undefined,
     onClose: () => {
+      if (api.filterOpen) { api.onCloseFilter?.(); return; }
       if (addingThing) { setAddingThing(false); return; }
       if (editingThing) { consumeThingEdit(); return; }
       if (sidebar.showGlobal) { sidebar.closeMemo(); return; }
@@ -292,7 +298,7 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
     // cursor, so the stick walking the board changed the key while Add Thing
     // was on screen — and the swap remounted the form, back to its Add tab at
     // the top of its list, with whatever had been typed gone.
-    contentKey: sidebar.showGlobal ? 'global'
+    contentKey: api.filterOpen ? 'filter' : sidebar.showGlobal ? 'global'
       : addingThing ? 'add-thing'
       : editingThing ? `edit-thing:${editingThing.id}`
       : cursorGroup ? `group:${cursorGroup.name}`
@@ -304,7 +310,9 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
           const idx = filteredWants.findIndex(w => (w.metadata?.id || w.id) === id);
           return idx >= 0 ? idx : undefined;
         })(),
-    content: sidebar.showGlobal ? (
+    content: api.filterOpen ? (
+      <ConstellationFilterPanel page="want" />
+    ) : sidebar.showGlobal ? (
       <GlobalStateSidebar
         summaryProps={{
           wants,
