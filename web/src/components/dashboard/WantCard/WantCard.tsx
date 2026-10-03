@@ -1122,7 +1122,7 @@ export const WantCard: React.FC<WantCardProps> = ({
           // Held long enough to move (or moving): the card dims and settles a
           // little, so the hand knows the hold took and a drag will reorder.
           ...(longPress.armed || touchReorder.dragging
-            ? { filter: 'brightness(0.72) saturate(0.85)', transform: 'scale(0.97)', transition: 'filter 120ms ease-out, transform 120ms ease-out' }
+            ? { transform: 'scale(0.97)', transition: 'transform 120ms ease-out' }
             : null),
           ...hoverRingVars(focusColor, isDarkMode),
           ...cardInkVars(typeIconStyle.color as string, isDarkMode),
@@ -1320,7 +1320,10 @@ export const WantCard: React.FC<WantCardProps> = ({
             unambiguous, and for the mouse case specifically gives a reason to
             keep moving instead of landing on an overlay button the moment the
             user pauses. Gone once the quick-actions overlay itself takes over. */}
-        {((longPress.holding && !overlay.showQuickActions) || (isKbReorderSource && !isBeingProcessed)) && (
+        {/* Shown once the hold has committed and for as long as the card can
+            move (armed, or being dragged) — not in the moments before, where
+            it appeared and then vanished just as a drag became possible. */}
+        {((longPress.armed || touchReorder.dragging) || (isKbReorderSource && !isBeingProcessed)) && (
           <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[inherit] bg-black/60 pointer-events-none">
             <Move className={classNames('w-7 h-7 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]', styles.longPressHint)} />
           </div>

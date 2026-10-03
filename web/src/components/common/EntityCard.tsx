@@ -17,7 +17,7 @@
  * the same grid rather than a special case.
  */
 import React, { useRef, useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Move } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { classNames } from '@/utils/helpers';
 import { menuTintBg, menuColorForPath } from '@/utils/menuColors';
@@ -453,7 +453,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
     ...(selected && !keepFocus ? focusGlowVars(focusColor, isDarkMode) : {}),
     // Held long enough to move: dimmed and settled a little (the want card's
     // feedback, the same).
-    ...(armed ? { filter: 'brightness(0.72) saturate(0.85)', transform: 'scale(0.97)', transition: 'filter 120ms ease-out, transform 120ms ease-out' } : {}),
+    ...(armed ? { transform: 'scale(0.97)', transition: 'transform 120ms ease-out' } : {}),
   } as React.CSSProperties;
 
   // Everything layered OVER the painted surface — icons, text, overlays. These
@@ -585,6 +585,14 @@ export const EntityCard: React.FC<EntityCardProps> = ({
           )}
         </div>
       </div>
+      )}
+
+      {/* Held long enough to move: the want card's move hint, the same — a dark
+          backdrop and the four-way arrow, for as long as it can move. */}
+      {armed && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[inherit] bg-black/60 pointer-events-none">
+          <Move className="w-7 h-7 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]" />
+        </div>
       )}
 
       {showActions && !activeOverlay && (
