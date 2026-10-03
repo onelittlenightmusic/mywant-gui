@@ -69,6 +69,9 @@ interface HostBridge {
   /** The app reads the controller itself and hands the page its state. */
   ownsController?: boolean;
   controller?: (frame: { buttons: boolean[]; axes: number[] }) => void;
+  /** A button of the app's native software pad pressed (down) or let go —
+   *  up/down/left/right, A, B, X, Y, SELECT, START. See CanvasDPad's HostPad. */
+  pad?: (id: string, down: boolean) => void;
 }
 
 declare global {
