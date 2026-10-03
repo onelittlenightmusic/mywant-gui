@@ -18,7 +18,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Slot } from '@/extensions/Slot';
 import { extensionMenu } from '@/extensions/registry';
 import { useOriginReveal, anchoredRevealStyle } from '@/components/ui/originReveal';
-import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, useHostPanelStore, useHostSheetStore, useHostFloatStore, useHostPadStore, type HostButton } from '@/lib/nativeHost';
+import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, useHostPanelStore, useHostSheetStore, useHostFloatStore, useHostPadStore, useHostActStore, type HostButton } from '@/lib/nativeHost';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { useDarkMode } from '@/hooks/useDarkMode';
@@ -727,7 +727,9 @@ export const Header: React.FC<HeaderProps> = ({
       // A corner card's: float:<act>:<kind>:<id> (see useHostFloatStore).
       if (id.startsWith('float:')) {
         const [, act, kind, ...rest] = id.split(':');
-        useHostFloatStore.getState().act?.(act, kind as 'want' | 'thing', rest.join(':'));
+        const k = kind as 'want' | 'thing';
+        useHostFloatStore.getState().act?.(act, k, rest.join(':'));
+        useHostActStore.getState().act?.(act, k, rest.join(':'));
         return;
       }
       hostActionsRef.current[id]?.();

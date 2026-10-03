@@ -1,3 +1,4 @@
+import { nativePanelPage } from '@/lib/nativeHost';
 import React, { useState, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useIconFont } from '@/hooks/useDisplaySettings';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
@@ -248,6 +249,30 @@ export const WantMinimap = forwardRef<WantMinimapRef, WantMinimapProps>(({
       return true;
     },
   }), [isOpen, isCanvasMode]);
+
+  // In an app's sheet (a panel page): the map is the page, the sheet its frame.
+  if (nativePanelPage) {
+    return (
+      <div data-minimap-panel="true"
+        className={classNames('fixed inset-0 overflow-y-auto p-3', minimapSurfaceClass(isCanvasMode))}
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}>
+        <div ref={listGridRef} className="grid grid-cols-3 gap-2 auto-rows-min">
+          {wants.map(want => {
+            const wantId = want.metadata?.id || want.id || '';
+            return (
+              <MinimapCard key={wantId} want={want} isSelected={selectedWantId === wantId}
+                onClick={() => onWantClick(wantId)}
+                onDoubleClick={onWantDoubleClick ? () => onWantDoubleClick(wantId) : undefined} />
+            );
+          })}
+          {drafts.map(draft => {
+            const draftId = draft.metadata?.id || draft.id || '';
+            return <MinimapDraftCard key={draftId} want={draft} isSelected={selectedWantId === draftId} onClick={() => onDraftClick(draftId)} />;
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

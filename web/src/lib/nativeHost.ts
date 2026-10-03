@@ -439,3 +439,13 @@ export function useHostFocusedCard(enabled: boolean): void {
     return () => { cancelAnimationFrame(raf); postToHost({ type: 'focus-card', card: null }); };
   }, [enabled]);
 }
+
+/**
+ * What a sheet's page did that this page has to carry out — a card pressed in
+ * the map sheet, say — arriving as "float:<act>:<kind>:<id>" like a corner
+ * card's (useHostFloatStore). A page that takes such acts registers here.
+ */
+export const useHostActStore = create<{
+  act: ((act: string, kind: HostFloatCard['kind'], id: string) => void) | null;
+  set: (act: ((act: string, kind: HostFloatCard['kind'], id: string) => void) | null) => void;
+}>((set) => ({ act: null, set: (act) => set({ act }) }));

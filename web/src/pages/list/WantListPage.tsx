@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { postToHost, HostFramedPanel, useHostFocusedCard } from '@/lib/nativeHost';
+import { postToHost, HostFramedPanel, useHostFocusedCard, useHostSheet, hostSheetsOn, useHostActStore } from '@/lib/nativeHost';
 import { useThingStore } from '@/stores/thingStore';
 import { requestThingEdit } from '@/stores/thingEditStore';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
@@ -355,6 +355,23 @@ export const WantListPage: React.FC<{
   // The list's focused card wears the app's native buttons (lib/nativeHost).
   useHostFocusedCard(!panel && !card);
 
+  // The map, in an app on a phone, is the app's sheet (/panel/minimap); a card
+  // pressed there comes back here as an act and is carried out as a press on
+  // the map here would be.
+  const minimapAsSheet = !panel && !card && minimapOpen && hostSheetsOn();
+  useHostSheet(minimapAsSheet ? '/panel/minimap' : null, 'Map', 'Map', () => setMinimapOpen(false));
+  const minimapActs = useRef({ handleMinimapClick, handleMinimapDoubleClick, handleMinimapDraftClick });
+  minimapActs.current = { handleMinimapClick, handleMinimapDoubleClick, handleMinimapDraftClick };
+  useEffect(() => {
+    if (panel || card) return;
+    useHostActStore.getState().set((act, _kind, id) => {
+      if (act === 'minimap') minimapActs.current.handleMinimapClick(id);
+      else if (act === 'minimap-open') minimapActs.current.handleMinimapDoubleClick(id);
+      else if (act === 'minimap-draft') minimapActs.current.handleMinimapDraftClick(id);
+    });
+    return () => useHostActStore.getState().set(null);
+  }, [panel, card]);
+
   // The panel the route names, opened — once what it names is loaded.
   useEffect(() => {
     if (!panel) return;
@@ -395,6 +412,23 @@ export const WantListPage: React.FC<{
 
   // A form's panel page draws the form (WorkspaceModals holds it); the
   // others' panels are AppSidebarHost's.
+  if (panel && panelRoute.kind === 'minimap') {
+    // The map on its own: what is pressed on it is the list's to carry out.
+    const act = (a: string, id: string) => postToHost({ type: 'card-act', act: a, kind: 'want', id });
+    return (
+      <WantMinimap
+        // Not filteredWants: the list fills that in as it draws, and this page
+        // draws no list.
+        wants={regularWants}
+        drafts={drafts}
+        selectedWantId={selectedWant?.metadata?.id || selectedWant?.id}
+        onWantClick={(id) => act('minimap', id)}
+        onWantDoubleClick={(id) => act('minimap-open', id)}
+        onDraftClick={(id) => act('minimap-draft', id)}
+        isOpen
+      />
+    );
+  }
   if (panel) return panelRoute.kind === 'add-want' || panelRoute.kind === 'edit-want'
     ? <WorkspaceModals ws={ws} canvasPlacementPos={null} />
     : null;
@@ -548,7 +582,7 @@ export const WantListPage: React.FC<{
         onWantClick={handleMinimapClick}
         onWantDoubleClick={handleMinimapDoubleClick}
         onDraftClick={handleMinimapDraftClick}
-        isOpen={minimapOpen}
+        isOpen={minimapOpen && !minimapAsSheet}
       />
       <WorkspaceModals ws={ws} canvasPlacementPos={null} />
       <DragOverlay ghostState={reorder.ghost} />

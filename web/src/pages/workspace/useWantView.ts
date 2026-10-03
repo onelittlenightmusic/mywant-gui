@@ -241,12 +241,22 @@ export function useWantView(api: WantViewApi) {
   const handleMinimapClick = useCallback((wantId: string) => {
     const a = apiRef.current;
     a.focusWantInDashboard(wantId);
+    // A phone: focusWantInDashboard stands aside there (it is also what the
+    // shared state sync calls, which must not scroll a phone's list under the
+    // finger), so the tap that asked for this card scrolls to it and lands on
+    // it itself — what pressing a card in the map is for.
+    if (window.innerWidth < 640) {
+      document.querySelector(`[data-want-id="${CSS.escape(wantId)}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const want = a.wants.find(w => (w.metadata?.id === wantId) || (w.id === wantId));
+      if (want) handleViewWant(want, { toggle: false, via: 'navigate' });
+    }
 
     // Close minimap on mobile after selection
     if (window.innerWidth < 1024) {
       a.setMinimapOpen(false);
     }
-  }, []);
+  }, [handleViewWant]);
 
   const handleMinimapDoubleClick = useCallback((wantId: string) => {
     const a = apiRef.current;
