@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, Globe, Map as MapIcon } from 'lucide-react';
-import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
+import { WantCardPluginProps, registerWantCardPlugin, CardEmbeddedContext } from '../registry';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { Want } from '@/types/want';
 import { myDeviceId } from '@/hooks/useDeviceSession';
@@ -252,6 +252,7 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
 
   const standalone = !onEnterInnerFocus;
   const live = standalone || !!isInnerFocused;
+  const opensSite = useContext(CardEmbeddedContext) || standalone || !!isExpanded;
 
   // On its own (/w/:id) the page has the whole screen, so it is drawn as is.
   // An expanded card is live like that page but still a card on the board —
@@ -529,20 +530,26 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
   // The server asked the page when the type was made, and it said no
   // (X-Frame-Options / frame-ancestors). A frame here would only ever be the
   // browser's broken-page icon, so show what the page looked like instead.
+  //
+  // A tap on it opens the site only on the card embedded in a panel (or
+  // expanded, or on its own page). In a list or floating over the board the
+  // picture is the card's face like any other: a tap there is the card's —
+  // its panel — not a jump out to X before its details were even seen.
   if (labels.frameable === 'false') {
     const shot = labels['screenshot-url'];
+    const Face = opensSite ? 'button' : 'div';
     return (
-      <button
-        onClick={openRealSite}
+      <Face
+        onClick={opensSite ? openRealSite : undefined}
         className="relative w-full h-full min-h-0 overflow-hidden bg-gray-100 dark:bg-gray-800 text-left"
-        title="実サイトを新しいタブで開く"
+        title={opensSite ? '実サイトを新しいタブで開く' : undefined}
       >
         {shot && <img src={shot} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />}
         <span className="absolute left-2 right-2 top-2 flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 text-white text-[0.65rem]">
           <ExternalLink className="w-3 h-3 flex-shrink-0" />
-          <span className="truncate">{new URL(url, window.location.href).hostname} を開く</span>
+          <span className="truncate">{new URL(url, window.location.href).hostname}{opensSite ? ' を開く' : ''}</span>
         </span>
-      </button>
+      </Face>
     );
   }
 

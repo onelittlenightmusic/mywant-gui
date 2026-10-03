@@ -1,4 +1,5 @@
 import { openWebWant } from './plugins/types/WebFrameCardPlugin';
+import { CardEmbeddedContext } from './plugins/registry';
 import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
 import { HostFramedPanel, nativeHost } from '@/lib/nativeHost';
 import { useDisplaySettings } from '@/hooks/useDisplaySettings';
@@ -986,6 +987,9 @@ export const WantCard: React.FC<WantCardProps> = ({
   // panel sits in a block of fixed height and fills it: taller, it ran down
   // over the field cards under it.
   const cardHeightClass = innerFocusScope === 'sidebar' ? 'h-full' : gridCardHeight;
+  // Embedded in a panel — the sidebar's card, or one an app's sheet says is
+  // (CardEmbeddedContext from the card page): its content may act on a tap.
+  const embedded = useContext(CardEmbeddedContext) || innerFocusScope === 'sidebar';
 
   // Resolve the same gradient/image background that the want type picker uses,
   // applied at 70% opacity over the card's base bg-white / dark:bg-gray-800.
@@ -1052,7 +1056,7 @@ export const WantCard: React.FC<WantCardProps> = ({
   const showFocusRing = isNavFocused || selected;
 
   return (
-    <>
+    <CardEmbeddedContext.Provider value={embedded}>
     <div className="relative h-full" style={{ isolation: 'isolate' }}>
       <CardCursorMan visible={showCursorMan} />
       <StackLayers stackCount={stackCount} />
@@ -1501,6 +1505,6 @@ export const WantCard: React.FC<WantCardProps> = ({
       </div>,
       document.body
     )}
-    </>
+    </CardEmbeddedContext.Provider>
   );
 };

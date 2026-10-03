@@ -1,6 +1,14 @@
 import React from 'react';
 import { Want } from '@/types/want';
 
+/**
+ * The card is the one embedded in a panel (the details sidebar, or an app's
+ * sheet), not one in a list or floating over the board. A tap on a card in a
+ * list or floating is a request for its panel; only the embedded card's
+ * content does its own thing on a tap — a web want's page opening its site.
+ */
+export const CardEmbeddedContext = React.createContext(false);
+
 // Props passed to every want card plugin's ContentSection.
 // Keep this minimal — derive extra values inside each plugin from `want`.
 export interface WantCardPluginProps {

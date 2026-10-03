@@ -1,8 +1,9 @@
+import { CardEmbeddedContext } from '@/components/dashboard/WantCard/plugins/registry';
 import React, { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Waypoints } from 'lucide-react';
 import { useConstellationFilter } from '@/components/sidebar/ConstellationFilterPanel';
-import { postToHost, HostFramedPanel, useHostFocusedCard, hostPanelId, useHostPanel } from '@/lib/nativeHost';
+import { HostCardPageButtons, postToHost, HostFramedPanel, useHostFocusedCard, hostPanelId, useHostPanel } from '@/lib/nativeHost';
 import { usePageMinimap } from '@/components/dashboard/ItemMinimap';
 import { useThingStore } from '@/stores/thingStore';
 import { requestThingEdit } from '@/stores/thingEditStore';
@@ -453,6 +454,10 @@ export const WantListPage: React.FC<{
     // view — goes to the app, which hands it to the board's page.
     const act = (a: string) => postToHost({ type: 'card-act', act: a, kind, id });
     const maximizedCard = new URLSearchParams(location.search).has('max');
+    // The card an app embeds in a panel's sheet (?embed=1), or maximized — not
+    // the one floating over the board: only there a tap on its content acts
+    // (CardEmbeddedContext).
+    const embeddedCard = maximizedCard || new URLSearchParams(location.search).has('embed');
     if (kind === 'thing') {
       const t = thingRecords.find(r => r.id === id);
       return (
@@ -477,7 +482,9 @@ export const WantListPage: React.FC<{
     const Frame = maximizedCard ? HostCardPage : HostCardFrame;
     return (
       <Frame>
+        <HostCardPageButtons />
         {w && (
+          <CardEmbeddedContext.Provider value={embeddedCard}>
           <WantCard
             want={w}
             selected
@@ -506,6 +513,7 @@ export const WantListPage: React.FC<{
             canvasMode
             confirmEntersInnerFocus
           />
+          </CardEmbeddedContext.Provider>
         )}
       </Frame>
     );

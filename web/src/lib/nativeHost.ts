@@ -160,7 +160,8 @@ export interface HostCardAct { type: 'card-act'; act: string; kind: HostFloatCar
 
 /** Hand a message to the app. Nothing happens without one. */
 export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot | HostFocusCard | HostBubbles | { type: 'haptic'; kind: 'lift' | 'drop' }
-  | { type: 'drag-shape'; shape: 'circle'; x: number; y: number; w: number; h: number }): void {
+  | { type: 'drag-shape'; shape: 'circle'; x: number; y: number; w: number; h: number }
+  | { type: 'card-buttons'; list: { id: string; label: string; icon: string }[] }): void {
   window.webkit?.messageHandlers?.mywantHost?.postMessage(message);
 }
 
@@ -366,6 +367,24 @@ export interface HostFloatCard { kind: 'want' | 'thing'; id: string }
 /** This page IS a corner card, inside the app's frame: draw the card, full. */
 export const nativeCardPage: boolean =
   nativeHost && typeof location !== 'undefined' && location.pathname.startsWith('/panel/card/');
+
+/**
+ * On a card page, the card's own actions (useHostCardActions — a web want's
+ * 開く) go to the app, which draws them on the card's native frame beside its
+ * maximize; a press on one comes back here. A card page has no header to carry
+ * them, as the board's page does. Renders nothing.
+ */
+export function HostCardPageButtons(): null {
+  const actions = useHostCardStore(s => s.actions);
+  const shape = JSON.stringify(actions.map(a => [a.id, a.label, a.icon]));
+  useEffect(() => {
+    if (!nativeCardPage) return;
+    postToHost({ type: 'card-buttons', list: actions.map(a => ({ id: a.id, label: a.label, icon: a.icon })) });
+    onHostPress(id => useHostCardStore.getState().actions.find(a => a.id === id)?.run());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shape]);
+  return null;
+}
 
 interface HostFloatState {
   cards: HostFloatCard[];
