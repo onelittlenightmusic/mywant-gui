@@ -549,3 +549,22 @@ export function useHostBubble(el: HTMLElement | null, tail: boolean): void {
     };
   }, [id, el, tail]);
 }
+
+// ── Buttons a page adds to the app's pill ───────────────────────────────────
+//
+// What a page draws in the GUI's own control pill (an extension's pillCells —
+// the board's mode lamp) is not drawn in an app, which hides the page's
+// header and its pill. Such a page hands its button over here instead, and it
+// goes out with the header's buttons — on the app's pill, pressed like them.
+
+export interface HostExtraButton extends HostButton { run: () => void }
+
+export const useHostExtraButtonsStore = create<{
+  buttons: Record<string, HostExtraButton>;
+  set: (b: HostExtraButton) => void;
+  remove: (id: string) => void;
+}>((set) => ({
+  buttons: {},
+  set: (b) => set(s => ({ buttons: { ...s.buttons, [b.id]: b } })),
+  remove: (id) => set(s => { const next = { ...s.buttons }; delete next[id]; return { buttons: next }; }),
+}));

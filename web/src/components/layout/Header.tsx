@@ -20,7 +20,7 @@ import { extensionMenu } from '@/extensions/registry';
 import { useOriginReveal, anchoredRevealStyle } from '@/components/ui/originReveal';
 import { useThingStore } from '@/stores/thingStore';
 import { useWantStore } from '@/stores/wantStore';
-import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, useHostPanelStore, useHostSheetStore, useHostFloatStore, useHostPadStore, dispatchHostAct, type HostButton } from '@/lib/nativeHost';
+import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, useHostPanelStore, useHostSheetStore, useHostFloatStore, useHostPadStore, dispatchHostAct, useHostExtraButtonsStore, type HostButton } from '@/lib/nativeHost';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { useDarkMode } from '@/hooks/useDarkMode';
@@ -660,6 +660,7 @@ export const Header: React.FC<HeaderProps> = ({
   const hostSheet = useHostSheetStore(s => s.sheet);
   const hostFloat = useHostFloatStore(s => s.cards);
   const hostPad = useHostPadStore(s => s.pad);
+  const hostExtra = useHostExtraButtonsStore(s => s.buttons);
   const hostActionsRef = useRef<Record<string, () => void>>({});
   const hostLastRef = useRef('');
   useEffect(() => {
@@ -681,6 +682,12 @@ export const Header: React.FC<HeaderProps> = ({
       const [icon, active] = look[b.id] ?? ['Circle'];
       buttons.push({ id: b.id, label: b.label, icon, active: !!active });
       actions[b.id] = b.action;
+    }
+    // What the page adds to the pill (its pillCells, which the app does not
+    // draw): the board's mode lamp.
+    for (const b of Object.values(hostExtra)) {
+      buttons.push({ id: b.id, label: b.label, icon: b.icon, active: b.active });
+      actions[b.id] = b.run;
     }
     // Not one of the walked cells, but a button all the same.
     if (onMinimapToggle) {
