@@ -960,11 +960,15 @@ export const WantCard: React.FC<WantCardProps> = ({
     if (!isBeingProcessed) dropLabelOnWant(tWantId, e, onLabelDropped);
   };
 
-  const cardHeightClass = {
+  const gridCardHeight = {
     sm: 'h-[6rem] sm:h-[10rem]',
     md: 'h-[9rem] sm:h-[15rem]',
     lg: 'h-[18rem] sm:h-[30rem]',
   }[useDisplaySettings().card_height];
+  // The card height setting is the grid's. The copy embedded in the detail
+  // panel sits in a block of fixed height and fills it: taller, it ran down
+  // over the field cards under it.
+  const cardHeightClass = innerFocusScope === 'sidebar' ? 'h-full' : gridCardHeight;
 
   // Resolve the same gradient/image background that the want type picker uses,
   // applied at 70% opacity over the card's base bg-white / dark:bg-gray-800.
