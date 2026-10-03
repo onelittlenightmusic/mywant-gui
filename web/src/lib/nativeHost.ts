@@ -159,7 +159,7 @@ export interface HostFocusCard {
 export interface HostCardAct { type: 'card-act'; act: string; kind: HostFloatCard['kind']; id: string }
 
 /** Hand a message to the app. Nothing happens without one. */
-export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot | HostFocusCard): void {
+export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot | HostFocusCard | HostBubbles): void {
   window.webkit?.messageHandlers?.mywantHost?.postMessage(message);
 }
 
@@ -508,4 +508,44 @@ export function useHostPanel(
     if (selectRef.current(wanted) !== false) done.current = true;
   }, [wanted, ready]);
   return selected ? hostPanelRoute(at?.path ?? location.pathname, selected, at?.extra) : undefined;
+}
+
+// ── Overlay bubbles' frames, drawn by the app ───────────────────────────────
+//
+// A bubble on the board (OverlayBubble — the character's actions, a Y
+// connection's choices, a name prompt…) keeps its contents here; framed by an
+// app, its frame — the outline, the tail, the shadow, the arrival — is the
+// app's, drawn natively around the box the bubble says it occupies. The app's
+// frame takes no touches, so the buttons inside are pressed as ever.
+
+export interface HostBubble { id: string; x: number; y: number; w: number; h: number; tail: boolean }
+export interface HostBubbles { type: 'bubbles'; list: HostBubble[] }
+
+const hostBubbles = new Map<string, { el: HTMLElement; tail: boolean }>();
+let bubbleLoop = 0;
+let lastBubbles = '';
+
+function lookAtBubbles() {
+  const list: HostBubble[] = [];
+  for (const [id, { el, tail }] of hostBubbles) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0) list.push({ id, x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), tail });
+  }
+  const key = JSON.stringify(list);
+  if (key !== lastBubbles) { lastBubbles = key; postToHost({ type: 'bubbles', list }); }
+  bubbleLoop = hostBubbles.size ? requestAnimationFrame(lookAtBubbles) : 0;
+}
+
+/** A bubble's box, for the app to frame while it is on screen (OverlayBubble). */
+export function useHostBubble(el: HTMLElement | null, tail: boolean): void {
+  const id = useRef(`bubble-${Math.random().toString(36).slice(2)}`).current;
+  useEffect(() => {
+    if (!nativeHost || !el) return;
+    hostBubbles.set(id, { el, tail });
+    if (!bubbleLoop) bubbleLoop = requestAnimationFrame(lookAtBubbles);
+    return () => {
+      hostBubbles.delete(id);
+      if (!hostBubbles.size) { cancelAnimationFrame(bubbleLoop); bubbleLoop = 0; lookAtBubbles(); }
+    };
+  }, [id, el, tail]);
 }

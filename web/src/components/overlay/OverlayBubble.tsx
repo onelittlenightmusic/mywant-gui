@@ -1,6 +1,7 @@
 import React from 'react';
 import { classNames } from '@/utils/helpers';
 import { useOverlayDesign } from './design';
+import { nativeHost, useHostBubble } from '@/lib/nativeHost';
 
 export interface OverlayBubbleProps {
   /** Where it is, in viewport px: the point the tail touches when `anchor` is 'above'. */
@@ -48,6 +49,11 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
 }, ref) => {
   const design = useOverlayDesign();
   const above = anchor === 'above';
+  // Framed by an app, the frame is the app's (useHostBubble): the box keeps
+  // its fill and its contents, and the outline, the tail and the shadow are
+  // drawn natively around it.
+  const [frameEl, setFrameEl] = React.useState<HTMLDivElement | null>(null);
+  useHostBubble(frameEl, above);
   return (
     <div
       ref={ref}
@@ -59,10 +65,11 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
       onKeyDown={contain ? (e) => e.stopPropagation() : undefined}
       onMouseDown={contain ? (e) => e.stopPropagation() : undefined}
     >
-      <div className={classNames('relative h-full w-full', design.frame)}>
+      <div ref={setFrameEl}
+        className={classNames('relative h-full w-full', nativeHost ? 'rounded-2xl overflow-hidden bg-slate-900/85' : design.frame)}>
         {children}
       </div>
-      {above && (
+      {above && !nativeHost && (
         <div
           aria-hidden
           style={{
