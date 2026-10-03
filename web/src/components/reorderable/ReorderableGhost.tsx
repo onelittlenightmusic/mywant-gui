@@ -3,6 +3,13 @@ import { classNames } from '@/utils/helpers';
 import type { ReorderableGhostState } from './useReorderableGroup';
 
 const GHOST_WIDTH = 192; // w-48 — matches the want-card ghost this was extracted from
+/** How much larger a picked-up card is drawn than it lies. */
+const LIFT_SCALE = 1.04;
+/** The ghost's width: a desktop's small card, or most of a phone's width. */
+function ghostWidth(): number {
+  if (typeof window === 'undefined' || window.innerWidth >= 640) return GHOST_WIDTH;
+  return Math.min(Math.round(window.innerWidth * 0.72), 300);
+}
 const GHOST_HEIGHT_ESTIMATE = 110;
 const SCREEN_MARGIN = 8;
 
@@ -74,9 +81,19 @@ export const ReorderableGhost: React.FC<ReorderableGhostProps> = ({ state, color
       pending = { x: e.clientX, y: e.clientY };
       if (!frame) frame = requestAnimationFrame(flush);
     };
+    // A finger drags by touch, which sends no dragover: the ghost follows the
+    // touch as well, or a phone's reorder had no picture under the finger.
+    const onTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!t) return;
+      pending = { x: t.clientX, y: t.clientY };
+      if (!frame) frame = requestAnimationFrame(flush);
+    };
     window.addEventListener('dragover', onDragOver);
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
     return () => {
       window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('touchmove', onTouchMove);
       if (frame) cancelAnimationFrame(frame);
     };
   }, [isMouseMode]);
@@ -96,15 +113,26 @@ export const ReorderableGhost: React.FC<ReorderableGhostProps> = ({ state, color
         // Mouse mode omits left/top entirely and lets the layout effect above
         // own them — including them here would fight the per-frame writes.
         ...(kbPos ? { left: kbPos.x, top: kbPos.y } : null),
-        transform: `translate(-50%, -50%) scale(${scale})`,
+        // Lifted, the way a held card is on iOS: a touch larger than it lies.
+        transform: `translate(-50%, -50%) scale(${scale * LIFT_SCALE})`,
       }}
     >
       <div
         className={classNames(
-          'rounded-lg shadow-2xl border-2 p-4 w-48 overflow-hidden transition-all duration-300 relative bg-white dark:bg-gray-800',
+          'rounded-xl border p-4 overflow-hidden transition-all duration-300 relative bg-white dark:bg-gray-800',
           className,
         )}
-        style={{ ...style, borderColor: `${color}bb`, opacity: scale < 1 ? 0.9 : 1 }}
+        style={{
+          ...style,
+          // A phone's cards are a column the width of the screen: the ghost
+          // is wider there, so it reads as the card picked up, not a token.
+          width: ghostWidth(),
+          borderColor: `${color}88`,
+          // A soft lift shadow, not a hard drop shadow; a little see-through,
+          // so where it will land still shows under it.
+          boxShadow: '0 18px 40px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.18)',
+          opacity: scale < 1 ? 0.85 : 0.94,
+        }}
       >
         {renderContent(state.id)}
       </div>

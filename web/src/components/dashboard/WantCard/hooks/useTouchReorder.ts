@@ -1,3 +1,4 @@
+import { hostHaptic } from '@/lib/nativeHost';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Reordering cards by touch.
@@ -100,6 +101,7 @@ export function useTouchReorder({
         onDragBegin?.();
         if (wantId) onDragStart?.(wantId);
         navigator.vibrate?.(10);
+        hostHaptic('lift');
       }
 
       e.preventDefault(); // the finger is moving a card, not the page
@@ -113,7 +115,10 @@ export function useTouchReorder({
       const wasDragging = draggingRef.current;
       const id = wantId;
       reset();
-      if (wasDragging && hit && id) onDrop?.(id, hit.index, hit.position);
+      if (wasDragging && hit && id) {
+        onDrop?.(id, hit.index, hit.position);
+        hostHaptic('drop');
+      }
     };
 
     node.addEventListener('touchmove', onTouchMove, { passive: false });
