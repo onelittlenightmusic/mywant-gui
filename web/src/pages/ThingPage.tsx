@@ -67,6 +67,8 @@ export const ThingPage: React.FC = () => {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [minimapOpen, setMinimapOpen] = useState(false);
+  /** Landed on from the map: selected, but its detail not opened (see the map). */
+  const [quietId, setQuietId] = useState<string | null>(null);
   const isDarkMode = useColorMode() === 'dark';
   /** Add Thing form open in the sidebar. */
   const [adding, setAdding] = useState(false);
@@ -176,10 +178,14 @@ export const ThingPage: React.FC = () => {
   });
 
   // The map of the things, the want list's layout (ItemMinimap): a press
-  // scrolls to the thing's card and lands on it.
+  // scrolls to the thing's card and lands on it — without opening its detail.
+  // Finding a thing is not asking to read about it; a press on the card does
+  // that, as it always has.
   const minimap = usePageMinimap(minimapOpen, setMinimapOpen, { pick: (id) => {
-    document.querySelector(`[data-reorder-id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setQuietId(id);
     setSelectedId(id);
+    requestAnimationFrame(() => requestAnimationFrame(() =>
+      document.querySelector(`[data-reorder-id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })));
   } });
   // A thing's tile in the map is its card, small: its picture behind (held
   // back by the card's scrim), its name with the drop cap the board gives it,
@@ -238,7 +244,7 @@ export const ThingPage: React.FC = () => {
   useAppSidebar({
     // In an app on a phone, the app's own sheet (lib/nativeHost, useHostPanel).
     hostRoute: panelRoute,
-    open: !selectMode && (adding || !!editingThing || !!selected),
+    open: !selectMode && (adding || !!editingThing || (!!selected && selected.id !== quietId)),
     title: adding ? 'Add Thing' : editingThing ? `Edit ${editingThing.value}` : (selected ? selected.value : ''),
     // The thing detail opens on a card that already names its subject and
     // carries its own way out, exactly as it does on the board — so the frame
@@ -325,7 +331,7 @@ export const ThingPage: React.FC = () => {
               selectMode={selectMode}
               selectedIds={selectedIds}
               onToggleSelected={handleToggleSelected}
-              onView={(r) => setSelectedId(r.id)}
+              onView={(r) => { setQuietId(null); setSelectedId(r.id); }}
               onDelete={(r) => { if (selectedId === r.id) setSelectedId(null); deleteRecord(r); }}
               onAddWant={handleAddWant}
               onEditConstellation={handleEditConstellation}

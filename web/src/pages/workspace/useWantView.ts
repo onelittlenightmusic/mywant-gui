@@ -246,10 +246,12 @@ export function useWantView(api: WantViewApi) {
     // finger), so the tap that asked for this card scrolls to it and lands on
     // it itself — what pressing a card in the map is for.
     if (window.innerWidth < 640) {
-      document.querySelector(`[data-want-id="${CSS.escape(wantId)}"]`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const want = a.wants.find(w => (w.metadata?.id === wantId) || (w.id === wantId));
       if (want) handleViewWant(want, { toggle: false, via: 'navigate' });
+      // After landing, once the list has laid itself out for it: scrolling
+      // first and selecting second let the selection's own layout move the
+      // card again, and it ended up at the top or the bottom.
+      requestAnimationFrame(() => requestAnimationFrame(() => centerInList(wantId)));
     }
 
     // Close minimap on mobile after selection
@@ -307,4 +309,26 @@ export function useWantView(api: WantViewApi) {
     handleMinimapDoubleClick,
     handleMinimapDraftClick,
   };
+}
+
+/**
+ * The list's own card for a want, put in the middle of the list's scroll box.
+ * The map's mini cards carry the same data-want-id, so the search leaves the
+ * map out; and the scroll is the list box's, worked out from where the card
+ * is in it, rather than scrollIntoView, which on a phone could pick the page
+ * or the map to scroll instead.
+ */
+function centerInList(wantId: string): void {
+  const card = Array.from(document.querySelectorAll<HTMLElement>(`[data-want-id="${CSS.escape(wantId)}"]`))
+    .find(el => !el.closest('[data-minimap-panel]'));
+  if (!card) return;
+  let box: HTMLElement | null = card.parentElement;
+  while (box && !(/(auto|scroll)/.test(getComputedStyle(box).overflowY) && box.scrollHeight > box.clientHeight)) {
+    box = box.parentElement;
+  }
+  if (!box) return;
+  const c = card.getBoundingClientRect();
+  const b = box.getBoundingClientRect();
+  const top = box.scrollTop + (c.top - b.top) - (box.clientHeight - c.height) / 2;
+  box.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
