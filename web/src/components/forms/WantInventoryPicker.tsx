@@ -1,3 +1,4 @@
+import { BadgeNameLayout } from '@/components/common/BadgeNameLayout';
 import React, { useState, useMemo, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { useIconFont } from '@/hooks/useDisplaySettings';
 import { Search, Package, HelpCircle, X } from 'lucide-react';
@@ -468,46 +469,24 @@ function WantInventoryPicker({
             // absolutely positioned — i.e. an empty slot.
             className="w-full h-full"
           >
-            <div className="absolute inset-y-0 left-0 z-10 flex items-center pl-1 pointer-events-none">
-              <div
-                className="flex items-center justify-center rounded-lg h-[76%] aspect-square"
-                style={{ backgroundColor: `${badgeColor}3a` }}
-              >
-                {item.type === 'recipe' ? (
-                  <Package style={{ width: '58%', height: '58%', ...typeIconStyle }} />
-                ) : (
-                  <WantIcon
-                    typeName={item.name}
-                    category={item.category ?? ''}
-                    iconFont={iconFont}
-                    size={18}
-                    isLight={!isDark}
-                    iconStyle={typeIconStyle}
-                    iconClassName="flex-shrink-0"
-                  />
-                )}
-              </div>
-            </div>
-            <div className="absolute inset-y-0 left-[42%] right-0 z-10 flex items-center justify-center px-1 pointer-events-none">
-              <span
-                className={[
-                  'text-[9px] font-semibold leading-tight text-center',
-                  isDark ? 'text-white' : 'text-gray-800',
-                ].join(' ')}
-                style={{
-                  overflow: 'hidden',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical' as const,
-                  maxWidth: '100%',
-                  textShadow: isDark
-                    ? '0 1px 3px rgba(0,0,0,0.7)'
-                    : '0 1px 3px rgba(255,255,255,0.7), 0 0 2px rgba(0,0,0,0.2)',
-                }}
-              >
-                {item.title}
-              </span>
-            </div>
+            <BadgeNameLayout
+              badgeColor={badgeColor}
+              isDark={isDark}
+              name={item.title}
+              badge={item.type === 'recipe' ? (
+                <Package style={{ width: '58%', height: '58%', ...typeIconStyle }} />
+              ) : (
+                <WantIcon
+                  typeName={item.name}
+                  category={item.category ?? ''}
+                  iconFont={iconFont}
+                  size={18}
+                  isLight={!isDark}
+                  iconStyle={typeIconStyle}
+                  iconClassName="flex-shrink-0"
+                />
+              )}
+            />
           </WantCardFace>
           {/* Overlay covers the face only, so the name bar below stays readable */}
           {isOverlayOpen && (() => {

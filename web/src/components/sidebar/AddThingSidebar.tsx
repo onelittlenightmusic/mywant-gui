@@ -1,3 +1,4 @@
+import { BadgeNameLayout } from '@/components/common/BadgeNameLayout';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bookmark, Check, Pin, Save, Search, Type } from 'lucide-react';
 import { useThingStore } from '@/stores/thingStore';
@@ -303,7 +304,7 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
               {records.length === 0 ? 'Nothing remembered yet.' : `No results for "${pinFilter}"`}
             </p>
           ) : (
-            <div ref={pinGridRef} className="grid grid-cols-2 gap-1.5">
+            <div ref={pinGridRef} className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2">
               {pinnable.map(r => {
                 const Icon = resolveLucideIcon(r.icon) ?? Type;
                 const already = onCanvas.has(r.id);
@@ -337,10 +338,9 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
                     }}
                     title={already ? `"${r.value}" is already on the canvas` : `Pin "${r.value}" where your character is — or drag it onto the canvas`}
                     className={classNames(
-                      // Same card, a size down: flatter, so more of the list
-                      // is in view without changing anything about how a thing
-                      // is drawn on it.
-                      'relative w-full aspect-[2.6/1] rounded-lg overflow-hidden border shadow-sm transition-all focus:outline-none',
+                      // The want type picker's card, at its size: one shape
+                      // for every picker (BadgeNameLayout).
+                      'relative w-full aspect-[2/1] rounded-lg overflow-hidden border shadow-sm transition-all focus:outline-none',
                       already
                         ? 'border-gray-200 dark:border-gray-700 opacity-55 cursor-not-allowed'
                         : 'border-gray-300/80 dark:border-black/60 hover:shadow-md hover:outline hover:outline-2 hover:outline-amber-400 hover:z-10',
@@ -362,26 +362,25 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
                         <div className={THING_BACKGROUND_SCRIM} />
                       </>
                     )}
-                    {/* Icon left, name right — the shape every card in the app
-                        wears, and the same one the want type picker uses. The
-                        glyph is the thing's own colour, embossed, exactly as on
-                        its card: over a photograph a pale mark on a disc
-                        disappears. */}
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
-                      <Icon
-                        className="w-[22%] h-[44%]"
-                        style={{ color: glyph, filter: iconEmbossFilter(!isDark) }}
-                        strokeWidth={1.75}
-                      />
-                    </div>
-                    <div className="absolute inset-y-0 left-[38%] right-0 flex flex-col items-start justify-center pr-1.5 gap-0.5 pointer-events-none">
-                      <span className="text-[11px] font-semibold leading-tight text-left text-gray-800 dark:text-gray-100 line-clamp-2 max-w-full">
-                        {r.value}
-                      </span>
-                      <span className="text-[9px] leading-none truncate max-w-full font-semibold" style={{ color: glyph }}>
-                        {r.typeName}
-                      </span>
-                    </div>
+                    {/* Icon left, name right — the want type picker's card
+                        (BadgeNameLayout). The glyph is the thing's own colour,
+                        embossed, as on its card. */}
+                    <BadgeNameLayout
+                      badgeColor={r.color}
+                      isDark={isDark}
+                      name={r.value}
+                      sub={
+                        <span className="text-[8px] leading-none truncate max-w-full font-semibold" style={{ color: glyph }}>
+                          {r.typeName}
+                        </span>
+                      }
+                      badge={
+                        <Icon
+                          style={{ width: '58%', height: '58%', color: glyph, filter: iconEmbossFilter(!isDark) }}
+                          strokeWidth={1.75}
+                        />
+                      }
+                    />
                     {already && (
                       <div
                         className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center bg-white/70 dark:bg-black/50"
@@ -450,7 +449,10 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
           </div>
         </div>
 
-        <div ref={typeGridRef} className="flex-1 min-h-0 grid grid-cols-3 content-start gap-1.5 overflow-y-auto pr-0.5">
+        {/* The scrolling is the wrapper's: a grid that scrolls itself in a
+            column squeezes its rows, and the cards' 2:1 went with them. */}
+        <div className="flex-1 min-h-0 overflow-y-auto pr-0.5">
+        <div ref={typeGridRef} className="grid grid-cols-3 sm:grid-cols-4 content-start gap-1.5 sm:gap-2">
           {categories.map(c => {
             const Icon = resolveLucideIcon(c.icon) ?? Type;
             const selected = category === c.name;
@@ -489,7 +491,8 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
                   },
                 } : {})}
                 className={classNames(
-                  'relative flex flex-col items-center gap-1 px-1.5 py-2 rounded-lg border transition-colors overflow-hidden',
+                  // The want type picker's card, at its size (BadgeNameLayout).
+                  'relative w-full aspect-[2/1] rounded-lg border shadow-sm transition-colors overflow-hidden',
                   selected
                     ? 'border-transparent'
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
@@ -513,25 +516,21 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
                     <div className={THING_BACKGROUND_SCRIM} />
                   </>
                 )}
-                {/* Above the picture: an absolutely-positioned sibling would
-                    otherwise paint over these. */}
-                <Icon
-                  className="relative w-4 h-4"
-                  style={{ color: glyph, filter: bgFile ? iconEmbossFilter(!isDark) : undefined }}
-                  strokeWidth={1.75}
+                {/* Icon left, name right, over the picture. */}
+                <BadgeNameLayout
+                  badgeColor={c.color}
+                  isDark={isDark}
+                  name={c.name}
+                  badge={
+                    <Icon
+                      style={{ width: '58%', height: '58%', color: glyph, filter: bgFile ? iconEmbossFilter(!isDark) : undefined }}
+                      strokeWidth={1.75}
+                    />
+                  }
                 />
-                <span
-                  className={classNames(
-                    'relative text-[10px] leading-none truncate max-w-full',
-                    bgFile ? 'font-semibold' : 'text-gray-600 dark:text-gray-300',
-                  )}
-                  style={bgFile ? { color: glyph } : undefined}
-                >
-                  {c.name}
-                </span>
                 {selected && (
                   <Check
-                    className="absolute top-0.5 right-0.5 w-2.5 h-2.5"
+                    className="absolute top-0.5 right-0.5 z-20 w-2.5 h-2.5"
                     style={{ color: c.color }}
                     strokeWidth={3}
                   />
@@ -539,6 +538,7 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
               </button>
             );
           })}
+        </div>
         </div>
       </div>
 
