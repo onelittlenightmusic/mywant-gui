@@ -30,6 +30,8 @@ export function useLongPress(id: string | null, { disabled = false, onCommit }: 
    * reorder, and a menu up under the moving finger was in its way.
    */
   const armedRef = useRef(false);
+  /** The same, drawn: the card is dimmed while it is armed (see WantCard). */
+  const [armed, setArmed] = useState(false);
 
   const start = (x: number, y: number) => {
     if (disabled) return;
@@ -41,6 +43,7 @@ export function useLongPress(id: string | null, { disabled = false, onCommit }: 
         navigator.vibrate?.(10);
         playHapticClick();
         armedRef.current = true;
+        setArmed(true);
         onCommit?.(posRef.current.x, posRef.current.y);
         timerRef.current = null;
       }
@@ -55,6 +58,7 @@ export function useLongPress(id: string | null, { disabled = false, onCommit }: 
     }
     posRef.current = null;
     armedRef.current = false;
+    setArmed(false);
     setHolding(false);
   };
 
@@ -90,5 +94,6 @@ export function useLongPress(id: string | null, { disabled = false, onCommit }: 
     /** The hold has committed: a drag from here is a long-press drag — a
      *  reorder, nothing else (see WantCard's handleDragStart). */
     isArmed: () => armedRef.current,
+    armed,
   };
 }

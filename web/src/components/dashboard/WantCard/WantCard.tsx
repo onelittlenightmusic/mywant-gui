@@ -1062,7 +1062,8 @@ export const WantCard: React.FC<WantCardProps> = ({
         data-want-card-index={index}
         draggable={!isSelectMode && !isBeingProcessed && !sliderActive}
         onDragStart={handleDragStart}
-        onDragEnd={() => onReorderDragEnd?.()}
+        // A mouse drag ends with no mouseup on the card: the hold is let go here.
+        onDragEnd={() => { longPress.cancel(); onReorderDragEnd?.(); }}
         onClick={handleCardClick}
         onContextMenu={handleContextMenu}
         onMouseDown={longPress.onMouseDown}
@@ -1118,6 +1119,11 @@ export const WantCard: React.FC<WantCardProps> = ({
           // pan-y normally, so the page still scrolls under a finger; none once
           // the card itself is being dragged, or the scroll runs away with it.
           touchAction: touchReorder.dragging ? 'none' : 'pan-y',
+          // Held long enough to move (or moving): the card dims and settles a
+          // little, so the hand knows the hold took and a drag will reorder.
+          ...(longPress.armed || touchReorder.dragging
+            ? { filter: 'brightness(0.72) saturate(0.85)', transform: 'scale(0.97)', transition: 'filter 120ms ease-out, transform 120ms ease-out' }
+            : null),
           ...hoverRingVars(focusColor, isDarkMode),
           ...cardInkVars(typeIconStyle.color as string, isDarkMode),
         } as React.CSSProperties}

@@ -260,6 +260,8 @@ export const EntityCard: React.FC<EntityCardProps> = ({
    * done that; this is the same rule — a long press is the whole of the press.
    */
   const firedRef = useRef(false);
+  /** Drawn: the card dims while a hold has committed (see the style below). */
+  const [armed, setArmed] = useState(false);
 
   /**
    * Open this card's action grid, selecting the card first if it is not the
@@ -281,6 +283,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
         // Armed, not opened: the actions open when the finger lets go without
         // having moved (lpEnd) — a hold that moves is a reorder.
         firedRef.current = true;
+        setArmed(true);
         navigator.vibrate?.(10);
         playHapticClick();
         timerRef.current = null;
@@ -290,6 +293,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
   const lpCancel = () => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     posRef.current = null;
+    setArmed(false);
   };
   const lpMove = (x: number, y: number) => {
     if (!posRef.current) return;
@@ -300,6 +304,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
     if (firedRef.current && posRef.current) openActions();
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     posRef.current = null;
+    setArmed(false);
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -446,6 +451,9 @@ export const EntityCard: React.FC<EntityCardProps> = ({
     // Not on a keepFocus card: it is the only card in the panel, so there is
     // nothing to pick it out from — a glow there is just noise on the subject.
     ...(selected && !keepFocus ? focusGlowVars(focusColor, isDarkMode) : {}),
+    // Held long enough to move: dimmed and settled a little (the want card's
+    // feedback, the same).
+    ...(armed ? { filter: 'brightness(0.72) saturate(0.85)', transform: 'scale(0.97)', transition: 'filter 120ms ease-out, transform 120ms ease-out' } : {}),
   } as React.CSSProperties;
 
   // Everything layered OVER the painted surface — icons, text, overlays. These
