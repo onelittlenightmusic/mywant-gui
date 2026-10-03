@@ -279,8 +279,10 @@ export const useHostPanelStore = create<HostPanelState>((set, get) => ({
 
 /** This page IS such a panel, inside an app's sheet: draw the panel, full. */
 export const nativePanelPage: boolean =
-  nativeHost && typeof location !== 'undefined' && location.pathname.startsWith('/panel/')
-  && !location.pathname.startsWith('/panel/card/');
+  nativeHost && typeof location !== 'undefined' && (
+    (location.pathname.startsWith('/panel/') && !location.pathname.startsWith('/panel/card/'))
+    // Any page, asked to be its panel (useHostPanel).
+    || new URLSearchParams(location.search).has('__panel'));
 
 export interface HostSheet {
   /** The route of this app the sheet shows, e.g. /panel/want/<id>. */
@@ -449,3 +451,32 @@ export const useHostActStore = create<{
   act: ((act: string, kind: HostFloatCard['kind'], id: string) => void) | null;
   set: (act: ((act: string, kind: HostFloatCard['kind'], id: string) => void) | null) => void;
 }>((set) => ({ act: null, set: (act) => set({ act }) }));
+
+/**
+ * One page's detail panel as a framing app's sheet — the same for every page
+ * with one (characters, agents, worlds, want types, recipes, things, kata).
+ *
+ * The sheet shows the page itself, at its own address, asked to be its panel
+ * (`?__panel=<what is selected>`): AppSidebarHost draws the panel as the whole
+ * page there (nativePanelPage), and this hook selects what the address names
+ * once it is loaded. On the page underneath it gives the panel's route, which
+ * goes in the page's useAppSidebar as hostRoute.
+ *
+ * `select` returns false while what it names is not there yet; it is tried
+ * again whenever `ready` changes (e.g. the list's length).
+ */
+export function useHostPanel(
+  selected: string | null | undefined,
+  select: (id: string) => boolean | void,
+  ready: unknown = 0,
+): string | undefined {
+  const wanted = nativePanelPage ? new URLSearchParams(location.search).get('__panel') : null;
+  const done = useRef(false);
+  const selectRef = useRef(select);
+  selectRef.current = select;
+  useEffect(() => {
+    if (!wanted || done.current) return;
+    if (selectRef.current(wanted) !== false) done.current = true;
+  }, [wanted, ready]);
+  return selected ? `${location.pathname}?__panel=${encodeURIComponent(selected)}` : undefined;
+}

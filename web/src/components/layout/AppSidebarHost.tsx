@@ -74,7 +74,7 @@ export const AppSidebarHost: React.FC = () => {
     return (
       // Its end clears the sheet's rounded corners, the home indicator, and
       // the app's shrunk tab bar and pill kept over the sheet.
-      <div className="fixed inset-0 overflow-auto bg-white dark:bg-gray-900"
+      <div className="fixed inset-0 z-[60] overflow-auto bg-white dark:bg-gray-900"
         style={{ ...descriptor?.backgroundStyle, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}>
         <HostFramedPanel.Provider value={true}>
           {descriptor?.open ? content : null}

@@ -1,3 +1,4 @@
+import { useHostPanel } from '@/lib/nativeHost';
 import React, { useState, useEffect, useRef } from 'react';
 import { AgentResponse } from '@/types/agent';
 import { useAgentStore } from '@/stores/agentStore';
@@ -120,7 +121,15 @@ export const AgentsPage: React.FC = () => {
     totalCapabilities: agents.reduce((acc, agent) => acc + agent.capabilities.length, 0)
   };
 
+  const panelRoute = useHostPanel(sidebar.selectedItem?.name, (name) => {
+    const a = agents.find(x => x.name === name);
+    if (!a) return false;
+    sidebar.selectItem(a);
+  }, agents.length);
+
   useAppSidebar({
+    // In an app on a phone, the app's own sheet (lib/nativeHost, useHostPanel).
+    hostRoute: panelRoute,
     open: !!sidebar.selectedItem,
     title: sidebar.selectedItem?.name ?? '',
     onClose: () => sidebar.clearSelection(),

@@ -1,3 +1,4 @@
+import { useHostPanel } from '@/lib/nativeHost';
 import React, { useEffect, useRef, useState } from 'react';
 import { Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -153,7 +154,15 @@ export default function WorldsPage() {
     cols,
   });
 
+  const panelRoute = useHostPanel(selectedWorld?.name, (name) => {
+    const w = worlds.find(x => x.name === name);
+    if (!w) return false;
+    sidebar.selectItem(w);
+  }, worlds.length);
+
   useAppSidebar({
+    // In an app on a phone, the app's own sheet (lib/nativeHost, useHostPanel).
+    hostRoute: panelRoute,
     open: !!selectedWorld,
     title: selectedWorld?.name ?? '',
     onClose: () => sidebar.clearSelection(),

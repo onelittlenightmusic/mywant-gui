@@ -1,3 +1,4 @@
+import { useHostPanel } from '@/lib/nativeHost';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Circle } from 'lucide-react';
@@ -12,7 +13,7 @@ import { ThingGrid } from '@/components/dashboard/ThingGrid';
 import { useThingTileStore } from '@/stores/thingTileStore';
 import { ThingDetailsSidebar } from '@/components/sidebar/ThingDetailsSidebar';
 import { AddThingSidebar } from '@/components/sidebar/AddThingSidebar';
-import { useThingEditStore } from '@/stores/thingEditStore';
+import { useThingEditStore, requestThingEdit } from '@/stores/thingEditStore';
 import { HeaderOverlay } from '@/components/layout/HeaderOverlay';
 import { BatchActionBar } from '@/components/dashboard/BatchActionBar';
 import { ThingRecord } from '@/types/thing';
@@ -169,7 +170,21 @@ export const ThingPage: React.FC = () => {
   const editingThing = useThingEditStore(s => s.record);
   const consumeThingEdit = useThingEditStore(s => s.consume);
 
+  const panelRoute = useHostPanel(
+    adding ? '__add' : editingThing ? `__edit:${editingThing.id}` : selected ? selected.id : null,
+    (id) => {
+      if (id === '__add') { setAdding(true); return; }
+      const editId = id.startsWith('__edit:') ? id.slice(7) : null;
+      const r = records.find(x => x.id === (editId ?? id));
+      if (!r) return false;
+      if (editId) requestThingEdit(r); else setSelectedId(r.id);
+    },
+    records.length,
+  );
+
   useAppSidebar({
+    // In an app on a phone, the app's own sheet (lib/nativeHost, useHostPanel).
+    hostRoute: panelRoute,
     open: !selectMode && (adding || !!editingThing || !!selected),
     title: adding ? 'Add Thing' : editingThing ? `Edit ${editingThing.value}` : (selected ? selected.value : ''),
     // The thing detail opens on a card that already names its subject and

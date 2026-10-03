@@ -1,3 +1,4 @@
+import { useHostPanel } from '@/lib/nativeHost';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { notify } from '@/stores/noticeStore';
 import { Plus } from 'lucide-react';
@@ -230,7 +231,15 @@ export default function RecipePage() {
     cols,
   });
 
+  const panelRoute = useHostPanel(selectedRecipe?.recipe.metadata.name, (name) => {
+    const r = recipes.find(x => x.recipe.metadata.name === name);
+    if (!r) return false;
+    sidebar.selectItem(r);
+  }, recipes.length);
+
   useAppSidebar({
+    // In an app on a phone, the app's own sheet (lib/nativeHost, useHostPanel).
+    hostRoute: panelRoute,
     open: !!selectedRecipe,
     title: selectedRecipe?.recipe.metadata.name ?? '',
     onClose: () => sidebar.clearSelection(),

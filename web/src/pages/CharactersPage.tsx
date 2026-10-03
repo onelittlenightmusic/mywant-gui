@@ -1,3 +1,4 @@
+import { useHostPanel } from '@/lib/nativeHost';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Users, MousePointer2, User } from 'lucide-react';
 import { useAppHeader } from '@/hooks/useAppHeader';
@@ -157,7 +158,21 @@ export default function CharactersPage() {
     itemLabel: 'character',
   });
 
+  const panelRoute = useHostPanel(
+    creating ? '__new' : focusedChar ? focusedChar.id : summaryOpen ? '__summary' : null,
+    (id) => {
+      if (id === '__new') { setCreating(true); return; }
+      if (id === '__summary') { setSummaryOpen(true); return; }
+      const idx = characters.findIndex(c => c.id === id);
+      if (idx < 0) return false;
+      setFocusedIdx(idx + charIdxOffset);
+    },
+    characters.length,
+  );
+
   useAppSidebar({
+    // In an app on a phone, the app's own sheet (lib/nativeHost, useHostPanel).
+    hostRoute: panelRoute,
     open: creating || summaryOpen || !!focusedChar,
     title: creating ? 'New character' : focusedChar ? focusedChar.name : 'Summary',
     onClose: () => {

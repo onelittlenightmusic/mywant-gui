@@ -1,3 +1,4 @@
+import { useHostPanel } from '@/lib/nativeHost';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { notify } from '@/stores/noticeStore';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
@@ -167,7 +168,15 @@ export default function WantTypePage() {
     cols,
   });
 
+  const panelRoute = useHostPanel(selectedWantType?.metadata.name, (name) => {
+    const t = wantTypes.find(x => x.name === name);
+    if (!t) return false;
+    void handleViewDetails(t);
+  }, wantTypes.length);
+
   useAppSidebar({
+    // In an app on a phone, the app's own sheet (lib/nativeHost, useHostPanel).
+    hostRoute: panelRoute,
     open: !!selectedWantType,
     title: selectedWantType?.metadata.name ?? '',
     onClose: () => {
