@@ -1,3 +1,4 @@
+import { useHostPanel } from '@/lib/nativeHost';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Smartphone } from 'lucide-react';
 import { useAppHeader } from '@/hooks/useAppHeader';
@@ -185,7 +186,15 @@ export default function DevicesPage() {
   // The sidebar belongs to a focused card. It used to be pinned open with a
   // page-wide summary standing in, so landing on the page put up a panel about
   // nothing — the same information the page already shows in its own banners.
+  const panelRoute = useHostPanel(focusedDevice?.id, (id) => {
+    const idx = visibleDevices.findIndex(d => d.id === id);
+    if (idx < 0) return false;
+    setFocusedIdx(idx);
+  }, visibleDevices.length);
+
   useAppSidebar({
+    // In an app on a phone, the app's own sheet (lib/nativeHost, useHostPanel).
+    hostRoute: panelRoute,
     open: !!focusedDevice,
     title: focusedDevice ? focusedDevice.name : '',
     onClose: () => setFocusedIdx(-1),

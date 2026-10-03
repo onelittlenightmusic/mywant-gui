@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
-import { nativeHost, nativePanelPage, postToHost, HOST_PANEL_BAR, HostFramedPanel, useHostPanelStore, iconName } from '@/lib/nativeHost';
+import { nativeHost, nativePanelPage, postToHost, HOST_PANEL_BAR, HostFramedPanel, useHostPanelStore, iconName, useHostSheet, hostSheetsOn } from '@/lib/nativeHost';
 import { useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
 import { PanelCloseButton } from '@/components/sidebar/PanelCloseButton';
@@ -56,6 +56,13 @@ interface RightSidebarProps {
   /** When true and on mobile, force the sheet to appear at the bottom regardless of header position. */
   mobileForceBottom?: boolean;
   /**
+   * The route of a page that shows this panel on its own (useHostPanel). In an
+   * app on a phone, the panel is then the app's own sheet from it, and is not
+   * drawn here. For a page that draws its RightSidebar itself rather than
+   * through AppSidebarHost.
+   */
+  hostRoute?: string;
+  /**
    * This panel takes the left stick as soon as it opens.
    *
    * For panels the user went and opened — a form, a picker — where being in
@@ -92,7 +99,12 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   disableBackdropClick = false,
   mobileForceBottom = false,
   claimsInputOnOpen = false,
+  hostRoute,
 }) => {
+  const asHostSheet = hostSheetsOn() && isOpen && !!hostRoute;
+  useHostSheet(asHostSheet ? hostRoute! : null, title ?? '',
+    iconName(TitleIcon as { displayName?: string } | undefined, ''), onClose);
+  if (asHostSheet) isOpen = false;
   const config = useConfigStore(state => state.config);
   const isBottom = useHeaderAtBottom();
   // When the caller doesn't supply its own background (the list pages —
@@ -651,7 +663,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   // page, the sheet its frame — no slide, no grabber, no close of its own.
   if (nativePanelPage) {
     return isOpen ? (
-      <div data-sidebar="true" ref={containerRef} className="fixed inset-0 flex flex-col overflow-hidden bg-white dark:bg-gray-900"
+      <div data-sidebar="true" ref={containerRef} className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-white dark:bg-gray-900"
         style={{ ...backgroundStyle, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}>
         <HostFramedPanel.Provider value={true}>{children}</HostFramedPanel.Provider>
       </div>

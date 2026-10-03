@@ -1,3 +1,4 @@
+import { useHostPanel } from '@/lib/nativeHost';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Trophy, Zap, Trash2, Plus } from 'lucide-react';
 import { useAchievementStore } from '@/stores/achievementStore';
@@ -116,7 +117,15 @@ export const AchievementsPage: React.FC = () => {
     itemLabel: 'achievement',
   });
 
+  const panelRoute = useHostPanel(selected ? selected.id : summaryOpen ? '__summary' : null, (id) => {
+    if (id === '__summary') { setSummaryOpen(true); return; }
+    if (!achievements.some(a => a.id === id)) return false;
+    setSelectedId(id);
+  }, achievements.length);
+
   useAppSidebar({
+    // In an app on a phone, the app's own sheet (lib/nativeHost, useHostPanel).
+    hostRoute: panelRoute,
     open: summaryOpen || !!selected,
     title: selected ? selected.title : 'Summary',
     onClose: () => {

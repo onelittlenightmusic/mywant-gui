@@ -1,3 +1,4 @@
+import { useHostPanel } from '@/lib/nativeHost';
 import React, { useState } from 'react';
 import { AlertTriangle, Activity, CheckCircle, XCircle, Bot, NotebookPen, MessageSquare } from 'lucide-react';
 import { useAppHeader } from '@/hooks/useAppHeader';
@@ -54,6 +55,9 @@ export const LogsPage: React.FC = () => {
     hideCreateButton: true,
   });
 
+  // In an app on a phone, the summary is the app's own sheet (useHostPanel).
+  const panelRoute = useHostPanel(showSummary ? '__summary' : null, () => { setShowSummary(true); });
+
   return (
     <>
       {/* Main content area */}
@@ -87,6 +91,7 @@ export const LogsPage: React.FC = () => {
         isOpen={showSummary}
         onClose={() => setShowSummary(false)}
         title="Summary"
+        hostRoute={panelRoute}
       >
         <div className="space-y-6">
           <div>
