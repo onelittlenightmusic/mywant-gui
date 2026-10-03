@@ -159,7 +159,8 @@ export interface HostFocusCard {
 export interface HostCardAct { type: 'card-act'; act: string; kind: HostFloatCard['kind']; id: string }
 
 /** Hand a message to the app. Nothing happens without one. */
-export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot | HostFocusCard | HostBubbles | { type: 'haptic'; kind: 'lift' | 'drop' }): void {
+export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot | HostFocusCard | HostBubbles | { type: 'haptic'; kind: 'lift' | 'drop' }
+  | { type: 'drag-shape'; shape: 'circle'; x: number; y: number; w: number; h: number }): void {
   window.webkit?.messageHandlers?.mywantHost?.postMessage(message);
 }
 
@@ -580,4 +581,14 @@ export const useHostExtraButtonsStore = create<{
  */
 export function hostHaptic(kind: 'lift' | 'drop'): void {
   if (nativeHost) postToHost({ type: 'haptic', kind });
+}
+
+/**
+ * What is being picked up is round (a thing's ball): framed by an app, the
+ * app draws the lifted picture — a web view on a phone takes no drag image
+ * from the page (setDragImage) and would carry the ball's square box. `rect`
+ * is where it is on screen. Nothing outside an app.
+ */
+export function hostDragShape(rect: DOMRect, shape: 'circle'): void {
+  if (nativeHost) postToHost({ type: 'drag-shape', shape, x: rect.left, y: rect.top, w: rect.width, h: rect.height });
 }
