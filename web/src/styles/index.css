@@ -313,6 +313,11 @@
     padding-top: 0;
     padding-bottom: 0;
   }
+  /* …and no character-coloured focus glow where a card publishes none of its
+     own (the fallback colour of .mw-card-focus and the picker's slots). */
+  html.native-host {
+    --mw-focus-color: transparent;
+  }
   /* A page's own scrolling list, in an app: starts below the status bar and
      scrolls under it, and its end clears the pill and the tab bar. */
   html.native-host .host-scroll-edges {

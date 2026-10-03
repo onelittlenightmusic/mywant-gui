@@ -1,5 +1,7 @@
 import type React from 'react';
 import { ringColor } from '@/components/dashboard/WantCardFace';
+import { nativeHost } from '@/lib/nativeHost';
+
 
 /**
  * マウスオーバー時の枠（ブラウザ拡張の CursorMan ハイライトと同じ見た目）。
@@ -17,6 +19,9 @@ export const CARD_HOVER_RING = 'mw-hover-ring';
  * 中身から目を奪う。誰の枠かは色相で読めるので、識別性は落ちない。
  */
 export function hoverRingVars(color: string, isDark: boolean): React.CSSProperties {
+  // Framed by an app, cards wear no character-coloured glow (focus or hover):
+  // the app's own frames say what is picked.
+  if (nativeHost) return { '--mw-ring': 'transparent', '--mw-ring-soft': 'transparent', '--mw-ring-faint': 'transparent' } as React.CSSProperties;
   const ring = ringColor(color, isDark);
   return {
     '--mw-ring': ring,
@@ -39,6 +44,7 @@ export function hoverRingVars(color: string, isDark: boolean): React.CSSProperti
  * card it belongs to whatever contains it.
  */
 export function focusGlowVars(color: string, isDark: boolean): React.CSSProperties {
+  if (nativeHost) return {}; // see hoverRingVars
   const c = ringColor(color, isDark);
   return { boxShadow: `inset 0 0 6px ${c}, inset 0 0 16px ${c}88, inset 0 0 30px ${c}44` };
 }

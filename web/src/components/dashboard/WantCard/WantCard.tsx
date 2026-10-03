@@ -1,6 +1,6 @@
 import { openWebWant } from './plugins/types/WebFrameCardPlugin';
 import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
-import { HostFramedPanel } from '@/lib/nativeHost';
+import { HostFramedPanel, nativeHost } from '@/lib/nativeHost';
 import { useDisplaySettings } from '@/hooks/useDisplaySettings';
 import { useIconFont } from '@/hooks/useDisplaySettings';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
@@ -1026,7 +1026,9 @@ export const WantCard: React.FC<WantCardProps> = ({
   // on out in the grid, so putting him on this one too puts the same character
   // on screen twice. The ring stays: that says "this is the one", which is
   // true of both copies.
-  const showCursorMan = isNavFocused && innerFocusScope !== 'sidebar';
+  // Not on a card an app frames (a corner card, a card in its chat): the
+  // character is shown by the board, not stamped on its cards.
+  const showCursorMan = isNavFocused && innerFocusScope !== 'sidebar' && !nativeHost;
 
   // フォーカス枠は他カードと同じくカード全体に出し、色は自分のキャラクター色に合わせる。
   const focusColor = useMyCursorColor();
