@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { postToHost, HostFramedPanel } from '@/lib/nativeHost';
+import { postToHost, HostFramedPanel, useHostFocusedCard } from '@/lib/nativeHost';
 import { useThingStore } from '@/stores/thingStore';
 import { requestThingEdit } from '@/stores/thingEditStore';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
@@ -351,6 +351,9 @@ export const WantListPage: React.FC<{
   useEffect(() => {
     if ((card || panel) && thingRecords.length === 0) void fetchThings();
   }, [card, panel, thingRecords.length, fetchThings]);
+
+  // The list's focused card wears the app's native buttons (lib/nativeHost).
+  useHostFocusedCard(!panel && !card);
 
   // The panel the route names, opened — once what it names is loaded.
   useEffect(() => {

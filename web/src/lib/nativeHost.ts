@@ -147,12 +147,19 @@ export interface HostCardSlot {
   slot: { kind: HostFloatCard['kind']; id: string; x: number; y: number; w: number; h: number } | null;
 }
 
+/** Where the focused card of a list is on screen, for the app to put its
+ *  native buttons (maximize) on it; null when no card is focused. */
+export interface HostFocusCard {
+  type: 'focus-card';
+  card: { kind: HostFloatCard['kind']; id: string; x: number; y: number; w: number; h: number } | null;
+}
+
 /** Something done on a card page (nativeCardPage) that belongs to the board:
  *  the app hands it to the board's page as "float:<act>:<kind>:<id>". */
 export interface HostCardAct { type: 'card-act'; act: string; kind: HostFloatCard['kind']; id: string }
 
 /** Hand a message to the app. Nothing happens without one. */
-export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot): void {
+export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot | HostFocusCard): void {
   window.webkit?.messageHandlers?.mywantHost?.postMessage(message);
 }
 
@@ -406,3 +413,29 @@ export const useHostPadStore = create<{ pad: HostPad | null; set: (pad: HostPad 
   pad: null,
   set: (pad) => set({ pad }),
 }));
+
+/**
+ * Tell a framing app where a list's focused want card is, as it moves (the
+ * list scrolls, the focus walks): the app puts its native buttons on it — the
+ * corner card's maximize — and, pressed, grows its native card frame out of
+ * it. Read once a frame and sent only when it changes.
+ */
+export function useHostFocusedCard(enabled: boolean): void {
+  useEffect(() => {
+    if (!enabled || !nativeHost) return;
+    let last = '';
+    let raf = 0;
+    const look = () => {
+      const el = document.querySelector<HTMLElement>('[data-keyboard-nav-selected="true"][data-want-id]');
+      const r = el?.getBoundingClientRect();
+      const card = el && r && r.width > 0
+        ? { kind: 'want' as const, id: el.dataset.wantId ?? '', x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) }
+        : null;
+      const key = JSON.stringify(card);
+      if (key !== last) { last = key; postToHost({ type: 'focus-card', card }); }
+      raf = requestAnimationFrame(look);
+    };
+    raf = requestAnimationFrame(look);
+    return () => { cancelAnimationFrame(raf); postToHost({ type: 'focus-card', card: null }); };
+  }, [enabled]);
+}
