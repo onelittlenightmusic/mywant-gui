@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { classNames } from '@/utils/helpers';
 import { useOverlayDesign } from './design';
 import { nativeHost, useHostBubble } from '@/lib/nativeHost';
@@ -18,7 +19,11 @@ export interface OverlayBubbleProps {
   anchor?: 'above' | 'at';
   /** Positioned against the viewport (default) or the nearest positioned ancestor. */
   position?: 'fixed' | 'absolute';
-  /** Stacking order. Default: 200, over the board and its cards. */
+  /**
+   * Stacking order. Default: over everything — a question or a menu is the
+   * one thing on screen being answered, so nothing (a character's chat, the
+   * pad, a card) may sit over it.
+   */
   zIndex?: number;
   className?: string;
   /**
@@ -32,6 +37,8 @@ export interface OverlayBubbleProps {
 
 /** How far the box sits above the point it is about, clear of the tail. */
 const LIFT_PX = 8;
+/** Above the pad's face buttons (9000) and every layer the board draws. */
+const BUBBLE_Z = 9500;
 const TAIL_PX = 9;
 
 /**
@@ -44,7 +51,7 @@ const TAIL_PX = 9;
  * outside the frame here.
  */
 export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps>(({
-  left, top, width, height, anchor = 'above', position = 'fixed', zIndex = 200,
+  left, top, width, height, anchor = 'above', position = 'fixed', zIndex = BUBBLE_Z,
   className, contain = false, children,
 }, ref) => {
   const design = useOverlayDesign();
@@ -54,7 +61,7 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
   // drawn natively around it.
   const [frameEl, setFrameEl] = React.useState<HTMLDivElement | null>(null);
   useHostBubble(frameEl, above);
-  return (
+  const box = (
     <div
       ref={ref}
       className={classNames(position === 'fixed' ? 'fixed' : 'absolute', 'pointer-events-auto', className)}
@@ -83,5 +90,10 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
       )}
     </div>
   );
+  // Placed against the viewport, it is put at the top of the page: drawn where
+  // it was asked for, it sat in whatever stacking its parent made (the board's
+  // layers), and things outside that — a character's chat — went over it
+  // however high its own z-index.
+  return position === 'fixed' && typeof document !== 'undefined' ? createPortal(box, document.body) : box;
 });
 OverlayBubble.displayName = 'OverlayBubble';
