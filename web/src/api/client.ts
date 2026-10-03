@@ -59,6 +59,11 @@ import { KataListResponse, KataRecord, LiveKataResponse } from '@/types/kata';
 import { CANVAS_LABEL_X, CANVAS_LABEL_Y, isSystemWant } from '@/utils/wantPlacement';
 import { Cell, knownCursorManCell } from '@/utils/cursorManCell';
 
+/** This page is a panel or a card inside an app's frame (lib/nativeHost):
+ *  it shows this person's GUI, and writes back none of its screen state. */
+const hostViewOnly = typeof window !== 'undefined' && !!window.__mywantHost && (
+  new URLSearchParams(location.search).has('__panel') || location.pathname.startsWith('/panel/card/'));
+
 export interface WantHashEntry {
   id: string;
   hash: string;
@@ -908,6 +913,10 @@ class MyWantApiClient {
     updates: Record<string, unknown>,
     ifMatchSeq?: number,
   ): Promise<{ seq: number; state: Record<string, unknown> }> {
+    // A page shown inside an app's sheet or card frame is a view of this
+    // person's GUI, not another one of it: it must not write back what is on
+    // screen, or it and the page it was opened from correct each other forever.
+    if (hostViewOnly) return { seq: ifMatchSeq ?? 0, state: {} };
     const headers: Record<string, string> = {};
     if (ifMatchSeq !== undefined) headers['If-Match'] = `"${ifMatchSeq}"`;
     const response = await this.client.put<{ seq: number; state: Record<string, unknown> }>(
@@ -1327,6 +1336,7 @@ class MyWantApiClient {
      */
     seq?: number,
   ): Promise<void> {
+    if (hostViewOnly) return; // see updateGUIState
     await this.client.put(`/api/v1/cursors/${encodeURIComponent(characterId)}`, {
       x, y, deviceId, avatar, color, name, effectType, effectNonce,
       message: say?.message, messageAt: say?.messageAt,
@@ -1336,6 +1346,7 @@ class MyWantApiClient {
 
   /** Remove this character's cursor (called when leaving canvas mode). */
   async deleteCursor(characterId: string): Promise<void> {
+    if (hostViewOnly) return; // see updateGUIState
     await this.client.delete(`/api/v1/cursors/${encodeURIComponent(characterId)}`);
   }
 
