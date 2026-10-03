@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { classNames } from '@/utils/helpers';
 import { createPortal } from 'react-dom';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
+import { HostFramedPanel, nativePanelPage } from '@/lib/nativeHost';
 import { PanelCloseButton } from './PanelCloseButton';
 
 /**
@@ -124,6 +125,14 @@ export const PanelShell: React.FC<{
   children: React.ReactNode;
 }> = ({ title, onClose, actions, children }) => {
   const isBottom = usePanelAtBottom();
+  const framed = useContext(HostFramedPanel);
+  // Nothing left for the row to hold: no name, no close (an app's sheet has
+  // its own way out), the actions down in the bar. Drawn anyway it was an
+  // empty 62px band at the top of the sheet.
+  const rowEmpty = !title && isBottom && (framed || !onClose);
+  // The bar's own clearance of the screen's bottom edge — none on a panel page
+  // in an app's sheet, whose frame already keeps clear of it (and of the pill).
+  const barEdge = nativePanelPage ? '0px' : 'env(safe-area-inset-bottom, 0px)';
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   // Whether a panel has put anything in the slot. The bottom bar exists for
   // that and for `actions`; with neither it was an empty 50px band under the
@@ -144,7 +153,7 @@ export const PanelShell: React.FC<{
             name and the close land on the same pixel whichever panel is open.
             That is the whole point of there being one row; putting it a few
             pixels lower here would have undone it. */}
-        <div className="flex-shrink-0 px-3 pt-3">
+        {!rowEmpty && <div className="flex-shrink-0 px-3 pt-3">
           <PanelIdentityRow
             title={title}
             onClose={onClose}
@@ -156,7 +165,7 @@ export const PanelShell: React.FC<{
               </>
             }
           />
-        </div>
+        </div>}
         {/* The shell owns the scrolling, so the row above it cannot be scrolled
             away — a way out that leaves the screen is not one. min-h-0 because
             a flex child's floor is its content: without it the body grows past
@@ -167,12 +176,13 @@ export const PanelShell: React.FC<{
         <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
         {isBottom && (
           <div
-            // min-h matching the identity row's, so a button that fills its
-            // bar (h-full, as the want form's submit is) is the same size
-            // whichever side it landed on.
-            className={classNames('flex-shrink-0 flex items-stretch gap-0 min-h-[50px] border-t border-gray-200 dark:border-gray-700',
+            // 50px of bar matching the identity row's height, so a button that
+            // fills its bar (h-full, as the want form's submit is) is the same
+            // size whichever side it landed on — on top of the edge clearance,
+            // not including it: counted in, a phone's 34pt left the buttons 16.
+            className={classNames('flex-shrink-0 flex items-stretch gap-0 border-t border-gray-200 dark:border-gray-700',
               !actions && !slotFilled && 'hidden')}
-            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+            style={{ paddingBottom: barEdge, minHeight: `calc(50px + ${barEdge})` }}
           >
             {/* The slot first and greedy, so a panel that fills it spans the
                 bar and a panel that does not still has its own actions pushed

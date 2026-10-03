@@ -665,7 +665,10 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     return isOpen ? (
       <div data-sidebar="true" ref={containerRef}
         className={classNames('fixed inset-0 z-[60] flex flex-col bg-white dark:bg-gray-900', overflowHidden ? 'overflow-hidden' : 'overflow-y-auto')}
-        style={{ ...backgroundStyle, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}>
+        // Clear of the app's shrunk pill and tab bar under it (MiniDock: 52pt
+        // tall, 6pt off the safe area) and no further — a form's bottom bar
+        // sits right above them, not a band of nothing higher.
+        style={{ ...backgroundStyle, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)' }}>
         <HostFramedPanel.Provider value={true}>{children}</HostFramedPanel.Provider>
       </div>
     ) : null;
