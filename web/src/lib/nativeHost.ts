@@ -279,10 +279,24 @@ export const useHostPanelStore = create<HostPanelState>((set, get) => ({
 
 /** This page IS such a panel, inside an app's sheet: draw the panel, full. */
 export const nativePanelPage: boolean =
-  nativeHost && typeof location !== 'undefined' && (
-    (location.pathname.startsWith('/panel/') && !location.pathname.startsWith('/panel/card/'))
-    // Any page, asked to be its panel (useHostPanel).
-    || new URLSearchParams(location.search).has('__panel'));
+  nativeHost && typeof location !== 'undefined' && new URLSearchParams(location.search).has('__panel');
+
+/** What this panel page was asked to show (`?__panel=<id>`), or null. */
+export function hostPanelId(): string | null {
+  return nativePanelPage ? new URLSearchParams(location.search).get('__panel') : null;
+}
+
+/**
+ * The address of a panel page: `path` (a page of this app) asked to be its
+ * panel for `id`, with anything else the panel needs to know (e.g. where the
+ * character stands) as further parameters. The one form every sheet's route
+ * takes.
+ */
+export function hostPanelRoute(path: string, id: string, extra?: Record<string, string | number>): string {
+  const q = new URLSearchParams({ __panel: id });
+  for (const [k, v] of Object.entries(extra ?? {})) q.set(k, String(v));
+  return `${path}?${q}`;
+}
 
 export interface HostSheet {
   /** The route of this app the sheet shows, e.g. /panel/want/<id>. */
@@ -350,16 +364,13 @@ export const nativeCardPage: boolean =
 
 interface HostFloatState {
   cards: HostFloatCard[];
-  act: ((act: string, kind: HostFloatCard['kind'], id: string) => void) | null;
-  set: (cards: HostFloatCard[], act: HostFloatState['act']) => void;
-  clear: () => void;
+  set: (cards: HostFloatCard[]) => void;
 }
 
+/** The corner cards, for the app; what is done on them comes back through useHostActs. */
 export const useHostFloatStore = create<HostFloatState>((set) => ({
   cards: [],
-  act: null,
-  set: (cards, act) => set({ cards, act }),
-  clear: () => set({ cards: [], act: null }),
+  set: (cards) => set({ cards }),
 }));
 
 /**
@@ -442,15 +453,31 @@ export function useHostFocusedCard(enabled: boolean): void {
   }, [enabled]);
 }
 
+type HostAct = (act: string, kind: HostFloatCard['kind'], id: string) => void;
+const hostActs = new Set<HostAct>();
+
 /**
- * What a sheet's page did that this page has to carry out — a card pressed in
- * the map sheet, say — arriving as "float:<act>:<kind>:<id>" like a corner
- * card's (useHostFloatStore). A page that takes such acts registers here.
+ * What something the app draws for this page did that the page carries out —
+ * a corner card pressed, a card pressed in a map sheet, Edit on a card — sent
+ * by the app as a press "float:<act>:<kind>:<id>". Any part of the page that
+ * carries such acts out registers here while it is mounted; each is handed
+ * every act and takes the ones it knows.
  */
-export const useHostActStore = create<{
-  act: ((act: string, kind: HostFloatCard['kind'], id: string) => void) | null;
-  set: (act: ((act: string, kind: HostFloatCard['kind'], id: string) => void) | null) => void;
-}>((set) => ({ act: null, set: (act) => set({ act }) }));
+export function useHostActs(handler: HostAct, enabled = true): void {
+  const ref = useRef(handler);
+  ref.current = handler;
+  useEffect(() => {
+    if (!enabled) return;
+    const h: HostAct = (a, k, id) => ref.current(a, k, id);
+    hostActs.add(h);
+    return () => { hostActs.delete(h); };
+  }, [enabled]);
+}
+
+/** Hand an act to whoever carries it out (see useHostActs). */
+export function dispatchHostAct(act: string, kind: HostFloatCard['kind'], id: string): void {
+  for (const h of hostActs) h(act, kind, id);
+}
 
 /**
  * One page's detail panel as a framing app's sheet — the same for every page
@@ -469,8 +496,10 @@ export function useHostPanel(
   selected: string | null | undefined,
   select: (id: string) => boolean | void,
   ready: unknown = 0,
+  /** The page the panel opens on, if not this one; and what else it is told. */
+  at?: { path?: string; extra?: Record<string, string | number> },
 ): string | undefined {
-  const wanted = nativePanelPage ? new URLSearchParams(location.search).get('__panel') : null;
+  const wanted = hostPanelId();
   const done = useRef(false);
   const selectRef = useRef(select);
   selectRef.current = select;
@@ -478,5 +507,5 @@ export function useHostPanel(
     if (!wanted || done.current) return;
     if (selectRef.current(wanted) !== false) done.current = true;
   }, [wanted, ready]);
-  return selected ? `${location.pathname}?__panel=${encodeURIComponent(selected)}` : undefined;
+  return selected ? hostPanelRoute(at?.path ?? location.pathname, selected, at?.extra) : undefined;
 }

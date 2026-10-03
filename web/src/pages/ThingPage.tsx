@@ -175,10 +175,10 @@ export const ThingPage: React.FC = () => {
 
   // The map of the things, the want list's layout (ItemMinimap): a press
   // scrolls to the thing's card and lands on it.
-  const minimap = usePageMinimap(minimapOpen, setMinimapOpen, (id) => {
+  const minimap = usePageMinimap(minimapOpen, setMinimapOpen, { pick: (id) => {
     document.querySelector(`[data-reorder-id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setSelectedId(id);
-  });
+  } });
   const minimapItems = useMemo<MinimapItem[]>(() => (filtered.length ? filtered : records).map(r => {
     const Icon = resolveLucideIcon(r.icon) ?? Circle;
     return {

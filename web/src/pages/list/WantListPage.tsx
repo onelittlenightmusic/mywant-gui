@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { postToHost, HostFramedPanel, useHostFocusedCard, useHostSheet, hostSheetsOn, useHostActStore } from '@/lib/nativeHost';
+import { postToHost, HostFramedPanel, useHostFocusedCard, hostPanelId, useHostPanel } from '@/lib/nativeHost';
+import { usePageMinimap } from '@/components/dashboard/ItemMinimap';
 import { useThingStore } from '@/stores/thingStore';
 import { requestThingEdit } from '@/stores/thingEditStore';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
@@ -35,21 +36,21 @@ import { WorkspaceHeaderOverlay, WorkspaceModals } from '../workspace/WorkspaceC
  */
 export const WantListPage: React.FC<{
   /**
-   * Run as one panel on its own (/panel/want/<id>, /panel/global), inside an
-   * app's sheet: the same workspace, the panel opened from the route, and no
-   * list drawn — the panel is the page (AppSidebarHost, nativePanelPage).
-   */
-  panel?: boolean;
-  /**
    * Run as one corner card on its own (/panel/card/<want|thing>/<id>), inside
    * an app's native card frame (lib/nativeHost, nativeCardPage): the card,
    * filling the page, its board-side actions handed to the app.
    */
   card?: boolean;
-}> = ({ panel = false, card = false }) => {
+}> = ({ card = false }) => {
   const board = useNoBoard();
   const panelRoute = useParams<{ kind?: string; id?: string }>();
-  const panelThingId = panel && panelRoute.kind === 'thing' ? panelRoute.id ?? null : null;
+  // Run as one of the workspace's panels inside an app's sheet
+  // (/dashboard?__panel=<id>, lib/nativeHost): the same workspace, the panel
+  // opened from the address, and no list drawn — the panel is the page. The
+  // board's panels open here too, so a sheet does not load a board behind.
+  const panelId = hostPanelId();
+  const panel = !!panelId;
+  const panelThingId = panelId?.startsWith('thing:') ? panelId.slice(6) : null;
   // A panel opened on its own page is told where the character stands (x, y):
   // a thing is pinned there, or lined up from there.
   if (panel && board.cursorManPosRef.current === null) {
@@ -355,83 +356,73 @@ export const WantListPage: React.FC<{
   // The list's focused card wears the app's native buttons (lib/nativeHost).
   useHostFocusedCard(!panel && !card);
 
-  // The map, in an app on a phone, is the app's sheet (/panel/minimap); a card
-  // pressed there comes back here as an act and is carried out as a press on
-  // the map here would be.
-  const minimapAsSheet = !panel && !card && minimapOpen && hostSheetsOn();
-  useHostSheet(minimapAsSheet ? '/panel/minimap' : null, 'Map', 'Map', () => setMinimapOpen(false));
-  const minimapActs = useRef({ handleMinimapClick, handleMinimapDoubleClick, handleMinimapDraftClick });
-  minimapActs.current = { handleMinimapClick, handleMinimapDoubleClick, handleMinimapDraftClick };
-  useEffect(() => {
-    if (panel || card) return;
-    useHostActStore.getState().set((act, _kind, id) => {
-      if (act === 'minimap') minimapActs.current.handleMinimapClick(id);
-      else if (act === 'minimap-open') minimapActs.current.handleMinimapDoubleClick(id);
-      else if (act === 'minimap-draft') minimapActs.current.handleMinimapDraftClick(id);
-    });
-    return () => useHostActStore.getState().set(null);
-  }, [panel, card]);
+  // The map: in the page, or in an app on a phone the app's own sheet, whose
+  // presses come back here (usePageMinimap — every page's map works so).
+  const minimap = usePageMinimap(minimapOpen, setMinimapOpen, {
+    pick: handleMinimapClick,
+    open: handleMinimapDoubleClick,
+    draft: handleMinimapDraftClick,
+  });
 
-  // The panel the route names, opened — once what it names is loaded.
-  useEffect(() => {
-    if (!panel) return;
-    if (panelRoute.kind === 'global') {
-      if (!sidebar.showGlobal) sidebar.toggleGlobal();
-      return;
+  // The panel the address names, opened once what it names is loaded
+  // (useHostPanel — every panel page works so). The route to it is the
+  // workspace's to give (useWorkspaceSidebar, WorkspaceModals).
+  useHostPanel(undefined, (id) => {
+    const [kind, ...rest] = id.split(':');
+    const arg = rest.join(':');
+    const wantById = (wid: string) => wants.find(w => (w.metadata?.id || w.id) === wid);
+    switch (kind) {
+      case 'global': if (!sidebar.showGlobal) sidebar.toggleGlobal(); return;
+      case 'add-thing': setAddingThing(true); return;
+      case 'add-want': {
+        const parent = arg ? wantById(arg) : undefined;
+        if (arg && !parent) return false;
+        if (!sidebar.showForm) handleCreateWant(parent);
+        return;
+      }
+      case 'edit-want': {
+        const w = wantById(arg);
+        if (!w) return false;
+        if (!sidebar.showForm) handleEditWant(w);
+        return;
+      }
+      case 'edit-thing': {
+        const t = thingRecords.find(r => r.id === arg);
+        if (!t) return false;
+        requestThingEdit(t);
+        return;
+      }
+      case 'thing': setDetailsRequestedFor(arg); return;
+      case 'want': {
+        const w = wantById(arg);
+        if (!w) return false;
+        handleViewWant(w, { toggle: false });
+        setDetailsRequestedFor(arg);
+        return;
+      }
     }
-    if (panelRoute.kind === 'add-thing') { setAddingThing(true); return; }
-    if (panelRoute.kind === 'add-want') {
-      const owner = new URLSearchParams(location.search).get('owner');
-      const parent = owner ? wants.find(w => (w.metadata?.id || w.id) === owner) : undefined;
-      if (owner && !parent) return; // not loaded yet
-      if (!sidebar.showForm) handleCreateWant(parent);
-      return;
-    }
-    if (panelRoute.kind === 'edit-want' && panelRoute.id) {
-      const w = wants.find(x => (x.metadata?.id || x.id) === panelRoute.id);
-      if (w && !sidebar.showForm) handleEditWant(w);
-      return;
-    }
-    if (panelRoute.kind === 'edit-thing' && panelRoute.id) {
-      const t = thingRecords.find(r => r.id === panelRoute.id);
-      if (t) requestThingEdit(t);
-      return;
-    }
-    if (panelRoute.kind === 'thing' && panelRoute.id) {
-      setDetailsRequestedFor(panelRoute.id);
-      return;
-    }
-    if (panelRoute.kind === 'want' && panelRoute.id) {
-      const want = wants.find(w => (w.metadata?.id || w.id) === panelRoute.id);
-      if (!want) return;
-      handleViewWant(want, { toggle: false });
-      setDetailsRequestedFor(panelRoute.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panel, panelRoute.kind, panelRoute.id, wants.length, thingRecords.length]);
+  }, `${wants.length}:${thingRecords.length}`);
 
   // A form's panel page draws the form (WorkspaceModals holds it); the
   // others' panels are AppSidebarHost's.
-  if (panel && panelRoute.kind === 'minimap') {
-    // The map on its own: what is pressed on it is the list's to carry out.
-    const act = (a: string, id: string) => postToHost({ type: 'card-act', act: a, kind: 'want', id });
-    return (
+  if (panel) {
+    if (panelId === '__minimap') return (
       <WantMinimap
         // Not filteredWants: the list fills that in as it draws, and this page
         // draws no list.
         wants={regularWants}
         drafts={drafts}
         selectedWantId={selectedWant?.metadata?.id || selectedWant?.id}
-        onWantClick={(id) => act('minimap', id)}
-        onWantDoubleClick={(id) => act('minimap-open', id)}
-        onDraftClick={(id) => act('minimap-draft', id)}
+        onWantClick={(id) => minimap.send('pick', id)}
+        onWantDoubleClick={(id) => minimap.send('open', id)}
+        onDraftClick={(id) => minimap.send('draft', id)}
         isOpen
       />
     );
+    return panelId!.startsWith('add-want') || panelId!.startsWith('edit-want')
+      ? <WorkspaceModals ws={ws} canvasPlacementPos={null} />
+      : null;
   }
-  if (panel) return panelRoute.kind === 'add-want' || panelRoute.kind === 'edit-want'
-    ? <WorkspaceModals ws={ws} canvasPlacementPos={null} />
-    : null;
 
   if (card) {
     const kind = panelRoute.kind === 'thing' ? 'thing' as const : 'want' as const;
@@ -582,7 +573,7 @@ export const WantListPage: React.FC<{
         onWantClick={handleMinimapClick}
         onWantDoubleClick={handleMinimapDoubleClick}
         onDraftClick={handleMinimapDraftClick}
-        isOpen={minimapOpen && !minimapAsSheet}
+        isOpen={minimap.drawHere}
       />
       <WorkspaceModals ws={ws} canvasPlacementPos={null} />
       <DragOverlay ghostState={reorder.ghost} />

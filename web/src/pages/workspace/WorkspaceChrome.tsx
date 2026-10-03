@@ -7,7 +7,7 @@ import { SaveAsRecipeModal } from '@/components/modals/SaveAsRecipeModal';
 import { isDraftWant } from '@/types/draft';
 import type { Recommendation } from '@/types/interact';
 import type { useWorkspace } from './useWorkspace';
-import { useHostSheet, hostSheetsOn } from '@/lib/nativeHost';
+import { useHostSheet, hostSheetsOn, hostPanelRoute } from '@/lib/nativeHost';
 
 type Workspace = ReturnType<typeof useWorkspace>;
 
@@ -86,8 +86,8 @@ export const WorkspaceModals: React.FC<{
   const editId = ws.editingWant ? (ws.editingWant.metadata?.id || ws.editingWant.id || '') : '';
   useHostSheet(
     !formAsSheet ? null
-      : editId ? `/panel/edit-want/${encodeURIComponent(editId)}`
-      : `/panel/add-want${ownerId ? `?owner=${encodeURIComponent(ownerId)}` : ''}`,
+      : editId ? hostPanelRoute('/dashboard', `edit-want:${editId}`)
+      : hostPanelRoute('/dashboard', ownerId ? `add-want:${ownerId}` : 'add-want'),
     editId ? 'Edit' : 'Add Want',
     'Heart',
     () => { ws.handleCloseModals(); void ws.fetchWants(); },

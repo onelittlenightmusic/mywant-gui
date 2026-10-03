@@ -215,11 +215,11 @@ export default function WantTypePage() {
 
   // The map of the want types, the want list's layout (ItemMinimap): a press
   // scrolls to the type's card and opens it, as pressing the card does.
-  const minimap = usePageMinimap(minimapOpen, setMinimapOpen, (name) => {
+  const minimap = usePageMinimap(minimapOpen, setMinimapOpen, { pick: (name) => {
     document.querySelector(`[data-want-type-name="${CSS.escape(name)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const t = wantTypes.find(x => x.name === name);
     if (t) void handleViewDetails(t);
-  });
+  } });
   const minimapItems: MinimapItem[] = (filteredWantTypes.length ? filteredWantTypes : wantTypes).map(t => {
     const Icon = resolveWantIcon(t.name, t.category, false, iconFont);
     return {

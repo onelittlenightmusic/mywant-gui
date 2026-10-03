@@ -18,7 +18,9 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Slot } from '@/extensions/Slot';
 import { extensionMenu } from '@/extensions/registry';
 import { useOriginReveal, anchoredRevealStyle } from '@/components/ui/originReveal';
-import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, useHostPanelStore, useHostSheetStore, useHostFloatStore, useHostPadStore, useHostActStore, type HostButton } from '@/lib/nativeHost';
+import { useThingStore } from '@/stores/thingStore';
+import { useWantStore } from '@/stores/wantStore';
+import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, useHostPanelStore, useHostSheetStore, useHostFloatStore, useHostPadStore, dispatchHostAct, type HostButton } from '@/lib/nativeHost';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { useDarkMode } from '@/hooks/useDarkMode';
@@ -707,7 +709,13 @@ export const Header: React.FC<HeaderProps> = ({
     // The open panel's close, drawn by the app (see useHostPanelStore).
     actions['panel:close'] = () => useHostPanelStore.getState().close?.();
     // The app's sheet closed (see useHostSheetStore): the panel closes here.
-    actions['sheet:close'] = () => useHostSheetStore.getState().close?.();
+    // And what the sheet's own page changed there — a thing added, a want
+    // edited — is read again here.
+    actions['sheet:close'] = () => {
+      useHostSheetStore.getState().close?.();
+      void useThingStore.getState().fetchThings();
+      void useWantStore.getState().fetchWants();
+    };
     // The header cursor, for the app to draw: Select still walks it here, in
     // the one place the gamepad's meaning lives — the app only shows it.
     const focus = {
@@ -727,9 +735,7 @@ export const Header: React.FC<HeaderProps> = ({
       // A corner card's: float:<act>:<kind>:<id> (see useHostFloatStore).
       if (id.startsWith('float:')) {
         const [, act, kind, ...rest] = id.split(':');
-        const k = kind as 'want' | 'thing';
-        useHostFloatStore.getState().act?.(act, k, rest.join(':'));
-        useHostActStore.getState().act?.(act, k, rest.join(':'));
+        dispatchHostAct(act, kind as 'want' | 'thing', rest.join(':'));
         return;
       }
       hostActionsRef.current[id]?.();

@@ -1,3 +1,4 @@
+import { hostPanelRoute } from '@/lib/nativeHost';
 import React from 'react';
 import { Globe, RefreshCw } from 'lucide-react';
 import { Want, WantExecutionStatus } from '@/types/want';
@@ -193,10 +194,10 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
   ) : null;
 
   // Where the character stands, for a panel opened on a page of its own.
-  const hereQuery = () => {
+  const here = (): Record<string, number> | undefined => {
     const p = cursorManPosRef.current
       ?? (canvasCenterX !== undefined && canvasCenterY !== undefined ? { x: canvasCenterX, y: canvasCenterY } : null);
-    return p ? `?x=${p.x}&y=${p.y}` : '';
+    return p ? { x: p.x, y: p.y } : undefined;
   };
 
   useAppSidebar({
@@ -208,12 +209,13 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
     // of its own (lib/nativeHost) — all but a group's, whose panel is the
     // board's. What a panel reads off the board (where the character stands,
     // for a thing pinned underfoot or lined up from there) goes with it.
-    hostRoute: sidebar.showGlobal ? '/panel/global'
-      : addingThing ? `/panel/add-thing${hereQuery()}`
-      : editingThing ? `/panel/edit-thing/${encodeURIComponent(editingThing.id)}`
+    // On the want list's page (no board to load behind it); see WantListPage.
+    hostRoute: sidebar.showGlobal ? hostPanelRoute('/dashboard', 'global')
+      : addingThing ? hostPanelRoute('/dashboard', 'add-thing', here())
+      : editingThing ? hostPanelRoute('/dashboard', `edit-thing:${editingThing.id}`)
       : cursorGroup ? undefined
-      : selectedWant ? `/panel/want/${encodeURIComponent(selectedWant.metadata?.id || selectedWant.id || '')}`
-      : cursorThingRecord ? `/panel/thing/${encodeURIComponent(cursorThingRecord.id)}${hereQuery()}`
+      : selectedWant ? hostPanelRoute('/dashboard', `want:${selectedWant.metadata?.id || selectedWant.id || ''}`)
+      : cursorThingRecord ? hostPanelRoute('/dashboard', `thing:${cursorThingRecord.id}`, here())
       : undefined,
     mobileForceBottom: isMobileCanvas,
     disableBackdropClick: expandedChain.length > 0,

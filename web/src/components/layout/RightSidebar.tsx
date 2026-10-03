@@ -663,7 +663,8 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   // page, the sheet its frame — no slide, no grabber, no close of its own.
   if (nativePanelPage) {
     return isOpen ? (
-      <div data-sidebar="true" ref={containerRef} className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-white dark:bg-gray-900"
+      <div data-sidebar="true" ref={containerRef}
+        className={classNames('fixed inset-0 z-[60] flex flex-col bg-white dark:bg-gray-900', overflowHidden ? 'overflow-hidden' : 'overflow-y-auto')}
         style={{ ...backgroundStyle, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}>
         <HostFramedPanel.Provider value={true}>{children}</HostFramedPanel.Provider>
       </div>

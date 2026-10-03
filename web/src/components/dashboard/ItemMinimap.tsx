@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { MinimapFrame, MinimapTile } from './WantMinimap';
-import { nativePanelPage, hostSheetsOn, useHostSheet, useHostActStore, postToHost } from '@/lib/nativeHost';
+import { hostPanelId, hostPanelRoute, hostSheetsOn, useHostSheet, useHostActs, postToHost } from '@/lib/nativeHost';
 
 /** One tile of a page's minimap. */
 export interface MinimapItem {
@@ -50,6 +50,8 @@ export interface PageMinimap {
   drawHere: boolean;
   /** A tile pressed. */
   pick: (id: string) => void;
+  /** Anything else done on the map (a double press, a draft…), by name. */
+  send: (name: string, id: string) => void;
 }
 
 const SHEET_ID = '__minimap';
@@ -57,28 +59,31 @@ const SHEET_ID = '__minimap';
 /**
  * A page's minimap, opened and closed by the page (its header's Minimap
  * button), wherever it is drawn: in the page, or — in an app on a phone — as
- * the app's sheet, whose presses come back here. `onPick` lands on an item;
- * on a phone the map closes after it, as the want list's does.
+ * the app's sheet (the page asked to be its map), whose presses come back
+ * here as acts. `handlers.pick` lands on an item, and any others carry out
+ * what else the map can do; on a phone the map closes after a pick, as it
+ * always has.
  */
-export function usePageMinimap(open: boolean, setOpen: (open: boolean) => void, onPick: (id: string) => void): PageMinimap {
-  const inSheet = nativePanelPage && new URLSearchParams(location.search).get('__panel') === SHEET_ID;
+export function usePageMinimap(
+  open: boolean,
+  setOpen: (open: boolean) => void,
+  handlers: { pick: (id: string) => void } & Record<string, (id: string) => void>,
+): PageMinimap {
+  const inSheet = hostPanelId() === SHEET_ID;
   const asSheet = !inSheet && open && hostSheetsOn();
-  useHostSheet(asSheet ? `${location.pathname}?__panel=${SHEET_ID}` : null, 'Map', 'Map', () => setOpen(false));
+  useHostSheet(asSheet ? hostPanelRoute(location.pathname, SHEET_ID) : null, 'Map', 'Map', () => setOpen(false));
 
-  const pickHere = (id: string) => {
-    onPick(id);
-    if (window.innerWidth < 1024) setOpen(false);
+  const here = (name: string, id: string) => {
+    handlers[name]?.(id);
+    if (name === 'pick' && window.innerWidth < 1024) setOpen(false);
   };
-  const pickRef = useRef(pickHere);
-  pickRef.current = pickHere;
-  useEffect(() => {
-    if (inSheet) return;
-    useHostActStore.getState().set((act, _kind, id) => { if (act === 'minimap') pickRef.current(id); });
-    return () => useHostActStore.getState().set(null);
-  }, [inSheet]);
+  // Acts are named minimap-<name> on their way through the app.
+  useHostActs((act, _kind, id) => {
+    if (act.startsWith('minimap-')) here(act.slice(8), id);
+  }, !inSheet);
 
-  return {
-    drawHere: inSheet || (open && !asSheet),
-    pick: inSheet ? (id) => postToHost({ type: 'card-act', act: 'minimap', kind: 'want', id }) : pickHere,
-  };
+  const send = (name: string, id: string) => inSheet
+    ? postToHost({ type: 'card-act', act: `minimap-${name}`, kind: 'want', id })
+    : here(name, id);
+  return { drawHere: inSheet || (open && !asSheet), pick: (id) => send('pick', id), send };
 }
