@@ -591,11 +591,13 @@ function WantInventoryPicker({
                 if (label === null) return <div key={gi}>{grid}</div>;
                 const accent = getCategoryHexColor(label, colorMode === 'dark');
                 return (
-                  // The category itself is a card: its name down the left edge,
-                  // its want types as a grid of cards on the right.
+                  // The category's name down the left edge, by its coloured bar,
+                  // and its want types as a grid of cards on the right. No box
+                  // round the two: the bar already says where a category runs,
+                  // and a frame round each one was a card holding cards.
                   <section
                     key={label}
-                    className="flex gap-2 sm:gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/40 shadow-sm p-2 sm:p-2.5"
+                    className="flex gap-2 sm:gap-3 py-1"
                   >
                     <div className="w-12 sm:w-16 flex-shrink-0 flex flex-col gap-0.5 border-l-2 pl-1.5 sm:pl-2" style={{ borderColor: accent }}>
                       <span
