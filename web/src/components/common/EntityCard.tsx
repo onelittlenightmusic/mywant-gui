@@ -252,6 +252,14 @@ export const EntityCard: React.FC<EntityCardProps> = ({
   // Long-press (150 ms) — same timing and haptics as the want card's useLongPress.
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const posRef = useRef<{ x: number; y: number } | null>(null);
+  /**
+   * The long press fired on this press. The release that ends it still sends a
+   * click, and that click used to run as a tap: it selected the card and asked
+   * for its panel, so a long press on a thing looked like a plain tap and the
+   * menu it had just opened was lost behind the panel. The want card has never
+   * done that; this is the same rule — a long press is the whole of the press.
+   */
+  const firedRef = useRef(false);
 
   /**
    * Open this card's action grid, selecting the card first if it is not the
@@ -267,8 +275,10 @@ export const EntityCard: React.FC<EntityCardProps> = ({
 
   const lpStart = (x: number, y: number) => {
     posRef.current = { x, y };
+    firedRef.current = false;
     timerRef.current = setTimeout(() => {
       if (posRef.current) {
+        firedRef.current = true;
         navigator.vibrate?.(10);
         playHapticClick();
         openActions();
@@ -286,6 +296,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
   };
 
   const handleClick = (e: React.MouseEvent) => {
+    if (firedRef.current) { firedRef.current = false; return; }
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('[role="button"]')) return;
     /**
