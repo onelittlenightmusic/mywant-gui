@@ -18,7 +18,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Slot } from '@/extensions/Slot';
 import { extensionMenu } from '@/extensions/registry';
 import { useOriginReveal, anchoredRevealStyle } from '@/components/ui/originReveal';
-import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, useHostPanelStore, useHostSheetStore, useHostFloatStore, type HostButton } from '@/lib/nativeHost';
+import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, useHostPanelStore, useHostSheetStore, useHostFloatStore, useHostPadStore, type HostButton } from '@/lib/nativeHost';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { useDarkMode } from '@/hooks/useDarkMode';
@@ -657,6 +657,7 @@ export const Header: React.FC<HeaderProps> = ({
   const hostPanel = useHostPanelStore(s => s.panel);
   const hostSheet = useHostSheetStore(s => s.sheet);
   const hostFloat = useHostFloatStore(s => s.cards);
+  const hostPad = useHostPadStore(s => s.pad);
   const hostActionsRef = useRef<Record<string, () => void>>({});
   const hostLastRef = useRef('');
   useEffect(() => {
@@ -715,7 +716,7 @@ export const Header: React.FC<HeaderProps> = ({
       menuIndex: menuOpen ? focusedIdx : -1,
     };
     hostActionsRef.current = actions;
-    const message = { type: 'header' as const, buttons, menu, card, focus, panel: hostPanel, sheet: hostSheet, float: hostFloat, position: headerSetting === 'bottom' ? 'bottom' as const : 'top' as const };
+    const message = { type: 'header' as const, buttons, menu, card, focus, panel: hostPanel, sheet: hostSheet, float: hostFloat, pad: hostPad, position: headerSetting === 'bottom' ? 'bottom' as const : 'top' as const };
     const json = JSON.stringify(message);
     if (json === hostLastRef.current) return;
     hostLastRef.current = json;

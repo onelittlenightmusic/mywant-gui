@@ -53,6 +53,11 @@ export interface HostMessage {
   /** The corner cards for what is underfoot, front first, for the app to draw
    *  natively (useHostFloatStore). Empty when there are none. */
   float: HostFloatCard[];
+  /** The software pad, drawn by the app natively while it is switched on:
+   *  what A/B/X/Y do where the character stands, and whether A has latched a
+   *  mode. Its presses come back as controller frames, as a real gamepad's do.
+   *  null while the pad is off. */
+  pad: HostPad | null;
   /** Where this person keeps the header (their character's display setting):
    *  the app puts its own bar there. */
   position: 'top' | 'bottom';
@@ -378,3 +383,23 @@ export function useHostCardSlot(kind: HostFloatCard['kind'], id: string): RefCal
   }, [el, kind, id]);
   return setEl;
 }
+
+// ── The software pad, drawn by the app ──────────────────────────────────────
+//
+// Framed by an app, the board's software pad (CanvasDPad) is not drawn: the
+// app draws a gamepad natively, laid out as one is, and hands its presses to
+// the page as controller frames — the same way it hands over a real gamepad
+// (hostControllerFrame), so holding, chords and long presses are the page's
+// as ever. What the page still says is the legend.
+
+export interface HostPad {
+  labels: Partial<Record<'A' | 'B' | 'X' | 'Y', string>>;
+  aLatched: boolean;
+  /** The driven character's colour, which a held button takes. */
+  color?: string;
+}
+
+export const useHostPadStore = create<{ pad: HostPad | null; set: (pad: HostPad | null) => void }>((set) => ({
+  pad: null,
+  set: (pad) => set({ pad }),
+}));
