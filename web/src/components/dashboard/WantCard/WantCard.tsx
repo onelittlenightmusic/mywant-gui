@@ -132,6 +132,9 @@ function wideExpandWidth(room: number, height: number): number {
   return Math.min(room, WIDE_MAX_W, height * WIDE_MAX_ASPECT);
 }
 
+/** Marks a drag that began after a long press: reorder only (handleDragStart). */
+const REORDER_ONLY_TYPE = 'application/x-mywant-reorder-only';
+
 export const WantCard: React.FC<WantCardProps> = ({
   want,
   children,
@@ -853,6 +856,11 @@ export const WantCard: React.FC<WantCardProps> = ({
     if (!id) return;
     onReorderDragStart?.(id);
     e.dataTransfer.setData('application/mywant-id', id);
+    // Held first, then dragged: a reorder and only that — it is never sent
+    // into another want (no 'inside' drop). A drag straight away still can be.
+    // Read by the cards it passes over through the type list, which is all a
+    // dragover may see.
+    if (longPress.isArmed()) e.dataTransfer.setData(REORDER_ONLY_TYPE, '1');
     e.dataTransfer.setData('application/mywant-name', want.metadata?.name || '');
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -881,7 +889,8 @@ export const WantCard: React.FC<WantCardProps> = ({
       // its dragover is not a drop target at all. The grid container skips
       // events originating inside a card, so the drop silently did nothing —
       // reordering appeared to randomly fail whenever a status was in flight.
-      if (isTargetWant && !isBeingProcessed) {
+      const reorderOnly = e.dataTransfer.types.includes(REORDER_ONLY_TYPE);
+      if (isTargetWant && !isBeingProcessed && !reorderOnly) {
         if (x < edgeThreshold) {
           position = 'before';
         } else if (x > rect.width - edgeThreshold) {
@@ -940,6 +949,13 @@ export const WantCard: React.FC<WantCardProps> = ({
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const edgeThreshold = rect.width * 0.2;
+
+    // A long-press drag (handleDragStart) is a reorder wherever it lands:
+    // before or after, by which half of the card.
+    if (e.dataTransfer.types.includes(REORDER_ONLY_TYPE)) {
+      onReorderDrop?.(draggedWantId, index, x < rect.width / 2 ? 'before' : 'after');
+      return;
+    }
 
     // Mirrors handleDragOver: a card mid-transition accepts before/after
     // reorders but not a nesting drop.

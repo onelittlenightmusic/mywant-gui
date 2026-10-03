@@ -87,5 +87,8 @@ export function useLongPress(id: string | null, { disabled = false, onCommit }: 
     cancel,
     holding,
     swallowsClick,
+    /** The hold has committed: a drag from here is a long-press drag — a
+     *  reorder, nothing else (see WantCard's handleDragStart). */
+    isArmed: () => armedRef.current,
   };
 }
