@@ -119,6 +119,8 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
     fetchWantResults,
     fetchWants,
     updateWant,
+    archiveWant,
+    unarchiveWant,
     loading
   } = useWantStore();
 
@@ -663,6 +665,10 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
             onDelete={() => onDelete?.(wantDetails)}
             onSuspend={() => onSuspend?.(wantDetails)}
             onResume={() => onResume?.(wantDetails)}
+            // Straight to the store: putting a want away needs nobody's say
+            // but the engine's, which stops its cycle on the label.
+            onArchive={(w) => { void archiveWant(w.metadata?.id || w.id || '').catch(() => {}); }}
+            onUnarchive={(w) => { void unarchiveWant(w.metadata?.id || w.id || '').catch(() => {}); }}
             index={0}
             className="h-full w-full"
           />

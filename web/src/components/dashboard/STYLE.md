@@ -49,6 +49,14 @@ Thing も want も、盤面に**置かれた立体**として描く。盤面に�
 - 14px 未満ではアイコンが潰れるので、球と頭文字だけにする（`ThingDot`）。
 - 大きさが違うだけで、影・色・文字の決まりは上と同じ。
 
+## 6. アーカイブしたものは色を抜く
+
+アーカイブ表示を On にしたときだけ、アーカイブした want / Thing も盤面に出る。そのときは**同じ物体のまま色を抜く**（`ARCHIVED_FILTER`：グレースケール）。
+
+- 半透明にしない。文字が半透明になり（§3）、物体が盤面に立っているように見えなくなる。
+- フィルタはタイルがもともと持っている filter（影・光り方）の前に足す。影も一緒に灰色になる。
+- 座標のない Thing は盤面が空いているセルを暫定で選ぶ。書き込まない。生きている Thing の配置を先に決め、アーカイブはその残りに置く。
+
 ## 部品の置き場所
 
 | 部品 | ファイル |
@@ -58,5 +66,6 @@ Thing も want も、盤面に**置かれた立体**として描く。盤面に�
 | `boardLiftFilter` / `boardLiftShadow` / `boardEdgeFilter` / `iconEmbossFilter` / `wantTypeIconStyle` / `vividIconColor` | `web/src/components/dashboard/WantCardFace.tsx` |
 | `glowLayers` / `glowRadius` | `web/src/components/dashboard/canvasGlow.ts` |
 | 盤面の重なり順 | `web/src/design/zLayers.ts` |
+| `ARCHIVED_FILTER` | `web/src/components/dashboard/archiveLook.ts`（mywant-guiex） |
 
 見本になる実装：`CanvasThingTile.tsx`（Thing の球）、`ThingDot.tsx`（小さい Thing）、`ConstellationClusterLayer.tsx`（折りたたみ時の縮小版）。

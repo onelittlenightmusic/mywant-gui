@@ -74,6 +74,16 @@ export const QuickActionsOverlay: React.FC<QuickActionsOverlayProps> = ({
       : { icon: <Pause     className="w-5 h-5 text-white" />,                    label: 'Suspend', onClick: () => {},                         tone: 'caution' as const,  delay: 60, disabled: true },
     {   icon: <X     className="w-4 h-4 sm:w-5 sm:h-5 text-white" />,            label: 'Close',   onClick: onClose,                          tone: 'cancel' as const,  delay: 90 },
     {   icon: <Trash2 className="w-5 h-5 text-white" />,                          label: 'Delete',  onClick: () => { onDelete();  onClose(); }, tone: 'danger' as const,  delay: 120, disabled: isSystem, title: isSystem ? 'The system owns this want — it would be put straight back' : undefined },
+    // Archive for a want that is not finished. The slot above offers it only
+    // to an achieved want, from when archiving merely filed a want away and
+    // left it running; the engine now stops an archived want's cycle, so a
+    // want still at work can be put away too. Appended rather than taking
+    // that slot, where Suspend/Resume are reached for by position.
+    ...(!isArchived && !isAchieved && onArchive
+      ? [{ icon: <Archive className="w-5 h-5 text-white" />, label: 'Archive',
+           onClick: () => { onArchive(); onClose(); }, tone: 'caution' as const, delay: 140,
+           disabled: isSystem, title: isSystem ? 'The system keeps this want running' : 'Put away — its cycle stops; its data and history are kept' }]
+      : []),
     // Row 2. Appended rather than slotted in among the others, which would
     // shift five actions people already reach for by position.
     //

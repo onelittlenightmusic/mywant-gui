@@ -2,7 +2,7 @@ import React from 'react';
 import { hasExtensionRoute } from '@/extensions/registry';
 import { useNavigate } from 'react-router-dom';
 import { useIconFont } from '@/hooks/useDisplaySettings';
-import { Type, Trash2, Heart, Plus, Check, Folder, Pin, PinOff, Pencil, Navigation } from 'lucide-react';
+import { Type, Trash2, Heart, Plus, Check, Folder, Pin, PinOff, Pencil, Navigation, Archive, ArchiveRestore } from 'lucide-react';
 import { ThingRecord } from '@/types/thing';
 import { classNames } from '@/utils/helpers';
 import { EntityCard, EntityCardAction } from '@/components/common/EntityCard';
@@ -81,6 +81,8 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
   const requestJump = useMarkJumpStore((s) => s.requestJump);
   const navigate = useNavigate();
   const setPinned = useThingTileStore((s) => s.setPinned);
+  const archived = useThingTileStore((s) => s.archived.has(record.id));
+  const setArchived = useThingTileStore((s) => s.setArchived);
   const ensureTiles = useThingTileStore((s) => s.ensureTiles);
   React.useEffect(() => { ensureTiles(); }, [ensureTiles]);
 
@@ -97,14 +99,25 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
       onClick: () => { requestJump({ kind: 'thing', id: record.id, name: record.value }); navigate('/canvas'); },
       tone: 'info' as const,
     }] : []),
-    {
+    // An archived thing is out of play, so the pin is not offered on it:
+    // taking it back out is the one thing to do with it.
+    ...(archived ? [] : [{
       icon: onCanvas ? <PinOff className="w-5 h-5 text-white" /> : <Pin className="w-5 h-5 text-white" />,
       label: onCanvas ? 'Unpin' : 'Pin',
       title: onCanvas
         ? `Take "${record.value}" off the canvas`
         : `Put "${record.value}" on the canvas`,
       onClick: () => { void setPinned(record.id, !onCanvas); },
-      tone: onCanvas ? 'caution' : 'muted',
+      tone: onCanvas ? 'caution' as const : 'muted' as const,
+    }]),
+    {
+      icon: archived ? <ArchiveRestore className="w-5 h-5 text-white" /> : <Archive className="w-5 h-5 text-white" />,
+      label: archived ? 'Unarchive' : 'Archive',
+      title: archived
+        ? `Take "${record.value}" back out of the archive`
+        : `Put "${record.value}" away — it stops, and the board shows it only with the archive on`,
+      onClick: () => { void setArchived(record.id, !archived); },
+      tone: 'caution' as const,
     },
     ...(onAddWant ? [{
       icon: (
@@ -209,6 +222,19 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
           title="On the canvas"
         >
           <Pin className="w-3 h-3" style={{ color: record.color }} strokeWidth={2.5} />
+        </div>
+      )}
+      {/* Put away, and says so — in the pin mark's corner, which an archived
+          thing never wears. */}
+      {archived && (
+        <div
+          className={classNames(
+            'absolute z-20 w-6 h-6 rounded-full flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-sm border border-white/30 dark:border-white/10',
+            selectMode ? 'bottom-1.5 right-1.5' : 'top-1.5 right-1.5',
+          )}
+          title="Archived"
+        >
+          <Archive className="w-3 h-3 text-gray-600 dark:text-gray-300" strokeWidth={2.5} />
         </div>
       )}
       {/* Multi-select checkbox — top-right, filled when selected. */}

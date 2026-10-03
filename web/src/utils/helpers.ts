@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, CheckCircle, AlertCircle, Clock, RotateCw, Trash2, AlertTriangle, Bell } from 'lucide-react';
+import { Play, Pause, Square, CheckCircle, AlertCircle, Clock, RotateCw, Trash2, AlertTriangle, Bell, Archive } from 'lucide-react';
 import { WantExecutionStatus, WantPhase } from '@/types/want';
 
 export const formatDate = (dateString?: string): string => {
@@ -85,6 +85,7 @@ export const getStatusColor = (status: WantExecutionStatus | WantPhase): string 
       return 'red';
     case 'terminated':
     case 'cancelled':
+    case 'archived':
         return 'gray';
     default:
       return 'gray';
@@ -119,6 +120,8 @@ export const getStatusIcon = (status: WantExecutionStatus | WantPhase): string =
       return '🗑️';
     case 'terminated':
       return '🛑';
+    case 'archived':
+      return '🗄️';
     default:
       return '❓';
   }
@@ -154,6 +157,8 @@ export const getStatusIconComponent = (status: WantExecutionStatus | WantPhase, 
       return React.createElement(Trash2, iconProps);
     case 'terminated':
       return React.createElement(Square, iconProps);
+    case 'archived':
+      return React.createElement(Archive, iconProps);
     default:
       return React.createElement(AlertCircle, iconProps);
   }

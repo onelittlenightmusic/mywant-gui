@@ -19,6 +19,20 @@ export const THING_CANVAS_LABEL_Y = 'mywant.io/canvas-y';
  * while a live want names it.
  */
 export const THING_CANVAS_PIN_LABEL = 'mywant.io/canvas';
+/**
+ * The archive: a thing put away. Not the pin — an unpinned thing is only off
+ * the board; an archived one is out of play (the server stops its motion and
+ * no rule fires on it) and the board draws it only while the archive is shown.
+ * The same label a want is archived with.
+ */
+export const THING_ARCHIVE_LABEL = 'mywant.io/archived';
+/** Set while a thing moves; archiving stops it, as the bin always has. */
+const THING_MOVING_LABEL = 'mywant.io/moving';
+
+/** True if the thing's labels say it is archived. */
+export function isThingArchived(labels: Record<string, string> | undefined): boolean {
+  return labels?.[THING_ARCHIVE_LABEL] === 'true';
+}
 
 export interface ThingTile {
   /** Thing record id — the thing's own UUID. */
@@ -34,6 +48,8 @@ export interface ThingTile {
   /** Placement the user dragged to, if any. Absent means auto-placed. */
   x?: number;
   y?: number;
+  /** Put away — only ever true on an entry of `archivedTiles`. */
+  archived?: boolean;
 }
 
 interface ThingTileStore {
@@ -43,6 +59,21 @@ interface ThingTileStore {
   loaded: boolean;
   /** Ids currently drawn on the board — what the pin control reads. */
   onCanvas: Set<string>;
+  /**
+   * Every archived thing, ready to draw when the board shows its archive —
+   * whether or not it was ever placed. Never part of `tiles` or `onCanvas`.
+   */
+  archivedTiles: ThingTile[];
+  /** Ids of the archived things — what the archive control reads. */
+  archived: Set<string>;
+  /**
+   * Put a thing away, or take it back out. Archiving also stops it moving; the
+   * pin and the coordinates are left alone, so taking it out returns it to
+   * where it stood.
+   */
+  setArchived: (id: string, archived: boolean) => Promise<void>;
+  /** The same for a whole selection at once. */
+  setArchivedMany: (ids: string[], archived: boolean) => Promise<void>;
   fetchTiles: () => Promise<void>;
   /** Fetch once, for surfaces that only read (the Thing page's pins). */
   ensureTiles: () => void;
@@ -82,6 +113,11 @@ interface ThingTileStore {
    * to trigger a refetch.
    */
   removeFromCanvas: (id: string) => void;
+  /**
+   * The server has archived a thing (a bin swallowed it) — move its tile into
+   * the archive here too, without a round trip. See removeFromCanvas.
+   */
+  markArchived: (id: string) => void;
   /**
    * Put a whole set of things at cells that were worked out together — what
    * lining a theme up produces.
@@ -281,6 +317,8 @@ export const useThingTileStore = create<ThingTileStore>()(
     loading: false,
     loaded: false,
     onCanvas: new Set<string>(),
+    archivedTiles: [],
+    archived: new Set<string>(),
 
     ensureTiles: () => {
       const { loaded, loading } = get();
@@ -296,12 +334,23 @@ export const useThingTileStore = create<ThingTileStore>()(
         const things = await apiClient.getThings().catch(() => []);
 
         const tiles: ThingTile[] = [];
+        const archivedTiles: ThingTile[] = [];
         for (const t of things) {
           const labels = t.labels ?? {};
           const x = numberLabel(labels, THING_CANVAS_LABEL_X);
           const y = numberLabel(labels, THING_CANVAS_LABEL_Y);
           const named = (t.wantIDs?.length ?? 0) > 0;
           const pinned = pinLabel(labels);
+          // Put away: kept apart, whatever its pin says, for a board that
+          // shows its archive. No coordinates is fine — the board finds it a
+          // cell for as long as it is shown and writes none.
+          if (isThingArchived(labels)) {
+            archivedTiles.push({
+              id: t.id, value: t.value, subtype: t.subtype, icon: t.icon, color: t.color,
+              wantIDs: t.wantIDs ?? [], listWantIDs: t.listWantIDs ?? [], x, y, archived: true,
+            });
+            continue;
+          }
           // Taken off the board by hand. Coordinates are kept, so pinning it
           // back returns it to where it was rather than to an empty cell.
           if (pinned === false) continue;
@@ -321,7 +370,11 @@ export const useThingTileStore = create<ThingTileStore>()(
             y,
           });
         }
-        set({ tiles, loading: false, loaded: true, onCanvas: new Set(tiles.map(t => t.id)) });
+        set({
+          tiles, archivedTiles, loading: false, loaded: true,
+          onCanvas: new Set(tiles.map(t => t.id)),
+          archived: new Set(archivedTiles.map(t => t.id)),
+        });
       } catch {
         set({ loading: false });
       }
@@ -381,6 +434,56 @@ export const useThingTileStore = create<ThingTileStore>()(
       const next = new Set(onCanvas);
       next.delete(id);
       set({ tiles: tiles.filter(t => t.id !== id), onCanvas: next });
+    },
+
+    markArchived: (id) => {
+      const { tiles, onCanvas, archivedTiles, archived } = get();
+      if (archived.has(id)) return;
+      const tile = tiles.find(t => t.id === id);
+      const nextOn = new Set(onCanvas); nextOn.delete(id);
+      const nextArchived = new Set(archived); nextArchived.add(id);
+      set({
+        tiles: tiles.filter(t => t.id !== id),
+        onCanvas: nextOn,
+        archived: nextArchived,
+        archivedTiles: tile ? [...archivedTiles, { ...tile, archived: true }] : archivedTiles,
+      });
+    },
+
+    setArchived: async (id, archived) => get().setArchivedMany([id], archived),
+
+    setArchivedMany: async (ids, archived) => {
+      if (ids.length === 0) return;
+      const wanted = new Set(ids);
+      // The board answers before the write does, as the pin does.
+      const { tiles, archivedTiles, onCanvas } = get();
+      const nextArchived = new Set(get().archived);
+      const nextOn = new Set(onCanvas);
+      for (const id of ids) {
+        if (archived) { nextArchived.add(id); nextOn.delete(id); } else nextArchived.delete(id);
+      }
+      set(archived
+        ? {
+            archived: nextArchived,
+            onCanvas: nextOn,
+            tiles: tiles.filter(t => !wanted.has(t.id)),
+            archivedTiles: [
+              ...archivedTiles.filter(t => !wanted.has(t.id)),
+              ...tiles.filter(t => wanted.has(t.id)).map(t => ({ ...t, archived: true })),
+            ],
+          }
+        : { archived: nextArchived, archivedTiles: archivedTiles.filter(t => !wanted.has(t.id)) });
+      await Promise.all(ids.map(async id => {
+        if (archived) {
+          // Stopped as well as put away, or it would set off again the moment
+          // it came back out.
+          await apiClient.setThingLabel(id, THING_MOVING_LABEL, 'false').catch(() => {});
+          await apiClient.setThingLabel(id, THING_ARCHIVE_LABEL, 'true').catch(() => {});
+        } else {
+          await apiClient.removeThingLabel(id, THING_ARCHIVE_LABEL).catch(() => {});
+        }
+      }));
+      await get().fetchTiles();
     },
 
     setPinned: async (id, pinned, at) => get().setPinnedMany([id], pinned, at),

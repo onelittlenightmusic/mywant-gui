@@ -28,6 +28,7 @@ export const getStatusHexColor = (status: WantExecutionStatus | WantPhase): stri
     
     case 'terminated':
     case 'cancelled':
+    case 'archived':
       return '#9ca3af'; // Gray (End state but not success)
     
     case 'created':

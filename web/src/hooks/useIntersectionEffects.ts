@@ -58,11 +58,11 @@ export function useIntersectionEffects(): void {
           name: moverName(e),
           kind: e.moverKind === 'thing' ? 'thing' : 'want',
         });
-        // And it is off the board, now rather than whenever something else
-        // happens to refetch. The server has already unpinned it; the tile
+        // And it is in the archive, now rather than whenever something else
+        // happens to refetch. The server has already archived it; the tile
         // lingering beside the bin it just went into is only this side not
         // having been told.
-        if (e.moverKind === 'thing') useThingTileStore.getState().removeFromCanvas(e.moverId);
+        if (e.moverKind === 'thing') useThingTileStore.getState().markArchived(e.moverId);
         break;
       }
       default:
