@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { classNames } from '@/utils/helpers';
 import { createPortal } from 'react-dom';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { PanelCloseButton } from './PanelCloseButton';
@@ -124,6 +125,18 @@ export const PanelShell: React.FC<{
 }> = ({ title, onClose, actions, children }) => {
   const isBottom = usePanelAtBottom();
   const [slot, setSlot] = useState<HTMLElement | null>(null);
+  // Whether a panel has put anything in the slot. The bottom bar exists for
+  // that and for `actions`; with neither it was an empty 50px band under the
+  // panel (the thing detail, which has no actions, wore one).
+  const [slotFilled, setSlotFilled] = useState(false);
+  useEffect(() => {
+    if (!slot) return;
+    const look = () => setSlotFilled(slot.childElementCount > 0);
+    look();
+    const watch = new MutationObserver(look);
+    watch.observe(slot, { childList: true });
+    return () => watch.disconnect();
+  }, [slot]);
   return (
     <PanelActionsSlot.Provider value={{ el: slot, placement: isBottom ? 'bar' : 'row' }}>
       <div className="h-full flex flex-col">
@@ -157,7 +170,8 @@ export const PanelShell: React.FC<{
             // min-h matching the identity row's, so a button that fills its
             // bar (h-full, as the want form's submit is) is the same size
             // whichever side it landed on.
-            className="flex-shrink-0 flex items-stretch gap-0 min-h-[50px] border-t border-gray-200 dark:border-gray-700"
+            className={classNames('flex-shrink-0 flex items-stretch gap-0 min-h-[50px] border-t border-gray-200 dark:border-gray-700',
+              !actions && !slotFilled && 'hidden')}
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           >
             {/* The slot first and greedy, so a panel that fills it spans the

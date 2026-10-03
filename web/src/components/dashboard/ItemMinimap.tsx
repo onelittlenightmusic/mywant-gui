@@ -78,7 +78,9 @@ export function usePageMinimap(
 
   const here = (name: string, id: string) => {
     handlers[name]?.(id);
-    if (name !== 'pick' || opts?.keepOpen?.includes(name)) return;
+    // A press that took you somewhere — onto an item, or (the board's map) the
+    // camera onto a cell — is done with the map on a phone.
+    if ((name !== 'pick' && name !== 'cell') || opts?.keepOpen?.includes(name)) return;
     if (window.innerWidth < 1024) setOpen(false);
   };
   // Acts are named minimap-<name> on their way through the app.
