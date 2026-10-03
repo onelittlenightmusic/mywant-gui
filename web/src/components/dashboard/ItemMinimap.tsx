@@ -68,14 +68,18 @@ export function usePageMinimap(
   open: boolean,
   setOpen: (open: boolean) => void,
   handlers: { pick: (id: string) => void } & Record<string, (id: string) => void>,
+  /** Presses that leave the map open on a phone (a camera aimed from it). */
+  opts?: { keepOpen?: string[] },
 ): PageMinimap {
   const inSheet = hostPanelId() === SHEET_ID;
   const asSheet = !inSheet && open && hostSheetsOn();
-  useHostSheet(asSheet ? hostPanelRoute(location.pathname, SHEET_ID) : null, 'Map', 'Map', () => setOpen(false));
+  // From the right edge, as the map has always come in on a wide screen.
+  useHostSheet(asSheet ? hostPanelRoute(location.pathname, SHEET_ID) : null, 'Map', 'Map', () => setOpen(false), 'right');
 
   const here = (name: string, id: string) => {
     handlers[name]?.(id);
-    if (name === 'pick' && window.innerWidth < 1024) setOpen(false);
+    if (name !== 'pick' || opts?.keepOpen?.includes(name)) return;
+    if (window.innerWidth < 1024) setOpen(false);
   };
   // Acts are named minimap-<name> on their way through the app.
   useHostActs((act, _kind, id) => {

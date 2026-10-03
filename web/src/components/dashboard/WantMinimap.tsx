@@ -191,7 +191,7 @@ export const MinimapFrame: React.FC<{ isOpen: boolean; isCanvasMode?: boolean; c
       <div className="fixed inset-0 z-[60] bg-white dark:bg-gray-950">
         <div data-minimap-panel="true"
           className={classNames('absolute inset-0 overflow-y-auto p-3', minimapSurfaceClass(isCanvasMode))}
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}>
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}>
           {children}
         </div>
       </div>

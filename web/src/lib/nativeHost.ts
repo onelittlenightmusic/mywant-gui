@@ -304,6 +304,9 @@ export interface HostSheet {
   title: string;
   /** A Lucide icon name, or "". */
   icon: string;
+  /** Where it comes from: the bottom (a panel, the default) or the right edge
+   *  (a map — pulled out from the right and put back there). */
+  edge?: 'bottom' | 'right';
 }
 
 interface HostSheetState {
@@ -328,14 +331,15 @@ export const useHostSheetStore = create<HostSheetState>((set, get) => ({
  * (null: no sheet), and be told when the person closes it there. Whoever
  * calls this draws nothing for the panel itself while it is the app's.
  */
-export function useHostSheet(route: string | null, title: string, icon: string, close: () => void): void {
+export function useHostSheet(route: string | null, title: string, icon: string, close: () => void,
+  edge: 'bottom' | 'right' = 'bottom'): void {
   const owner = useRef(`sheet-${Math.random().toString(36).slice(2)}`).current;
   const closeRef = useRef(close);
   closeRef.current = close;
   useEffect(() => {
     if (!route) { useHostSheetStore.getState().clear(owner); return; }
-    useHostSheetStore.getState().set(owner, { route, title, icon }, () => closeRef.current());
-  }, [owner, route, title, icon]);
+    useHostSheetStore.getState().set(owner, { route, title, icon, edge }, () => closeRef.current());
+  }, [owner, route, title, icon, edge]);
   useEffect(() => () => useHostSheetStore.getState().clear(owner), [owner]);
 }
 
