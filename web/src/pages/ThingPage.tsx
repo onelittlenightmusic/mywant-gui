@@ -1,4 +1,8 @@
 import { useHostPanel } from '@/lib/nativeHost';
+import { ItemMinimap, usePageMinimap, type MinimapItem } from '@/components/dashboard/ItemMinimap';
+import { resolveLucideIcon } from '@/utils/subtypeIcons';
+import { vividIconColor } from '@/components/dashboard/WantCardFace';
+import { useColorMode } from '@/hooks/useColorMode';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Circle } from 'lucide-react';
@@ -60,6 +64,8 @@ export const ThingPage: React.FC = () => {
   }, [requestSeed, navigate, startFlight]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [minimapOpen, setMinimapOpen] = useState(false);
+  const isDarkMode = useColorMode() === 'dark';
   /** Add Thing form open in the sidebar. */
   const [adding, setAdding] = useState(false);
   const [filtered, setFiltered] = useState<ThingRecord[]>([]);
@@ -163,7 +169,25 @@ export const ThingPage: React.FC = () => {
     itemLabel: 'value',
     showSelectMode: selectMode,
     onToggleSelectMode: toggleSelectMode,
+    showMinimap: minimapOpen,
+    onMinimapToggle: () => setMinimapOpen(v => !v),
   });
+
+  // The map of the things, the want list's layout (ItemMinimap): a press
+  // scrolls to the thing's card and lands on it.
+  const minimap = usePageMinimap(minimapOpen, setMinimapOpen, (id) => {
+    document.querySelector(`[data-reorder-id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setSelectedId(id);
+  });
+  const minimapItems = useMemo<MinimapItem[]>(() => (filtered.length ? filtered : records).map(r => {
+    const Icon = resolveLucideIcon(r.icon) ?? Circle;
+    return {
+      id: r.id,
+      title: r.value,
+      background: `${r.color}${isDarkMode ? '40' : '33'}`,
+      icon: <Icon width={21} height={21} style={{ color: vividIconColor(r.color, !isDarkMode), flexShrink: 0 }} strokeWidth={1.75} />,
+    };
+  }), [filtered, records, isDarkMode]);
 
   // A card asked for its editor — the same panel naming a thing uses, opened
   // on an existing one. See thingEditStore.
@@ -282,6 +306,7 @@ export const ThingPage: React.FC = () => {
           )}
         </div>
       </main>
+      <ItemMinimap items={minimapItems} selectedId={selectedId} map={minimap} />
     </>
   );
 };

@@ -1,3 +1,8 @@
+import { ItemMinimap, usePageMinimap, type MinimapItem } from '@/components/dashboard/ItemMinimap';
+import { resolveWantIcon, getCategoryBgLight, getCategoryBgDark, type IconFamily } from '@/components/dashboard/WantTypeVisuals';
+import { wantTypeIconStyle } from '@/components/dashboard/WantCardFace';
+import { useColorMode } from '@/hooks/useColorMode';
+import { useIconFont } from '@/hooks/useDisplaySettings';
 import { useHostPanel } from '@/lib/nativeHost';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { notify } from '@/stores/noticeStore';
@@ -41,6 +46,9 @@ export default function WantTypePage() {
 
   // UI State
   const sidebar = useRightSidebarExclusivity<WantTypeListItem>();
+  const [minimapOpen, setMinimapOpen] = useState(false);
+  const isDarkMode = useColorMode() === 'dark';
+  const iconFont = useIconFont() as IconFamily;
   const [filteredWantTypes, setFilteredWantTypes] = useState<WantTypeListItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const gridRef = useRef<HTMLDivElement>(null);
@@ -201,6 +209,25 @@ export default function WantTypePage() {
     title: 'Want Types',
     itemCount: wantTypes.length,
     itemLabel: 'type',
+    showMinimap: minimapOpen,
+    onMinimapToggle: () => setMinimapOpen(v => !v),
+  });
+
+  // The map of the want types, the want list's layout (ItemMinimap): a press
+  // scrolls to the type's card and opens it, as pressing the card does.
+  const minimap = usePageMinimap(minimapOpen, setMinimapOpen, (name) => {
+    document.querySelector(`[data-want-type-name="${CSS.escape(name)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const t = wantTypes.find(x => x.name === name);
+    if (t) void handleViewDetails(t);
+  });
+  const minimapItems: MinimapItem[] = (filteredWantTypes.length ? filteredWantTypes : wantTypes).map(t => {
+    const Icon = resolveWantIcon(t.name, t.category, false, iconFont);
+    return {
+      id: t.name,
+      title: t.title || t.name,
+      background: isDarkMode ? getCategoryBgDark(t.category) : getCategoryBgLight(t.category),
+      icon: <Icon width={21} height={21} style={{ ...wantTypeIconStyle(t.name, t.category, isDarkMode), flexShrink: 0 }} />,
+    };
   });
 
   return (
@@ -230,6 +257,7 @@ export default function WantTypePage() {
 
       {/* Detail/summary sidebar is rendered by the app-root shell (Layout →
           AppSidebarHost); registered via useAppSidebar above. */}
+      <ItemMinimap items={minimapItems} selectedId={selectedWantType?.metadata.name ?? null} map={minimap} />
     </>
   );
 }

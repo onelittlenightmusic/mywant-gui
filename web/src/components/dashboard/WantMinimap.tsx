@@ -171,109 +171,32 @@ const MinimapDraftCard: React.FC<MinimapDraftCardProps> = ({ want, isSelected, o
   );
 };
 
-export interface WantMinimapRef {
-  /**
-   * Focus the minimap panel — one shared entry point regardless of mode, so
-   * Dashboard's L1/R1 handler doesn't need to know which kind of minimap is
-   * currently rendered. Canvas mode: spatial nearest-mini-tile-by-row (see
-   * CanvasSpatialMinimapRef; `gridY` required there). List mode: just clicks
-   * the first mini-card (same click path a mouse would use, so it gets the
-   * same isBlinking flash for free) — `gridY` is ignored. Returns false
-   * (no-op) if the panel isn't visible or has nothing to focus.
-   */
-  enterNav(gridY?: number): boolean;
-}
 
 /**
- * WantMinimap Component
- * Displays miniature versions of Want cards and Draft cards.
- * When in canvas mode, also renders a spatial overview map at the bottom.
- *
- * Fixed position on the right side, matches WantGrid layout (3 columns)
+ * A minimap's panel: out of the header, along the axis the header is on, with
+ * the frame that says the keys are here; in an app's sheet (a panel page), the
+ * whole page. Shared by every minimap (wants, things) so they open, sit and
+ * look the same.
  */
-
-export const WantMinimap = forwardRef<WantMinimapRef, WantMinimapProps>(({
-  wants,
-  drafts,
-  selectedWantId,
-  onWantClick,
-  onWantDoubleClick,
-  onDraftClick,
-  isOpen,
-  renderSpatial,
-}, ref) => {
+export const MinimapFrame: React.FC<{ isOpen: boolean; isCanvasMode?: boolean; children: React.ReactNode }> = ({
+  isOpen, isCanvasMode = false, children,
+}) => {
   const isHeaderBottom = useHeaderAtBottom();
-
-
-  const isCanvasMode = !!renderSpatial;
-
-  // The frame, in the character's own colour — the same colour the board's frame
-  // and the detail panel's are drawn in.
   const minimapFocused = useMinimapFocusStore(s => s.focused);
   const focusColor = useCharacterStore(s => s.getMyCharacter())?.color ?? '#38bdf8';
-
-  const spatialRef = useRef<SpatialMinimapNav>(null);
-  const listGridRef = useRef<HTMLDivElement>(null);
-  useImperativeHandle(ref, () => ({
-    enterNav: (gridY?: number) => {
-      // Only accept the handoff if the minimap panel is actually visible —
-      // on narrow screens it's translated off-screen unless explicitly
-      // opened (isOpen), so silently "handing off" to it there would just
-      // make CursorMan/focus vanish with nothing visible to interact with.
-      const panelVisible = isOpen || window.innerWidth >= 1024;
-      if (!panelVisible) return false;
-      // gridY is ignored in canvas mode now — the keys move the camera rather
-      // than landing on a want, so there is no row to start from. Kept in the
-      // signature for the list-mode branch's callers.
-      if (isCanvasMode) return spatialRef.current?.enterNavFromCanvas() ?? false;
-      const grid = listGridRef.current;
-      if (!grid) return false;
-      // Land on the mini-card matching whichever want is currently
-      // keyboard/gamepad-focused in the main list (not just always the
-      // first one), so the jump reads as "this same want, now on the
-      // minimap" rather than resetting focus to an arbitrary card.
-      const focusedListId = document
-        .querySelector('[data-keyboard-nav-selected="true"]')
-        ?.getAttribute('data-keyboard-nav-id');
-      const matched = focusedListId
-        ? grid.querySelector<HTMLElement>(`[data-want-id="${CSS.escape(focusedListId)}"]`)
-        : null;
-      const target = matched ?? grid.querySelector<HTMLElement>('[data-free-cursor-item]');
-      if (!target) return false;
-      target.click();
-      // Visually relocate the free-roaming cursor (CursorMan) onto this same
-      // mini-card, with its highlight frame animating the move — otherwise
-      // the click alone changes selection state but the cursor icon itself
-      // stays wherever it last was.
-      warpFreeCursorToElement(target);
-      return true;
-    },
-  }), [isOpen, isCanvasMode]);
-
-  // In an app's sheet (a panel page): the map is the page, the sheet its frame.
   if (nativePanelPage) {
     return (
-      <div data-minimap-panel="true"
-        className={classNames('fixed inset-0 overflow-y-auto p-3', minimapSurfaceClass(isCanvasMode))}
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}>
-        <div ref={listGridRef} className="grid grid-cols-3 gap-2 auto-rows-min">
-          {wants.map(want => {
-            const wantId = want.metadata?.id || want.id || '';
-            return (
-              <MinimapCard key={wantId} want={want} isSelected={selectedWantId === wantId}
-                onClick={() => onWantClick(wantId)}
-                onDoubleClick={onWantDoubleClick ? () => onWantDoubleClick(wantId) : undefined} />
-            );
-          })}
-          {drafts.map(draft => {
-            const draftId = draft.metadata?.id || draft.id || '';
-            return <MinimapDraftCard key={draftId} want={draft} isSelected={selectedWantId === draftId} onClick={() => onDraftClick(draftId)} />;
-          })}
+      // Opaque underneath: the surface is see-through, and under it in a
+      // sheet is the page this map belongs to, not the board.
+      <div className="fixed inset-0 z-[60] bg-white dark:bg-gray-950">
+        <div data-minimap-panel="true"
+          className={classNames('absolute inset-0 overflow-y-auto p-3', minimapSurfaceClass(isCanvasMode))}
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}>
+          {children}
         </div>
       </div>
     );
   }
-
   return (
     <div
       className={classNames(
@@ -331,6 +254,123 @@ export const WantMinimap = forwardRef<WantMinimapRef, WantMinimapProps>(({
         />
       )}
 
+      {children}
+    </div>
+  );
+};
+
+/**
+ * A minimap's tile: a 40px cell in its subject's colour with its icon, ringed
+ * when selected, blinking once when pressed. What a want's and a thing's mini
+ * cards are both drawn as.
+ */
+export const MinimapTile: React.FC<{
+  background: string;
+  icon: React.ReactNode;
+  selected: boolean;
+  title: string;
+  onClick: () => void;
+  onDoubleClick?: () => void;
+  dataAttrs?: Record<string, string>;
+  children?: React.ReactNode;
+}> = ({ background, icon, selected, title, onClick, onDoubleClick, dataAttrs, children }) => {
+  const [isBlinking, setIsBlinking] = useState(false);
+  return (
+    <div
+      className={classNames(
+        'relative rounded border cursor-pointer transition-all duration-200 overflow-hidden',
+        'flex items-center justify-center',
+        'hover:border-blue-400 hover:shadow-md',
+        selected ? 'border-blue-400 border-2' : 'border-white/20 dark:border-white/10',
+        isBlinking && styles.minimapBlink,
+      )}
+      style={{ background, height: '40px', minHeight: '40px' }}
+      onClick={() => { setIsBlinking(false); requestAnimationFrame(() => setIsBlinking(true)); onClick(); }}
+      onDoubleClick={onDoubleClick}
+      onAnimationEnd={() => setIsBlinking(false)}
+      title={title}
+      data-free-cursor-item
+      {...dataAttrs}
+    >
+      {icon}
+      {children}
+    </div>
+  );
+};
+
+export interface WantMinimapRef {
+  /**
+   * Focus the minimap panel — one shared entry point regardless of mode, so
+   * Dashboard's L1/R1 handler doesn't need to know which kind of minimap is
+   * currently rendered. Canvas mode: spatial nearest-mini-tile-by-row (see
+   * CanvasSpatialMinimapRef; `gridY` required there). List mode: just clicks
+   * the first mini-card (same click path a mouse would use, so it gets the
+   * same isBlinking flash for free) — `gridY` is ignored. Returns false
+   * (no-op) if the panel isn't visible or has nothing to focus.
+   */
+  enterNav(gridY?: number): boolean;
+}
+
+/**
+ * WantMinimap Component
+ * Displays miniature versions of Want cards and Draft cards.
+ * When in canvas mode, also renders a spatial overview map at the bottom.
+ *
+ * Fixed position on the right side, matches WantGrid layout (3 columns)
+ */
+
+export const WantMinimap = forwardRef<WantMinimapRef, WantMinimapProps>(({
+  wants,
+  drafts,
+  selectedWantId,
+  onWantClick,
+  onWantDoubleClick,
+  onDraftClick,
+  isOpen,
+  renderSpatial,
+}, ref) => {
+  const isCanvasMode = !!renderSpatial;
+
+  const spatialRef = useRef<SpatialMinimapNav>(null);
+  const listGridRef = useRef<HTMLDivElement>(null);
+  useImperativeHandle(ref, () => ({
+    enterNav: (gridY?: number) => {
+      // Only accept the handoff if the minimap panel is actually visible —
+      // on narrow screens it's translated off-screen unless explicitly
+      // opened (isOpen), so silently "handing off" to it there would just
+      // make CursorMan/focus vanish with nothing visible to interact with.
+      const panelVisible = isOpen || window.innerWidth >= 1024;
+      if (!panelVisible) return false;
+      // gridY is ignored in canvas mode now — the keys move the camera rather
+      // than landing on a want, so there is no row to start from. Kept in the
+      // signature for the list-mode branch's callers.
+      if (isCanvasMode) return spatialRef.current?.enterNavFromCanvas() ?? false;
+      const grid = listGridRef.current;
+      if (!grid) return false;
+      // Land on the mini-card matching whichever want is currently
+      // keyboard/gamepad-focused in the main list (not just always the
+      // first one), so the jump reads as "this same want, now on the
+      // minimap" rather than resetting focus to an arbitrary card.
+      const focusedListId = document
+        .querySelector('[data-keyboard-nav-selected="true"]')
+        ?.getAttribute('data-keyboard-nav-id');
+      const matched = focusedListId
+        ? grid.querySelector<HTMLElement>(`[data-want-id="${CSS.escape(focusedListId)}"]`)
+        : null;
+      const target = matched ?? grid.querySelector<HTMLElement>('[data-free-cursor-item]');
+      if (!target) return false;
+      target.click();
+      // Visually relocate the free-roaming cursor (CursorMan) onto this same
+      // mini-card, with its highlight frame animating the move — otherwise
+      // the click alone changes selection state but the cursor icon itself
+      // stays wherever it last was.
+      warpFreeCursorToElement(target);
+      return true;
+    },
+  }), [isOpen, isCanvasMode]);
+
+  return (
+    <MinimapFrame isOpen={isOpen} isCanvasMode={isCanvasMode}>
       {/* Canvas mode: only the spatial minimap, filling the whole panel */}
       {isCanvasMode ? (
         renderSpatial(spatialRef, { selectedWantId, onWantClick, onWantDoubleClick })
@@ -369,7 +409,7 @@ export const WantMinimap = forwardRef<WantMinimapRef, WantMinimapProps>(({
           />
         </div>
       )}
-    </div>
+    </MinimapFrame>
   );
 });
 WantMinimap.displayName = 'WantMinimap';
