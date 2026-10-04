@@ -32,6 +32,7 @@ import { VersionBadge } from './parts/VersionBadge';
 import { CharacterCornerIcons } from './parts/CharacterCornerIcons';
 import { StatusChangeIcon } from './parts/StatusChangeIcon';
 import { WantCardHeader } from './WantCardHeader';
+import { CardActionsOutlet, useCardActionSlot } from './cardActions';
 
 import { QuickActionsOverlay } from './parts/QuickActionsOverlay';
 import { buildDeleteConfirmConfig } from './parts/DeleteConfirmOverlay';
@@ -526,6 +527,10 @@ export const WantCard: React.FC<WantCardProps> = ({
    * inside the panel was silent.
    */
   const isMaximized = !!wantId && maximizedWantId === wantId;
+  // What the content offers as the card's own actions (cardActions), from the
+  // card's face and from its expanded copy separately: both can be mounted.
+  const [compactActions, CompactActions] = useCardActionSlot();
+  const [expandedActions, ExpandedActions] = useCardActionSlot();
   const prevMaximizedRef = useRef(false);
   useEffect(() => {
     if (isMaximized === prevMaximizedRef.current) return;
@@ -1206,6 +1211,11 @@ export const WantCard: React.FC<WantCardProps> = ({
 
         <VersionBadge version={version} />
 
+        {/* The card's own actions (a web want's 開く) on its top-right corner,
+            as an app draws them on the card's frame — see cardActions. The
+            select checkbox has the corner while selecting. */}
+        {!isSelectMode && <CardActionsOutlet actions={compactActions} />}
+
         <CharacterCornerIcons want={want} category={typeCategory} hidden={isSelectMode} />
 
         {/* Compact pill — type icon + status icon, visible when header is hidden.
@@ -1290,6 +1300,7 @@ export const WantCard: React.FC<WantCardProps> = ({
               onCloseBalloon={onCloseBalloon}
             />
           ) : (
+            <CompactActions>
             <WantCardContent
               want={want} isChild={false} hasChildren={!!hasChildren} isFocused={selected} isSelectMode={isSelectMode}
               onView={onView} onViewAgents={onViewAgents} onViewResults={onViewResults} onViewChat={onViewChat}
@@ -1304,6 +1315,7 @@ export const WantCard: React.FC<WantCardProps> = ({
                 cardRef.current?.focus();
               }}
             />
+            </CompactActions>
           )}
         </div>
 
@@ -1461,6 +1473,7 @@ export const WantCard: React.FC<WantCardProps> = ({
         />}
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-hidden relative">
+          <CardActionsOutlet actions={expandedActions} />
           {iframeUrl ? (
             <div className="absolute inset-0 flex flex-col bg-white dark:bg-gray-900 overflow-hidden">
               <div className="flex items-center gap-1.5 px-2 py-1 bg-black/80 flex-shrink-0">
@@ -1490,6 +1503,7 @@ export const WantCard: React.FC<WantCardProps> = ({
               />
             </div>
           ) : (
+            <ExpandedActions>
             <WantCardContent
               want={want} isChild={false} hasChildren={!!hasChildren} isFocused={true} isSelectMode={false}
               onView={onView} onViewAgents={onViewAgents} onViewResults={onViewResults} onViewChat={onViewChat}
@@ -1500,6 +1514,7 @@ export const WantCard: React.FC<WantCardProps> = ({
               isInnerFocused={false} onExitInnerFocus={() => {}}
               isExpanded={true}
             />
+            </ExpandedActions>
           )}
         </div>
       </div>,

@@ -1,6 +1,7 @@
 import type { ComponentType, ReactElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { Character, CharacterDisplay } from '@/types/character';
+import type { CardAction } from '@/components/dashboard/WantCard/cardActions';
 import { registerOverlayDesign, type OverlayDesign } from '@/components/overlay/design';
 
 /**
@@ -76,6 +77,14 @@ export interface ExtensionSlots {
   /** In a character's Display tab, after Icon Style — look choices only an
    *  extension has (the canvas's design). `put` saves a patch of the display. */
   characterDisplay: ComponentType<{ display: CharacterDisplay; put: (patch: Partial<CharacterDisplay>) => void }>;
+  /**
+   * A want card's own actions — what its content offers through useCardActions
+   * (a web want's 開く) — drawn on the card's top-right corner, as an app draws
+   * them on the card's native frame. The public edition offers them and draws
+   * nothing; an app framing the page draws them itself. `ownPage` is a want's
+   * own page (/w/:id), where there is no card and a bell has the corner.
+   */
+  wantCardActions: ComponentType<{ actions: CardAction[]; ownPage: boolean }>;
 }
 
 /** What the header's bubble does with what is typed into it. */

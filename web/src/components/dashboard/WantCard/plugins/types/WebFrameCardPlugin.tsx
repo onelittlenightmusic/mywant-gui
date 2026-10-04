@@ -12,7 +12,7 @@ import { Slot } from '@/extensions/Slot';
 import { extensionSlot } from '@/extensions/registry';
 import { classNames } from '@/utils/helpers';
 import { controlPillVars, ensureControlPillCss, CONTROL_PILL_LABELS } from '@/shared/controlPill';
-import { useHostCardActions } from '@/lib/nativeHost';
+import { CardActionsOutlet, useCardActions, type CardAction } from '../../cardActions';
 
 // The page's bar is drawn as the control pill is (see WebFrameBar).
 if (typeof document !== 'undefined') ensureControlPillCss(document);
@@ -487,13 +487,14 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
     };
   }, [standalone, isInnerFocused, onExitInnerFocus]);
 
-  // The card in hand offers its real site to an app framing the page, which
-  // draws the button natively (lib/nativeHost): inside the app there is no
-  // extension, so no pill over the page, and a tap on the card only selects it.
-  useHostCardActions(want.metadata?.id ?? want.metadata?.name ?? 'web',
-    url && (isFocused || isExpanded)
-      ? [{ id: 'card:open', label: '開く', icon: 'ExternalLink', run: () => openWebWant(want) }]
-      : null);
+  // The card in hand offers its real site, as a button on the card's top-right
+  // corner — drawn by the card in a browser, by an app's card frame in an app
+  // (see cardActions). The one way out to the site, wherever the card is and
+  // whether its page is framed live or shown as a picture.
+  const siteAction: CardAction[] | null = url && (isFocused || opensSite)
+    ? [{ id: 'card:open', label: '実サイトを新しいタブで開く', icon: 'ExternalLink', run: () => openWebWant(want) }]
+    : null;
+  const cardDrawsActions = useCardActions(want.metadata?.id ?? want.metadata?.name ?? 'web', siteAction);
 
   if (!url) {
     return (
@@ -535,21 +536,26 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
   // expanded, or on its own page). In a list or floating over the board the
   // picture is the card's face like any other: a tap there is the card's —
   // its panel — not a jump out to X before its details were even seen.
+  // With no card around it (its own page, /w/:id) the content wears the
+  // card's corner button itself, clear of the notification bell there.
+  const ownCorner = cardDrawsActions ? null : (
+    <CardActionsOutlet actions={siteAction} ownPage={onOwnPage} />
+  );
+
   if (labels.frameable === 'false') {
     const shot = labels['screenshot-url'];
     const Face = opensSite ? 'button' : 'div';
     return (
-      <Face
-        onClick={opensSite ? openRealSite : undefined}
-        className="relative w-full h-full min-h-0 overflow-hidden bg-gray-100 dark:bg-gray-800 text-left"
-        title={opensSite ? '実サイトを新しいタブで開く' : undefined}
-      >
-        {shot && <img src={shot} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />}
-        <span className="absolute left-2 right-2 top-2 flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 text-white text-[0.65rem]">
-          <ExternalLink className="w-3 h-3 flex-shrink-0" />
-          <span className="truncate">{new URL(url, window.location.href).hostname}{opensSite ? ' を開く' : ''}</span>
-        </span>
-      </Face>
+      <div className="relative w-full h-full min-h-0">
+        <Face
+          onClick={opensSite ? openRealSite : undefined}
+          className="relative w-full h-full min-h-0 overflow-hidden bg-gray-100 dark:bg-gray-800 text-left"
+          title={opensSite ? '実サイトを新しいタブで開く' : undefined}
+        >
+          {shot && <img src={shot} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />}
+        </Face>
+        {ownCorner}
+      </div>
     );
   }
 
@@ -597,10 +603,12 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
             as wide as its cells, floating in the page's top right corner so it
             costs the page no height. Only where the extension can do it (a
             live frame, the extension there). On its own page (/w/:id) it keeps
-            clear of the notification bell there (WantPushToggle). */}
+            clear of the notification bell there (WantPushToggle), and of the
+            open button beside it. */}
+        {ownCorner}
         {viewable && (
           <div
-            className={classNames('mwp-pill absolute top-1 z-10 shadow-lg', isDark && 'mwp-dark', onOwnPage ? 'right-[56px]' : 'right-1')}
+            className={classNames('mwp-pill absolute top-1 z-10 shadow-lg', isDark && 'mwp-dark', onOwnPage ? 'right-[96px]' : 'right-1')}
             style={{ ...(controlPillVars(design.portable) as React.CSSProperties), height: 40 }}
           >
             <div className="mwp-row">
@@ -627,16 +635,6 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
                   <span className="mwp-label">{canvas ? CONTROL_PILL_LABELS.canvas : CONTROL_PILL_LABELS.browse}</span>
                 </button>
               )}
-              {/* The real site, in a tab of its own — see openWebWant. */}
-              <button
-                type="button"
-                onClick={openRealSite}
-                className="mwp-cell mwp-divided mwp-end"
-                title="実サイトを新しいタブで開く"
-              >
-                <span className="mwp-icon"><ExternalLink /></span>
-                <span className="mwp-label">開く</span>
-              </button>
             </div>
           </div>
         )}
