@@ -75,6 +75,11 @@ export const CANVAS_ACTOR_KIND_ORDER = [
   'lock',
   'prompt',
   'mode',
+  // A crowded cell the character stands on, its tiles fanned out around them
+  // (guiex's stackFanStore): a direction toward one of them picks it, before
+  // the board reads the direction as a move. Below a held mode — Z's cluster
+  // owns its directions while it is up — and above everything underfoot.
+  'stack',
   'want',
   'thing',
   'relationRoad',
@@ -211,7 +216,11 @@ export function heldModeAnswers(action: string): boolean {
     // the BOARD must not move — not that a panel with the keys should stop
     // scrolling. A lock still wins the moment the board is actually asked
     // (runCanvasAction), which is where its job is.
-    if (actor.kind !== 'mode' && actor.kind !== 'prompt') continue;
+    // A fan underfoot ('stack') too: the detail panel opens by itself on
+    // landing and takes focus, which would drop the pad's pick of the very
+    // tile beside it. Its handler declines a direction with nothing to pick,
+    // so a press that is a move still moves.
+    if (actor.kind !== 'mode' && actor.kind !== 'prompt' && actor.kind !== 'stack') continue;
     if (actor.actions[action]) return true;
   }
   return false;
