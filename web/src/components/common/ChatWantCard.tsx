@@ -1,6 +1,7 @@
 import React from 'react';
-import { Crosshair, Layers } from 'lucide-react';
+import { Circle, Crosshair, Layers } from 'lucide-react';
 import { useWantStore } from '@/stores/wantStore';
+import { useThingTileStore } from '@/stores/thingTileStore';
 import { useMarkJump } from '@/components/common/MarkButton';
 import { getStatusHexColor } from '@/components/dashboard/WantCard/parts/StatusColor';
 import { classNames } from '@/utils/helpers';
@@ -30,7 +31,10 @@ export interface ChatCardRef {
  * camera goes to the want, as the phone's card does.
  */
 export const ChatWantCard: React.FC<{ card: ChatCardRef; compact?: boolean }> = ({ card, compact }) => {
-  const onBoard = useWantStore(s => s.wants.some(w => (w.metadata?.id || w.id) === card.id));
+  const isThing = card.kind === 'thing';
+  const wantOnBoard = useWantStore(s => s.wants.some(w => (w.metadata?.id || w.id) === card.id));
+  const thingOnBoard = useThingTileStore(s => s.onCanvas.has(card.id) || !s.loaded);
+  const onBoard = isThing ? thingOnBoard : wantOnBoard;
   const jump = useMarkJump();
   const status = (card.status ?? '') as WantExecutionStatus;
   const color = status ? getStatusHexColor(status) : '#9ca3af';
@@ -40,7 +44,11 @@ export const ChatWantCard: React.FC<{ card: ChatCardRef; compact?: boolean }> = 
   return (
     <button
       type="button"
-      onClick={(e) => { e.stopPropagation(); jump({ kind: 'want', id: card.id, name }); }}
+      // The character walks to it — a want or a thing, as from every card.
+      onClick={(e) => {
+        e.stopPropagation();
+        jump(isThing ? { kind: 'thing', id: card.id, name, color: '' } : { kind: 'want', id: card.id, name });
+      }}
       title={`盤面の "${name}" へ行く`}
       className={classNames(
         'mt-1.5 w-full text-left rounded-md border border-black/10 dark:border-white/10',
@@ -49,7 +57,9 @@ export const ChatWantCard: React.FC<{ card: ChatCardRef; compact?: boolean }> = 
       )}
     >
       <span className="flex items-center gap-1.5 min-w-0">
-        <Layers className="w-3.5 h-3.5 flex-shrink-0 text-gray-500" />
+        {isThing
+          ? <Circle className="w-3.5 h-3.5 flex-shrink-0 text-gray-500" />
+          : <Layers className="w-3.5 h-3.5 flex-shrink-0 text-gray-500" />}
         <span className="text-xs font-semibold truncate text-gray-900 dark:text-gray-100">{name}</span>
         <span className="flex-1" />
         {status && (
