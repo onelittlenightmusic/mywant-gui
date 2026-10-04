@@ -19,6 +19,7 @@ import { useWantStore } from '@/stores/wantStore';
 import { Want } from '@/types/want';
 import { formatRelativeTime, classNames } from '@/utils/helpers';
 import { MarkdownContent, looksLikeMarkdown } from '@/components/common/MarkdownContent';
+import { ChatWantCard, type ChatCardRef } from '@/components/common/ChatWantCard';
 
 export interface CCMessage {
   sender: string;
@@ -38,6 +39,9 @@ export interface CCResponse {
   picture_id?: string;
   picture_name?: string;
   answer_id?: string;
+  /** The wants the reply is about (the robot's tools went to them), shown
+   *  under it as small cards — see ChatWantCard and the engine's fmTurnCards. */
+  cards?: ChatCardRef[];
 }
 
 /** Which picture answer a reply is, so it can be marked right or wrong. */
@@ -54,7 +58,7 @@ export interface CCActivity {
 
 /** A message bubble or a working-log line, in the order they are shown. */
 export type ChatItem =
-  | { kind: 'message'; role: 'user' | 'assistant'; text: string; timestamp?: string; about?: AnswerRef }
+  | { kind: 'message'; role: 'user' | 'assistant'; text: string; timestamp?: string; about?: AnswerRef; cards?: ChatCardRef[] }
   | { kind: 'activity'; activity: CCActivity }
   | { kind: 'reset'; timestamp: string };
 
@@ -183,7 +187,7 @@ export function buildChatItems(want: Want, showActivity: boolean): ChatItem[] {
   const { messages, responses, activities: all } = readChat(want);
   const activities = showActivity ? all : [];
 
-  const conversation: Array<{ role: 'user' | 'assistant'; text: string; timestamp?: string; about?: AnswerRef }> = [];
+  const conversation: Array<{ role: 'user' | 'assistant'; text: string; timestamp?: string; about?: AnswerRef; cards?: ChatCardRef[] }> = [];
   const len = Math.max(messages.length, responses.length);
   for (let i = 0; i < len; i++) {
     const msg = messages[i];
@@ -192,6 +196,7 @@ export function buildChatItems(want: Want, showActivity: boolean): ChatItem[] {
     if (res?.text) conversation.push({
       role: 'assistant', text: res.text, timestamp: res.timestamp,
       about: res.picture_id && res.answer_id ? { pictureId: res.picture_id, answerId: res.answer_id } : undefined,
+      cards: res.cards?.length ? res.cards : undefined,
     });
   }
 
@@ -408,6 +413,9 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
             {entry.role === 'assistant' && entry.about && (
               <AnswerFeedback about={entry.about} compact={compact} />
             )}
+            {entry.role === 'assistant' && entry.cards?.map(card => (
+              <ChatWantCard key={card.id} card={card} compact={compact} />
+            ))}
             {!compact && entry.timestamp && (
               <p className={classNames(
                 'text-xs mt-1',
