@@ -483,6 +483,9 @@ export const useThingTileStore = create<ThingTileStore>()(
           await apiClient.removeThingLabel(id, THING_ARCHIVE_LABEL).catch(() => {});
         }
       }));
+      // The records too: the Thing list filters on their labels, and asking
+      // here does not wait on the server's thing_changed to arrive.
+      void useThingStore.getState().fetchThings();
       await get().fetchTiles();
     },
 

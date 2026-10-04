@@ -20,11 +20,31 @@ function save(s: Selected) {
   try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* the filter still holds for this visit */ }
 }
 
+/**
+ * What the thing list does with archived things: leave them out (the default,
+ * as the want list does), show them with the rest, or show nothing else.
+ */
+export type ArchiveFilter = 'hide' | 'include' | 'only';
+
+const ARCHIVE_KEY = 'mywant.thingArchiveFilter';
+
+function loadArchive(): ArchiveFilter {
+  try {
+    const v = localStorage.getItem(ARCHIVE_KEY);
+    return v === 'include' || v === 'only' ? v : 'hide';
+  } catch {
+    return 'hide';
+  }
+}
+
 interface ConstellationFilterStore {
   /** The constellations each list is narrowed to (by name); none = everything. */
   selected: Selected;
   toggle: (page: FilterPage, name: string) => void;
   clear: (page: FilterPage) => void;
+  /** The thing list's archive filter. */
+  archive: ArchiveFilter;
+  setArchive: (a: ArchiveFilter) => void;
 }
 
 /**
@@ -48,10 +68,16 @@ export const useConstellationFilterStore = create<ConstellationFilterStore>((set
     save(next);
     set({ selected: next });
   },
+  archive: loadArchive(),
+  setArchive: (archive) => {
+    try { localStorage.setItem(ARCHIVE_KEY, archive); } catch { /* holds for this visit */ }
+    set({ archive });
+  },
 }));
 
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
     if (e.key === KEY) useConstellationFilterStore.setState({ selected: load() });
+    if (e.key === ARCHIVE_KEY) useConstellationFilterStore.setState({ archive: loadArchive() });
   });
 }

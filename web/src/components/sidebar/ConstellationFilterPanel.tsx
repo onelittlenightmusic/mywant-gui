@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
-import { Check, Waypoints, X } from 'lucide-react';
+import { Archive, Check, Waypoints, X } from 'lucide-react';
 import { useConstellationStore } from '@/stores/constellationStore';
-import { useConstellationFilterStore, type FilterPage } from '@/stores/constellationFilterStore';
+import { useConstellationFilterStore, type ArchiveFilter, type FilterPage } from '@/stores/constellationFilterStore';
 import type { Constellation } from '@/types/constellation';
 import { classNames } from '@/utils/helpers';
 
@@ -49,6 +49,7 @@ export const ConstellationFilterPanel: React.FC<{ page: FilterPage }> = ({ page 
 
   return (
     <div className="p-4 space-y-4">
+      {page === 'thing' && <ArchiveFilterRow />}
       <div className="flex items-center gap-2">
         <Waypoints className="w-4 h-4 text-gray-500" />
         <span className="text-sm text-gray-600 dark:text-gray-300 flex-1">
@@ -90,6 +91,49 @@ export const ConstellationFilterPanel: React.FC<{ page: FilterPage }> = ({ page 
           })}
         </div>
       )}
+    </div>
+  );
+};
+
+const ARCHIVE_CHOICES: Array<{ value: ArchiveFilter; label: string }> = [
+  { value: 'hide', label: '隠す' },
+  { value: 'include', label: '含める' },
+  { value: 'only', label: 'アーカイブのみ' },
+];
+
+/**
+ * The thing list's archive: left out, shown with the rest, or shown alone.
+ * One choice of three, so a segmented row rather than pills that toggle.
+ */
+const ArchiveFilterRow: React.FC = () => {
+  const archive = useConstellationFilterStore(s => s.archive);
+  const setArchive = useConstellationFilterStore(s => s.setArchive);
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Archive className="w-4 h-4 text-gray-500" />
+        <span className="text-sm text-gray-600 dark:text-gray-300">アーカイブ</span>
+      </div>
+      <div className="inline-flex rounded-full border border-gray-300 dark:border-gray-600 overflow-hidden">
+        {ARCHIVE_CHOICES.map(c => {
+          const on = archive === c.value;
+          return (
+            <button
+              key={c.value}
+              type="button"
+              data-free-cursor-item
+              onClick={() => setArchive(c.value)}
+              aria-pressed={on}
+              className={classNames(
+                'px-3 py-1.5 text-sm font-medium transition-colors',
+                on ? 'bg-amber-500 text-white' : 'text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-gray-800/60',
+              )}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };

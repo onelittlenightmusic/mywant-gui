@@ -1,6 +1,8 @@
 import { useHostPanel } from '@/lib/nativeHost';
 import { Waypoints } from 'lucide-react';
 import { ConstellationFilterPanel, useConstellationFilter } from '@/components/sidebar/ConstellationFilterPanel';
+import { useConstellationFilterStore } from '@/stores/constellationFilterStore';
+import { isThingArchived } from '@/stores/thingTileStore';
 import { ItemMinimap, usePageMinimap, type MinimapItem } from '@/components/dashboard/ItemMinimap';
 import { resolveLucideIcon } from '@/utils/subtypeIcons';
 import { iconEmbossFilter } from '@/components/dashboard/WantCardFace';
@@ -72,6 +74,15 @@ export const ThingPage: React.FC = () => {
   /** The constellation filter's panel (the header's Filter). */
   const [filterOpen, setFilterOpen] = useState(false);
   const constellationFilter = useConstellationFilter('thing');
+  const archiveFilter = useConstellationFilterStore(s => s.archive);
+  /** Narrowed to the chosen constellations, if any, and by the archive filter. */
+  const listed = useMemo(() => records.filter(r => {
+    if (constellationFilter && !constellationFilter.has(r.id)) return false;
+    const archived = isThingArchived(r.labels);
+    return archiveFilter === 'include' || (archiveFilter === 'only' ? archived : !archived);
+  }), [records, constellationFilter, archiveFilter]);
+  /** Anything narrowing the list beyond the default (archived hidden). */
+  const filtering = !!constellationFilter || archiveFilter !== 'hide';
   /** Landed on from the map: selected, but its detail not opened (see the map). */
   const [quietId, setQuietId] = useState<string | null>(null);
   const isDarkMode = useColorMode() === 'dark';
@@ -189,9 +200,9 @@ export const ThingPage: React.FC = () => {
       // effect with the panel closed says so another way — the button's
       // colour here, a filled glyph in an app — or it looked stuck pressed.
       active: filterOpen,
-      toneClass: constellationFilter ? 'text-sky-500 dark:text-sky-400' : undefined,
-      hostIcon: constellationFilter ? 'WaypointsFilled' : undefined,
-      tooltip: constellationFilter ? '星座で絞り込み中' : '星座で絞り込む',
+      toneClass: filtering ? 'text-sky-500 dark:text-sky-400' : undefined,
+      hostIcon: filtering ? 'WaypointsFilled' : undefined,
+      tooltip: filtering ? '絞り込み中' : '星座・アーカイブで絞り込む',
     },
   });
 
@@ -350,8 +361,7 @@ export const ThingPage: React.FC = () => {
             </div>
           ) : (
             <ThingGrid
-              // Narrowed to the chosen constellations, if any.
-              records={constellationFilter ? records.filter(r => constellationFilter.has(r.id)) : records}
+              records={listed}
               loading={loading}
               selectedId={selectedId}
               selectMode={selectMode}
