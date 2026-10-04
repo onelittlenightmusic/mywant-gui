@@ -1,5 +1,7 @@
 import { CardEmbeddedContext } from '@/components/dashboard/WantCard/plugins/registry';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { useWantStore } from '@/stores/wantStore';
+import { listedWants } from '@/utils/wantUtils';
 import { useParams } from 'react-router-dom';
 import { Waypoints } from 'lucide-react';
 import { useConstellationFilter } from '@/components/sidebar/ConstellationFilterPanel';
@@ -98,6 +100,19 @@ export const WantListPage: React.FC<{
     handleLabelDropped, handleWantDropped, isGlobalDragOver, handleGlobalDragEnter, handleGlobalDragOver, handleGlobalDragLeave, handleGlobalDrop, handleMaximizeChange,
     handleCloseModals,
   } = ws;
+
+  // What the list shows: the list's own wants (wantsForGrid — no children, no
+  // types kept off lists, such as wall), narrowed to the chosen constellations.
+  const gridWants = useMemo(
+    () => constellationFilter
+      ? wantsForGrid.filter(w => constellationFilter.has(w.metadata?.id || w.id || ''))
+      : wantsForGrid,
+    [wantsForGrid, constellationFilter],
+  );
+  // The map drawn in an app's map sheet, where no list is drawn to read it off:
+  // the same wants, by the same rule the grid uses (listedWants).
+  const orderOverride = useWantStore(s => s.orderOverride);
+  const sheetMapWants = useMemo(() => listedWants(gridWants, orderOverride), [gridWants, orderOverride]);
 
   // Walking the card grid — reading order, not space. See list/useListNavigation.
   useListNavigation({
@@ -432,8 +447,8 @@ export const WantListPage: React.FC<{
     if (panelId === '__minimap') return (
       <WantMinimap
         // Not filteredWants: the list fills that in as it draws, and this page
-        // draws no list.
-        wants={regularWants}
+        // draws no list. The same wants the list shows, worked out the same way.
+        wants={sheetMapWants}
         drafts={drafts}
         selectedWantId={selectedWant?.metadata?.id || selectedWant?.id}
         onWantClick={(id) => minimap.send('pick', id)}
@@ -544,9 +559,7 @@ export const WantListPage: React.FC<{
             roomForSheet={!!selectedWant || sidebar.showGlobal}
             grid={{
               // Narrowed to the chosen constellations, if any.
-              wants: constellationFilter
-                ? wantsForGrid.filter(w => constellationFilter.has(w.metadata?.id || w.id || ''))
-                : wantsForGrid,
+              wants: gridWants,
               drafts: drafts,
               onDraftClick: handleDraftClick,
               onDraftDelete: handleDraftDelete,

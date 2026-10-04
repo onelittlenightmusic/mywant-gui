@@ -11,7 +11,7 @@ import { WantChildrenBubble } from './WantChildrenBubble';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { CountBadge } from '@/components/common/CountBadge';
 import { computeGridColumns, GRID_COLUMN_WIDTH } from '@/utils/gridUtils';
-import { isWantArchived } from '@/utils/wantUtils';
+import { isWantArchived, listedWants } from '@/utils/wantUtils';
 import type { ReorderPosition } from '@/components/reorderable/useReorderableGroup';
 import { useGridMotion } from '@/hooks/useGridMotion';
 import { useWantStore } from '@/stores/wantStore';
@@ -208,24 +208,10 @@ export const WantGrid: React.FC<WantGridProps> = ({
    */
   const orderOverride = useWantStore(s => s.orderOverride);
 
-  const filteredWants = useMemo(() => {
-    const claimed = orderOverride ? new Map(orderOverride.map((id, i) => [id, i])) : null;
-    return hierarchicalWants.filter(want => !isWantArchived(want)).sort((a, b) => {
-      if (claimed) {
-        // Anything the claim does not name (arrived since) sorts after what it
-        // does, in its own key order, rather than jumping to the front.
-        const ia = claimed.get(a.metadata?.id || a.id || '');
-        const ib = claimed.get(b.metadata?.id || b.id || '');
-        if (ia !== undefined && ib !== undefined) return ia - ib;
-        if (ia !== undefined) return -1;
-        if (ib !== undefined) return 1;
-      }
-      // Sort by orderKey if available, otherwise fall back to ID
-      const keyA = a.metadata?.orderKey || a.metadata?.id || '';
-      const keyB = b.metadata?.orderKey || b.metadata?.id || '';
-      return keyA.localeCompare(keyB);
-    });
-  }, [hierarchicalWants, orderOverride]);
+  const filteredWants = useMemo(
+    () => listedWants(hierarchicalWants, orderOverride),
+    [hierarchicalWants, orderOverride],
+  );
 
   const filteredArchivedWants = useMemo(
     () => hierarchicalWants.filter(isWantArchived),

@@ -219,7 +219,10 @@ export const ThingPage: React.FC = () => {
   // A thing's tile in the map is its card, small: its picture behind (held
   // back by the card's scrim), its name with the drop cap the board gives it,
   // and its kind's glyph as a decal low on the right — STYLE.md §3–§5.
-  const minimapItems = useMemo<MinimapItem[]>(() => (filtered.length ? filtered : records).map(r => {
+  // The grid's order when it has drawn; otherwise (an app's map sheet draws no
+  // grid) the same things it would show — never every record, archived and
+  // filtered-out ones included.
+  const minimapItems = useMemo<MinimapItem[]>(() => (filtered.length ? filtered : listed).map(r => {
     const Icon = resolveLucideIcon(r.icon) ?? Circle;
     const isLight = !isDarkMode;
     const bg = thingBackgroundSrc(r.background, r.labels);
@@ -251,7 +254,7 @@ export const ThingPage: React.FC = () => {
         </>
       ),
     };
-  }), [filtered, records, isDarkMode]);
+  }), [filtered, listed, isDarkMode]);
 
   // A card asked for its editor — the same panel naming a thing uses, opened
   // on an existing one. See thingEditStore.

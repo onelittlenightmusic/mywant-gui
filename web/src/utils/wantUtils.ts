@@ -9,6 +9,35 @@ export function isWantArchived(want: Want): boolean {
 }
 
 /**
+ * The wants a list shows, in the order it shows them: the archived ones left
+ * out (they have their own drawer), sorted by order key — or by the order this
+ * tab has just claimed, while the server catches up (wantStore.orderOverride).
+ *
+ * One function, so the list and its map cannot disagree. The map used to read
+ * this off the grid as the grid drew; a map drawn where no grid is (an app's
+ * map sheet) then had nothing to read and showed every want there was — walls,
+ * archived ones and all.
+ */
+export function listedWants<T extends Want>(wants: T[], orderOverride: string[] | null): T[] {
+  const claimed = orderOverride ? new Map(orderOverride.map((id, i) => [id, i])) : null;
+  return wants.filter(want => !isWantArchived(want)).sort((a, b) => {
+    if (claimed) {
+      // Anything the claim does not name (arrived since) sorts after what it
+      // does, in its own key order, rather than jumping to the front.
+      const ia = claimed.get(a.metadata?.id || a.id || '');
+      const ib = claimed.get(b.metadata?.id || b.id || '');
+      if (ia !== undefined && ib !== undefined) return ia - ib;
+      if (ia !== undefined) return -1;
+      if (ib !== undefined) return 1;
+    }
+    // Sort by orderKey if available, otherwise fall back to ID
+    const keyA = a.metadata?.orderKey || a.metadata?.id || '';
+    const keyB = b.metadata?.orderKey || b.metadata?.id || '';
+    return keyA.localeCompare(keyB);
+  });
+}
+
+/**
  * Update want parameters
  */
 export async function updateWantParameters(
