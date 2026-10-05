@@ -32,6 +32,9 @@ export interface HostButton {
   /** For a menu entry that is a page: where it goes. The app may open a page
    *  it has a place of its own for (a tab) there, rather than in this one. */
   href?: string;
+  /** Kept off the app's bar at first: in its "…" menu, for a button that is
+   *  occasional rather than the page's everyday one. */
+  more?: boolean;
 }
 
 export interface HostMessage {

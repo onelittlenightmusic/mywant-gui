@@ -98,6 +98,8 @@ export interface HeaderPageAction {
   /** The icon a framing app draws it with, when not the Lucide one's own name
    *  — a state the colour says here (toneClass), said there by the glyph. */
   hostIcon?: string;
+  /** In a framing app, kept in its "…" menu rather than on its bar. */
+  hostMore?: boolean;
 }
 
 /**
@@ -683,7 +685,8 @@ export const Header: React.FC<HeaderProps> = ({
     const buttons: HostButton[] = [];
     for (const b of hBtns) {
       const [icon, active] = look[b.id] ?? ['Circle'];
-      buttons.push({ id: b.id, label: b.label, icon, active: !!active });
+      const more = b.id === 'page' && !!pageAction?.hostMore;
+      buttons.push({ id: b.id, label: b.label, icon, active: !!active, ...(more ? { more } : {}) });
       actions[b.id] = b.action;
     }
     // What the page adds to the pill (its pillCells, which the app does not
