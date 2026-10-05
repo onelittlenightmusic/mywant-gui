@@ -326,9 +326,8 @@ export const WantListPage: React.FC<{
 
   useAppHeader({
     onCreateWant: handleCreateWant,
-    // A toggle, like Add Want: the press that opened the panel closes it.
-    onCreateThing: () => setAddingThing(v => !v),
-    isAddThingActive: addingThing,
+    // No Add Thing here: this page is the wants. Things are made on the Thing
+    // page and on the board.
     isAddWantActive: sidebar.showForm && !initialFormTypeId && initialFormItemType === 'want-type' && !editingWant,
     showSelectMode: isSelectMode,
     onToggleSelectMode: handleToggleSelectMode,
