@@ -26,8 +26,22 @@ const _SILENT_WAV =
   'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
 let _sessionUpgraded = false;
 
+// ── Inside the iPhone app: mix with what is already playing ──────────────────
+// The upgrade above makes the session "playback", which on iOS stops every
+// other app's audio — opening the app's canvas paused the music app behind
+// it. A board's clicks and chimes are not worth that: inside the app (which
+// announces itself as window.__mywantHost) the page asks for "ambient"
+// instead, which plays over the music (and, like any ambient sound, keeps
+// quiet with the ring switch off), and never upgrades.
+const _inApp = typeof window !== 'undefined' &&
+  !!(window as unknown as { __mywantHost?: unknown }).__mywantHost;
+if (_inApp) {
+  const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+  if (session) session.type = 'ambient';
+}
+
 function _upgradeAudioSession(): void {
-  if (_sessionUpgraded) return;
+  if (_sessionUpgraded || _inApp) return;
   _sessionUpgraded = true;
   const audio = document.createElement('audio');
   audio.src = _SILENT_WAV;
