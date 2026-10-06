@@ -43,7 +43,7 @@ const RETRY_AT_MS = [150, 400, 900, 1600];
 const RETRYABLE = new Set(['MYWANT_QUERY_CONTEXT', 'MYWANT_LIST_CONTEXTS']);
 
 /** Resolves null when no extension answers, which is also how "not installed" looks. */
-function ask<T>(type: string, payload: Record<string, unknown> = {}): Promise<T | null> {
+function ask<T>(type: string, payload: Record<string, unknown> = {}, timeoutMs = REPLY_TIMEOUT_MS): Promise<T | null> {
   // Framed by an app that keeps profiles the way the extension does
   // (mywant-ios): the same questions go to it, and it answers in the
   // extension's shapes, so the Extension page manages the app's profiles.
@@ -75,7 +75,7 @@ function ask<T>(type: string, payload: Record<string, unknown> = {}): Promise<T 
       finish(msg.payload as T);
     };
 
-    const timer = setTimeout(() => finish(null), REPLY_TIMEOUT_MS);
+    const timer = setTimeout(() => finish(null), timeoutMs);
     window.addEventListener('message', onMessage);
     // The same requestId every time, so however many of these are heard, only
     // the first reply is taken and the rest are ignored by the id check above.
@@ -87,6 +87,23 @@ function ask<T>(type: string, payload: Record<string, unknown> = {}): Promise<T 
       RETRY_AT_MS.forEach((at) => { retries.push(setTimeout(() => { if (!done) say(); }, at)); });
     }
   });
+}
+
+/** Whether this Mac's model can answer for the page (the extension's fmtool
+ *  native host, with Apple's model ready), or null when no extension replies. */
+export interface BrowserFMStatus { available: boolean; reason?: string }
+
+export function getBrowserFMStatus(): Promise<BrowserFMStatus | null> {
+  return ask<BrowserFMStatus>('MYWANT_FM_STATUS', {}, 5000);
+}
+
+/** The robot's answer from this Mac's model: the page's server's instructions
+ *  and tools, the turn written into the robot's chat as a phone's is. */
+export interface BrowserFMAnswer { text?: string; cards?: unknown[]; error?: string }
+
+export function askBrowserFM(question: string): Promise<BrowserFMAnswer | null> {
+  // A model answering with tool calls takes seconds, sometimes tens of them.
+  return ask<BrowserFMAnswer>('MYWANT_FM_ASK', { question }, 180_000);
 }
 
 /** One server the extension is watching, or null when no extension replies.

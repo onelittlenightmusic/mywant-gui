@@ -10,6 +10,7 @@ import { apiClient } from '@/api/client';
 // "You:" caption, which loses the shape of the exchange — and on a board of
 // cards the shape is most of what you are reading. See ChatThread.
 import { ChatThread, readChat, isChatBusy, type CCMessage } from '@/components/common/ChatThread';
+import { sayToWant } from '@/utils/robotAsk';
 
 export const CodingContentSection: React.FC<WantCardPluginProps> = ({
   want, isChild, isControl, isFocused,
@@ -76,12 +77,7 @@ export const CodingContentSection: React.FC<WantCardPluginProps> = ({
     setSending(true);
     setSendError(null);
     try {
-      const res = await fetch(`/api/v1/webhooks/${wantName}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, sender: 'user' }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await sayToWant(wantName, text);
       setInputText('');
     } catch (err) {
       setSendError(err instanceof Error ? err.message : 'Failed to send');

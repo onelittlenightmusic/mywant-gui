@@ -12,6 +12,7 @@ import {
   isChatBusy,
   buildChatItems,
 } from '@/components/common/ChatThread';
+import { sayToWant } from '@/utils/robotAsk';
 
 export const ChatTab: React.FC<{ want: Want }> = ({ want }) => {
   const [inputText, setInputText] = useState('');
@@ -50,7 +51,7 @@ export const ChatTab: React.FC<{ want: Want }> = ({ want }) => {
     setSending(true);
     setSendError(null);
     try {
-      await apiClient.sendWebhookMessage(wantName, inputText.trim(), 'user');
+      await sayToWant(wantName, inputText.trim());
       setInputText('');
     } catch (err: unknown) {
       setSendError(err instanceof Error ? err.message : 'Failed to send message');
