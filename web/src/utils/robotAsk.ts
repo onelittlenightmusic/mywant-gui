@@ -21,8 +21,9 @@ const DECIDED_FOR_MS = 5 * 60_000;
 
 export function hasLocalLLM(): Promise<boolean> {
   if (decided && Date.now() - decided.at < DECIDED_FOR_MS) return decided.yes;
-  decided = { at: Date.now(), yes: decide() };
-  return decided.yes;
+  const entry = { at: Date.now(), yes: decide() };
+  decided = entry;
+  return entry.yes;
 }
 
 async function decide(): Promise<boolean> {
@@ -30,6 +31,11 @@ async function decide(): Promise<boolean> {
     if (localStorage.getItem('mywant:browserFM') === 'never') return false;
   } catch { /* storage blocked: decide as usual */ }
   const status = await getBrowserFMStatus();
+  // No reply at all is not a no: asked as the page opens, the extension's
+  // bridge may not have been listening yet. Not kept, so the next @robot asks
+  // again — a no that was only too early used to stand for five minutes, and
+  // every question went to a server with no model to answer it.
+  if (status === null) decided = null;
   return !!status?.available;
 }
 

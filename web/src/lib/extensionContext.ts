@@ -40,7 +40,9 @@ const REPLY_TIMEOUT_MS = 2500;
  * injection in the first place.
  */
 const RETRY_AT_MS = [150, 400, 900, 1600];
-const RETRYABLE = new Set(['MYWANT_QUERY_CONTEXT', 'MYWANT_LIST_CONTEXTS']);
+// MYWANT_FM_STATUS too: asked as the canvas opens, which is exactly when the
+// bridge may not be listening yet (see useRobotInteract).
+const RETRYABLE = new Set(['MYWANT_QUERY_CONTEXT', 'MYWANT_LIST_CONTEXTS', 'MYWANT_FM_STATUS']);
 
 /** Resolves null when no extension answers, which is also how "not installed" looks. */
 function ask<T>(type: string, payload: Record<string, unknown> = {}, timeoutMs = REPLY_TIMEOUT_MS): Promise<T | null> {
