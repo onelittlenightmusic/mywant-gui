@@ -1,10 +1,11 @@
 import React from 'react';
-import { Circle, Crosshair, Layers } from 'lucide-react';
+import { Archive, Circle, Crosshair, Layers } from 'lucide-react';
 import { useWantStore } from '@/stores/wantStore';
 import { useThingTileStore } from '@/stores/thingTileStore';
 import { useMarkJump } from '@/components/common/MarkButton';
 import { getStatusHexColor } from '@/components/dashboard/WantCard/parts/StatusColor';
 import { classNames } from '@/utils/helpers';
+import { ARCHIVE_LABEL } from '@/utils/wantUtils';
 import type { WantExecutionStatus } from '@/types/want';
 
 /**
@@ -32,7 +33,13 @@ export interface ChatCardRef {
  */
 export const ChatWantCard: React.FC<{ card: ChatCardRef; compact?: boolean }> = ({ card, compact }) => {
   const isThing = card.kind === 'thing';
-  const wantOnBoard = useWantStore(s => s.wants.some(w => (w.metadata?.id || w.id) === card.id));
+  const wantKnown = useWantStore(s => s.wants.some(w => (w.metadata?.id || w.id) === card.id));
+  // Archived: in the store, but put away, off the board — the robot found it
+  // and asks whether to bring it back. Its card is shown all the same, saying so.
+  const archived = useWantStore(s => s.wants.some(w =>
+    (w.metadata?.id || w.id) === card.id && w.metadata?.labels?.[ARCHIVE_LABEL] === 'true',
+  )) || card.status === 'archived';
+  const wantOnBoard = wantKnown && !archived;
   const thingOnBoard = useThingTileStore(s => s.onCanvas.has(card.id) || !s.loaded);
   const onBoard = isThing ? thingOnBoard : wantOnBoard;
   const jump = useMarkJump();
@@ -47,9 +54,11 @@ export const ChatWantCard: React.FC<{ card: ChatCardRef; compact?: boolean }> = 
       // The character walks to it — a want or a thing, as from every card.
       onClick={(e) => {
         e.stopPropagation();
+        // Nowhere to walk to while it is archived.
+        if (!isThing && archived) return;
         jump(isThing ? { kind: 'thing', id: card.id, name, color: '' } : { kind: 'want', id: card.id, name });
       }}
-      title={`盤面の "${name}" へ行く`}
+      title={!isThing && archived ? `"${name}" はアーカイブ済みです` : `盤面の "${name}" へ行く`}
       className={classNames(
         'mt-1.5 w-full text-left rounded-md border border-black/10 dark:border-white/10',
         'bg-white/70 dark:bg-gray-900/60 hover:bg-white dark:hover:bg-gray-900 transition-colors',
@@ -70,7 +79,9 @@ export const ChatWantCard: React.FC<{ card: ChatCardRef; compact?: boolean }> = 
             {status}
           </span>
         )}
-        <Crosshair className="w-3 h-3 flex-shrink-0 text-gray-400" />
+        {!isThing && archived
+          ? <Archive className="w-3 h-3 flex-shrink-0 text-gray-400" />
+          : <Crosshair className="w-3 h-3 flex-shrink-0 text-gray-400" />}
       </span>
       {!compact && card.type && (
         <span className="block text-[10px] text-gray-500 dark:text-gray-400 truncate">{card.type}</span>
@@ -78,7 +89,9 @@ export const ChatWantCard: React.FC<{ card: ChatCardRef; compact?: boolean }> = 
       {result && (
         <span className="block text-[11px] text-gray-600 dark:text-gray-300 truncate">{result}</span>
       )}
-      {!onBoard && (
+      {!isThing && archived ? (
+        <span className="block text-[11px] text-gray-400">アーカイブ済み — 復元すると盤面に戻ります</span>
+      ) : !onBoard && (
         <span className="block text-[11px] text-gray-400">盤面にありません</span>
       )}
     </button>
