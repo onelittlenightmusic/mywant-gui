@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { Want, WantDetails, WantResults, CreateWantRequest, UpdateWantRequest, WantExecutionStatus } from '@/types/want';
+import { Want, WantDetails, WantResults, CreateWantRequest, UpdateWantRequest, WantExecutionStatus, WantPatch } from '@/types/want';
+import { ApiError } from '@/types/api';
+import { ARCHIVE_LABEL } from '@/utils/wantUtils';
 import { apiClient } from '@/api/client';
 import { send } from '@/api/outbox';
 import { smartPollWants, registerWantCacheActions, getWantETag, setWantETag, seedWantETags, suspendWantPolling, invalidateCollectionETag } from '@/stores/wantHashCache';
@@ -62,6 +64,9 @@ interface WantStore {
   orderOverride: string[] | null;
   archiveWant: (id: string) => Promise<void>;
   unarchiveWant: (id: string) => Promise<void>;
+  /** Some labels and params changed on the server, the rest left as they are
+   *  (PATCH); the store takes the want the server hands back. */
+  updateWantFields: (id: string, patch: WantPatch) => Promise<Want>;
   // Partial-update helpers used by smart polling
   patchWant: (updated: Want) => void;
   /** Same as patchWant but merges a whole batch in one state update — used by
@@ -610,34 +615,29 @@ export const useWantStore = create<WantStore>()(
     stopWants: async (ids: string[]) => { get().controlWants(ids, 'stop'); },
     startWants: async (ids: string[]) => { get().controlWants(ids, 'start'); },
 
+    updateWantFields: async (id: string, patch: WantPatch) => {
+      const updatedWant = await apiClient.patchWant(id, patch);
+      set(s => ({
+        wants: s.wants.map(w => (w.metadata?.id === id || w.id === id) ? updatedWant : w),
+        selectedWant: (s.selectedWant?.metadata?.id === id || s.selectedWant?.id === id) ? updatedWant : s.selectedWant,
+      }));
+      return updatedWant;
+    },
+
     archiveWant: async (id: string) => {
-      const want = useWantStore.getState().wants.find(w => (w.metadata?.id || w.id) === id);
-      if (!want) return;
       try {
-        const updatedWant = await apiClient.updateWant(id, {
-          metadata: { ...want.metadata, labels: { ...(want.metadata?.labels ?? {}), 'mywant.io/archived': 'true' } },
-          spec: want.spec,
-        });
-        set(s => ({ wants: s.wants.map(w => (w.metadata?.id === id || w.id === id) ? updatedWant : w) }));
+        await get().updateWantFields(id, { labels: { [ARCHIVE_LABEL]: 'true' } });
       } catch (error) {
-        set({ error: error instanceof Error ? error.message : 'Failed to archive want' });
+        set({ error: error instanceof Error ? error.message : (error as ApiError)?.message ?? 'Failed to archive want' });
         throw error;
       }
     },
 
     unarchiveWant: async (id: string) => {
-      const want = useWantStore.getState().wants.find(w => (w.metadata?.id || w.id) === id);
-      if (!want) return;
-      const labels = { ...(want.metadata?.labels ?? {}) };
-      delete labels['mywant.io/archived'];
       try {
-        const updatedWant = await apiClient.updateWant(id, {
-          metadata: { ...want.metadata, labels },
-          spec: want.spec,
-        });
-        set(s => ({ wants: s.wants.map(w => (w.metadata?.id === id || w.id === id) ? updatedWant : w) }));
+        await get().updateWantFields(id, { labels: { [ARCHIVE_LABEL]: null } });
       } catch (error) {
-        set({ error: error instanceof Error ? error.message : 'Failed to unarchive want' });
+        set({ error: error instanceof Error ? error.message : (error as ApiError)?.message ?? 'Failed to unarchive want' });
         throw error;
       }
     },

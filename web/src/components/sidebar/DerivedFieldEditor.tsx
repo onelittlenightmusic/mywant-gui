@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Type, Braces, Save, Trash2 } from 'lucide-react';
-import { Want, WantSpec, WantMetadata } from '@/types/want';
+import { Want } from '@/types/want';
 import { useWantStore } from '@/stores/wantStore';
 import { useDataTypes } from '@/hooks/useDataTypes';
 import { resolveLucideIcon } from '@/utils/subtypeIcons';
@@ -44,12 +44,7 @@ export async function deleteDerivedField(want: Want, key: string): Promise<void>
   const id = want.metadata?.id || want.id;
   if (!id) return;
   const defs = readDefs(want).filter(d => d.key !== key);
-  await useWantStore.getState().updateWant(id, {
-    metadata: { ...want.metadata, labels: { ...(want.metadata?.labels ?? {}), [DERIVED_FIELDS_LABEL]: JSON.stringify(defs) } } as WantMetadata,
-    spec: (want.spec ?? {}) as WantSpec,
-    status: want.status,
-    state: want.state,
-  });
+  await useWantStore.getState().updateWantFields(id, { labels: { [DERIVED_FIELDS_LABEL]: JSON.stringify(defs) } });
   removeWantStateKey(id, key);
 }
 
@@ -193,14 +188,9 @@ export const DerivedFieldEditor: React.FC<{
     defs.push({ key: key.trim(), expr, ...(subType ? { subType } : {}) });
     setSaving(true);
     try {
-      // Send status + state back (like patchCanvasLabels) so persisting the
-      // label doesn't reset the want's runtime state to empty.
-      await useWantStore.getState().updateWant(id, {
-        metadata: { ...want.metadata, labels: { ...(want.metadata?.labels ?? {}), [DERIVED_FIELDS_LABEL]: JSON.stringify(defs) } } as WantMetadata,
-        spec: (want.spec ?? {}) as WantSpec,
-        status: want.status,
-        state: want.state,
-      });
+      // The label alone (PATCH): the want's runtime state is not sent back,
+      // so it cannot be reset by a stale copy.
+      await useWantStore.getState().updateWantFields(id, { labels: { [DERIVED_FIELDS_LABEL]: JSON.stringify(defs) } });
       // Renamed while editing: the old key's computed value would otherwise stay
       // orphaned in state.current forever (evaluateDerivedFields only ever adds).
       if (originalKey && originalKey !== key.trim()) {

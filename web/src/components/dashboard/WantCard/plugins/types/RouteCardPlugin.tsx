@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { apiClient } from '@/api/client';
 import { Bike, Car, Footprints, ArrowLeftRight, MapPin } from 'lucide-react';
 import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
 import { WantCardLayout } from '../../WantCardLayout';
@@ -215,22 +216,11 @@ async function solve(places: string[], mode: ModeKey, country?: string): Promise
   };
 }
 
-/** Write the want's params back — the card's controls are edits to the question. */
+/** Write the want's params back — the card's controls are edits to the question.
+ *  Only these params (PATCH): no read-modify-write of a whole want that a list
+ *  response may have projected. */
 async function putParams(wantId: string, patch: Record<string, string>): Promise<void> {
-  // Read-modify-write: the want this card was rendered from is whatever a list
-  // response gave us, and a full PUT built from that would drop anything the
-  // projection left out.
-  const cur = await fetch(`/api/v1/wants/${encodeURIComponent(wantId)}`).then(r => {
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  });
-  const spec = cur.spec ?? {};
-  const res = await fetch(`/api/v1/wants/${encodeURIComponent(wantId)}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...cur, spec: { ...spec, params: { ...(spec.params ?? {}), ...patch } } }),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  await apiClient.patchWant(wantId, { params: patch });
 }
 
 const RouteContentSection: React.FC<WantCardPluginProps> = ({ want, isExpanded }) => {

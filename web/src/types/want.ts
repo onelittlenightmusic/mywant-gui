@@ -225,6 +225,13 @@ export interface CreateWantRequest {
   history?: WantHistory;
 }
 
+/** A merge patch of a want's labels and params (PATCH /api/v1/wants/{id}):
+ *  each key set, or taken away when null. */
+export interface WantPatch {
+  labels?: Record<string, string | null>;
+  params?: Record<string, unknown>;
+}
+
 export interface UpdateWantRequest {
   metadata: WantMetadata;
   spec: WantSpec;

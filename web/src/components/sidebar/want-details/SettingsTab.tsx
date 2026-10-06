@@ -10,6 +10,7 @@ import { useConfigStore } from '@/stores/configStore';
 import { formatDate, formatDuration } from '@/utils/helpers';
 import { stringifyYaml } from '@/utils/yaml';
 import { updateWantParameters, updateWantScheduling, updateWantLabels, updateWantDependencies } from '@/utils/wantUtils';
+import { useWantStore } from '@/stores/wantStore';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
 import { ParameterGridSection } from '@/components/forms/sections/ParameterGridSection';
 import { ExposeEntry } from '@/components/forms/sections/ExposeSection';
@@ -147,7 +148,7 @@ export const SettingsTab: React.FC<{
     setIsEditingParameters(true);
 
     try {
-      await updateWantParameters(want.metadata.id, want, newParams, updateWant);
+      await updateWantParameters(want.metadata.id, want, newParams, useWantStore.getState().updateWantFields);
       onWantUpdate?.();
       showSaved();
     } catch (error) {

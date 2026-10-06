@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -196,8 +197,14 @@ func (c *Client) GetWant(id string) (*WantData, error) {
 	return &result, nil
 }
 
-// UpdateWantLabels merges the given labels into a want's metadata (fetches current data first).
+// UpdateWantLabels sets these labels on a want and leaves the rest of it
+// alone: PATCH /api/v1/wants/{id}. A server older than PATCH gets the
+// read-modify-write PUT this replaced.
 func (c *Client) UpdateWantLabels(id string, labels map[string]string) error {
+	err := c.request("PATCH", "/api/v1/wants/"+id, map[string]any{"metadata": map[string]any{"labels": labels}}, nil)
+	if !isMethodNotAllowed(err) {
+		return err
+	}
 	want, err := c.GetWant(id)
 	if err != nil {
 		return err
@@ -211,8 +218,14 @@ func (c *Client) UpdateWantLabels(id string, labels map[string]string) error {
 	return c.request("PUT", "/api/v1/wants/"+id, want, nil)
 }
 
-// UpdateWantParam updates a single param on a want (fetches current data first).
+// UpdateWantParam updates a single param on a want and leaves the rest of it
+// alone: PATCH /api/v1/wants/{id}, or on an older server the read-modify-write
+// PUT this replaced.
 func (c *Client) UpdateWantParam(id, key string, value any) error {
+	err := c.request("PATCH", "/api/v1/wants/"+id, map[string]any{"spec": map[string]any{"params": map[string]any{key: value}}}, nil)
+	if !isMethodNotAllowed(err) {
+		return err
+	}
 	want, err := c.GetWant(id)
 	if err != nil {
 		return err
@@ -222,6 +235,12 @@ func (c *Client) UpdateWantParam(id, key string, value any) error {
 	}
 	want.Spec.Params[key] = value
 	return c.request("PUT", "/api/v1/wants/"+id, want, nil)
+}
+
+// isMethodNotAllowed: the server has no handler for that method (a 405) —
+// a backend from before PATCH /api/v1/wants/{id}.
+func isMethodNotAllowed(err error) bool {
+	return err != nil && strings.HasPrefix(err.Error(), "server returned 405")
 }
 
 // GetCurrentGUIState returns the current GUI state fields as a flat map.

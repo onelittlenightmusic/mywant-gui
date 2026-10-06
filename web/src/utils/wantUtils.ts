@@ -1,4 +1,5 @@
-import { Want, UpdateWantRequest } from '@/types/want';
+import { Want, UpdateWantRequest, WantPatch } from '@/types/want';
+import { apiClient } from '@/api/client';
 
 /** Label set by archiveWant()/unarchiveWant() (see wantStore.ts). */
 export const ARCHIVE_LABEL = 'mywant.io/archived';
@@ -38,25 +39,26 @@ export function listedWants<T extends Want>(wants: T[], orderOverride: string[] 
 }
 
 /**
- * Update want parameters
+ * Update want parameters: only the ones that changed go to the server (PATCH),
+ * a removed one as null — not the whole want rebuilt from this copy, whose
+ * labels the canvas may have moved on from since it was read.
  */
 export async function updateWantParameters(
   wantId: string,
   want: Want,
   newParams: Record<string, any>,
-  updateWantFn: (id: string, request: UpdateWantRequest) => Promise<void>
+  patchFn: (id: string, patch: WantPatch) => Promise<unknown>
 ): Promise<void> {
-  await updateWantFn(wantId, {
-    metadata: {
-      name: want.metadata?.name,
-      type: want.metadata?.type,
-      labels: want.metadata?.labels
-    },
-    spec: {
-      ...want.spec,
-      params: newParams
-    }
-  });
+  const old = (want.spec?.params ?? {}) as Record<string, unknown>;
+  const params: Record<string, unknown> = {};
+  for (const key of Object.keys(old)) {
+    if (!(key in newParams)) params[key] = null;
+  }
+  for (const [key, value] of Object.entries(newParams)) {
+    if (JSON.stringify(old[key]) !== JSON.stringify(value)) params[key] = value;
+  }
+  if (Object.keys(params).length === 0) return;
+  await patchFn(wantId, { params });
 }
 
 /**
@@ -89,42 +91,19 @@ export async function updateWantLabels(
   oldLabels: Record<string, string>,
   newLabels: Record<string, string>
 ): Promise<void> {
-  // Determine what changed
-  const added = Object.keys(newLabels).filter(key => !oldLabels[key]);
-  const removed = Object.keys(oldLabels).filter(key => !newLabels[key]);
-  const updated = Object.keys(newLabels).filter(key =>
-    oldLabels[key] && oldLabels[key] !== newLabels[key]
-  );
-
-  // Remove deleted labels
-  for (const key of removed) {
-    await fetch(`/api/v1/wants/${wantId}/labels/${key}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' }
-    });
+  // One PATCH with every change: a removed label null, an added or changed one
+  // its value. It was a DELETE and a POST per label — never at once, and a key
+  // with a "/" in it (mywant.io/…, constellation/…) could not be deleted at
+  // all, its slash ending the URL's path segment.
+  const patch: Record<string, string | null> = {};
+  for (const key of Object.keys(oldLabels)) {
+    if (!(key in newLabels)) patch[key] = null;
   }
-
-  // Add new labels
-  for (const key of added) {
-    await fetch(`/api/v1/wants/${wantId}/labels`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, value: newLabels[key] })
-    });
+  for (const [key, value] of Object.entries(newLabels)) {
+    if (oldLabels[key] !== value) patch[key] = value;
   }
-
-  // Update changed labels (delete old + add new)
-  for (const key of updated) {
-    await fetch(`/api/v1/wants/${wantId}/labels/${key}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    await fetch(`/api/v1/wants/${wantId}/labels`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, value: newLabels[key] })
-    });
-  }
+  if (Object.keys(patch).length === 0) return;
+  await apiClient.patchWant(wantId, { labels: patch });
 }
 
 /**

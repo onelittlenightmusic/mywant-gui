@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import {
+import { WantPatch,
   Want,
   WantDetails,
   WantResults,
@@ -400,6 +400,41 @@ class MyWantApiClient {
   async updateWant(id: string, request: UpdateWantRequest): Promise<Want> {
     const response = await this.client.put<Want>(`/api/v1/wants/${id}`, request);
     return response.data;
+  }
+
+  /**
+   * Change the labels and params a patch names and leave the rest of the want
+   * alone — PATCH /api/v1/wants/{id}, a JSON merge patch (null removes a key).
+   * What a full PUT built from the store's copy could not promise: that state,
+   * status and the other fields the copy was stale on go untouched, and that
+   * two patches at once (a cluster drag) do not overwrite each other.
+   * A server older than PATCH (405) gets the read-modify-write PUT it replaced.
+   */
+  async patchWant(id: string, patch: WantPatch): Promise<Want> {
+    const body: Record<string, unknown> = {};
+    if (patch.labels) body.metadata = { labels: patch.labels };
+    if (patch.params) body.spec = { params: patch.params };
+    try {
+      const response = await this.client.patch<Want>(`/api/v1/wants/${id}`, body);
+      return response.data;
+    } catch (error) {
+      if ((error as ApiError)?.status !== 405) throw error;
+      const cur = (await this.client.get<Want>(`/api/v1/wants/${id}`)).data;
+      const merged = <T,>(base: Record<string, T> | undefined, p: Record<string, T | null> | undefined) => {
+        const out: Record<string, T> = { ...(base ?? {}) };
+        for (const [k, v] of Object.entries(p ?? {})) {
+          if (v === null) delete out[k];
+          else out[k] = v as T;
+        }
+        return out;
+      };
+      const response = await this.client.put<Want>(`/api/v1/wants/${id}`, {
+        ...cur,
+        metadata: { ...cur.metadata, labels: merged(cur.metadata?.labels, patch.labels) },
+        spec: { ...cur.spec, params: merged(cur.spec?.params as Record<string, unknown>, patch.params) },
+      });
+      return response.data;
+    }
   }
 
   async updateWantOrder(
