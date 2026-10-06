@@ -1357,8 +1357,10 @@ class MyWantApiClient {
     name?: string,
     effectType?: string,
     effectNonce?: number,
-    /** Speech bubble carried alongside the position — see Dashboard's say state. */
-    say?: { message?: string; messageAt?: number },
+    /** Speech bubble carried alongside the position — see Dashboard's say state.
+     *  robotAnswered: this browser answers an @robot in it itself (its own
+     *  model), so the server records the words but does not hand them on. */
+    say?: { message?: string; messageAt?: number; robotAnswered?: boolean },
     /**
      * Orders this browser's PUTs for this character. Assigned here when the
      * caller does not supply one, which is what every caller should do — see
@@ -1374,7 +1376,7 @@ class MyWantApiClient {
     if (hostViewOnly) return; // see updateGUIState
     await this.client.put(`/api/v1/cursors/${encodeURIComponent(characterId)}`, {
       x, y, deviceId, avatar, color, name, effectType, effectNonce,
-      message: say?.message, messageAt: say?.messageAt,
+      message: say?.message, messageAt: say?.messageAt, robotAnswered: say?.robotAnswered || undefined,
       seq: seq ?? this.nextCursorSeq(characterId),
     });
   }
