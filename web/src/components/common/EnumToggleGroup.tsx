@@ -252,10 +252,18 @@ export const EnumToggleGroup = forwardRef<EnumToggleGroupHandle, EnumToggleGroup
         ref={el => { buttonRefs.current[index] = el; }}
         type="button"
         disabled={disabled}
+        // A press keeps the focus where it is. iOS Safari never focuses a
+        // tapped <button>, so the press only took focus away — a blur with
+        // nowhere to go — and a parameter card, which leaves editing when
+        // focus leaves it, took the pills down before the click arrived: on an
+        // iPhone, 到着 could not be switched to 出発. The pill takes focus
+        // itself once chosen, so the keys still follow on a desktop.
+        onMouseDown={e => e.preventDefault()}
         onClick={() => {
           if (dragDistRef.current > 4) return;
           setCursorIndex(index);
           onChange(opt.value);
+          buttonRefs.current[index]?.focus();
         }}
         onMouseEnter={() => setCursorIndex(index)}
         onFocus={e => handleButtonFocus(e, index)}
