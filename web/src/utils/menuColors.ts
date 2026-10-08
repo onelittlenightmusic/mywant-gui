@@ -39,6 +39,7 @@ export const ROUTE_MENU_COLOR: Record<string, string> = {
   '/kata': MENU_COLORS.kata,
   '/devices': MENU_COLORS.devices,
   '/extension': MENU_COLORS.extension,
+  '/servers': MENU_COLORS.extension,
   '/characters': MENU_COLORS.characters,
 };
 

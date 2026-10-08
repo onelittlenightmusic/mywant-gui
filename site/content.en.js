@@ -546,7 +546,7 @@ mywant guiex commands</pre></div>
 Capture a website you use and it becomes a <strong>kind of Want</strong>. Teach it the parts you care about — a search box, a button — and MyWant can open that site and work it for you. Even this guide can be one — see the pictures below.</p>
 ${shot('web-wants-grid.jpg', 'Web Wants in the Menu — here with this very guide captured (mywant-gui Guide)')}
 <h4>Make one from the browser extension</h4>
-<p>The easiest way is the <strong>MyWant Web Inspector</strong> browser extension: you pick the parts right on the page you are looking at.</p>
+<p>The easiest way is the <strong>MyWant</strong> browser extension: you pick the parts right on the page you are looking at.</p>
 <ol class="steps">
   <li><strong>Install the extension</strong><br />The steps are on the <strong>Extension</strong> page in the Menu. For Chrome, unzip the release, turn on Developer mode at <code>chrome://extensions</code>, choose "Load unpacked" and pick the <code>chrome-extension</code> folder. There is a Firefox build too.</li>
   <li><strong>Open the site and press the MyWant icon in the toolbar</strong><br />Your character and a sidebar appear on top of the page.</li>

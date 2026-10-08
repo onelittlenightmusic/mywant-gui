@@ -17,6 +17,7 @@ const ROUTE_ORDER = [
   '/logs',
   '/devices',
   '/extension',
+  '/servers',
   '/characters',
 ];
 

@@ -550,7 +550,7 @@ mywant guiex commands</pre></div>
 いつも使う Web サイトを取り込むと、そのサイトが <strong>Want の種類</strong>になります。検索欄やボタンなど使いたい部品を覚えさせておけば、MyWant からそのサイトを開いて操作できます。たとえば、いま読んでいるこのガイドのページも Web Want にできます（下の写真）。</p>
 ${shot('web-wants-grid.jpg', 'Menu の Web Wants。ここでは、このガイドのページ自体を取り込んでいます（mywant-gui Guide）')}
 <h4>ブラウザ拡張から作る</h4>
-<p>いちばん手軽なのは、ブラウザ拡張 <strong>MyWant Web Inspector</strong> から作る方法です。ふだん見ているページの上で、そのまま部品を選べます。</p>
+<p>いちばん手軽なのは、ブラウザ拡張 <strong>MyWant</strong> から作る方法です。ふだん見ているページの上で、そのまま部品を選べます。</p>
 <ol class="steps">
   <li><strong>拡張を入れる</strong><br />手順は Menu の <strong>Extension</strong> ページにあります。Chrome なら、配布されている zip を展開し、<code>chrome://extensions</code> でデベロッパーモードをオンにして、「パッケージ化されていない拡張機能を読み込む」から <code>chrome-extension</code> フォルダを選びます。Firefox 版もあります。</li>
   <li><strong>取り込みたいサイトを開き、ツールバーの MyWant のアイコンを押す</strong><br />ページの上に自分のキャラクターとサイドバーが現れます。</li>
