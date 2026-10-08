@@ -29,6 +29,8 @@ import { BatchActionBar } from '@/components/dashboard/BatchActionBar';
 import { ThingRecord } from '@/types/thing';
 import { Constellation } from '@/types/constellation';
 import { useDashboardNav } from '@/hooks/useDashboardNav';
+import { useInputActions } from '@/hooks/useInputActions';
+import { useListOrderStore } from '@/stores/listOrderStore';
 import { useGridCols } from '@/hooks/useGridCols';
 
 export const ThingPage: React.FC = () => {
@@ -166,16 +168,24 @@ export const ThingPage: React.FC = () => {
     setSelectMode(false);
   }, [selectedIds, createConstellation]);
 
+  // The order card leads the grid: place 0 is the card, a thing's place is its
+  // index + 1, so up and down land in the column they look like they should.
+  const [orderFocused, setOrderFocused] = useState(false);
+  const toggleOrder = useListOrderStore((s) => s.toggle);
+  useEffect(() => { if (selectedId) setOrderFocused(false); }, [selectedId]);
   useDashboardNav({
-    itemCount: filtered.length,
-    currentIndex,
+    itemCount: filtered.length + 1,
+    currentIndex: currentIndex >= 0 ? currentIndex + 1 : orderFocused ? 0 : -1,
     onNavigate: (index) => {
-      if (filtered[index]) setSelectedId(filtered[index].id);
+      if (index === 0) { setSelectedId(null); setOrderFocused(true); return; }
+      setOrderFocused(false);
+      if (filtered[index - 1]) setSelectedId(filtered[index - 1].id);
     },
     onClose: selected ? () => setSelectedId(null) : undefined,
     enabled: !selectMode && filtered.length > 0,
     cols,
   });
+  useInputActions({ enabled: orderFocused && !selectMode, onConfirm: () => toggleOrder('thing') });
 
   useAppHeader({
     // Add Thing mirrors the dashboard's Add Want: the header button opens a form
@@ -376,6 +386,7 @@ export const ThingPage: React.FC = () => {
               onEditConstellation={handleEditConstellation}
               onGetFiltered={handleGetFiltered}
               gridRef={gridRef}
+              orderFocused={orderFocused}
             />
           )}
         </div>

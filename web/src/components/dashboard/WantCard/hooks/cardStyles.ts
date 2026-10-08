@@ -65,6 +65,22 @@ export const CARD_SHELL_BASE =
   'rounded-lg shadow-sm border overflow-hidden';
 
 /**
+ * 一覧のグリッドに置く want カードの高さ（表示設定 card_height ごと）。
+ * 一覧の先頭の並び順カード（ListOrderCard）も同じ高さで並ぶ。
+ */
+export const GRID_CARD_HEIGHT = {
+  sm: 'h-[6rem] sm:h-[10rem]',
+  md: 'h-[9rem] sm:h-[15rem]',
+  lg: 'h-[18rem] sm:h-[30rem]',
+} as const;
+
+/**
+ * EntityCard（thing・world・device などのカード）の高さ。表示設定に従わず
+ * 固定で、thing 一覧の並び順カードもこれに揃える。
+ */
+export const ENTITY_CARD_HEIGHT = 'min-h-[6rem] sm:min-h-[10rem]';
+
+/**
  * card_opacity レイヤの中に敷く、カード自身の地の色。
  * 背景グラデーションや画像を持たないカード（world / device / character 等）は
  * これだけが面になる。

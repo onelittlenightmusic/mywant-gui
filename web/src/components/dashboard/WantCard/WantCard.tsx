@@ -47,7 +47,7 @@ import { useTouchReorder } from './hooks/useTouchReorder';
 import { useCardOverlay } from './hooks/useCardOverlay';
 import { useInnerFocusRing } from './hooks/useInnerFocusRing';
 import { dropLabelOnWant } from './hooks/labelDrop';
-import { CARD_BORDER_BASE, CARD_FOCUS_BASE, CARD_SHELL_BASE, CARD_SURFACE_BASE, CARD_FOCUS_RING, CARD_HOVER_RING, hoverRingVars } from './hooks/cardStyles';
+import { CARD_BORDER_BASE, CARD_FOCUS_BASE, CARD_SHELL_BASE, CARD_SURFACE_BASE, CARD_FOCUS_RING, CARD_HOVER_RING, GRID_CARD_HEIGHT, hoverRingVars } from './hooks/cardStyles';
 import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { WantCardLayout } from './WantCardLayout';
 import { RecipeSlideDeck, type RecipeSlideDeckHandle } from './parts/RecipeSlideDeck';
@@ -983,11 +983,7 @@ export const WantCard: React.FC<WantCardProps> = ({
     if (!isBeingProcessed) dropLabelOnWant(tWantId, e, onLabelDropped);
   };
 
-  const gridCardHeight = {
-    sm: 'h-[6rem] sm:h-[10rem]',
-    md: 'h-[9rem] sm:h-[15rem]',
-    lg: 'h-[18rem] sm:h-[30rem]',
-  }[useDisplaySettings().card_height];
+  const gridCardHeight = GRID_CARD_HEIGHT[useDisplaySettings().card_height];
   // The card height setting is the grid's. The copy embedded in the detail
   // panel sits in a block of fixed height and fills it: taller, it ran down
   // over the field cards under it.

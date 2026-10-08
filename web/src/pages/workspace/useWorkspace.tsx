@@ -287,6 +287,8 @@ export function useWorkspace({ board }: { board: BoardLink }) {
   // immediately on page load before the first filter callback fires.
   const flattenedWants = (filteredWants.length > 0 ? filteredWants : wants).flatMap((pw: any) => [pw, ...(pw.children || [])]);
   const hierarchicalWants: Array<{ id: string; parentId?: string }> = [
+    // The order card, the grid's first item (ListOrderCard).
+    { id: '__list-order__' },
     ...flattenedWants.map(w => ({ id: w.metadata?.id || w.id || '', parentId: w.metadata?.ownerReferences?.[0]?.id })),
     { id: '__add-want__' },
     { id: '__open-archive__' },

@@ -1,3 +1,7 @@
+import { CardCursorMan } from './CardCursorMan';
+import { ListOrderCard } from '@/components/common/ListOrderCard';
+import { ENTITY_CARD_HEIGHT } from './WantCard/hooks/cardStyles';
+import { useListOrderStore } from '@/stores/listOrderStore';
 import { classNames } from '@/utils/helpers';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Type, X, Folder } from 'lucide-react';
@@ -13,6 +17,15 @@ import { useCharacterStore, getDefaultCursorColor } from '@/stores/characterStor
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { resolveLucideIcon } from '@/utils/subtypeIcons';
 import { useGridMotion } from '@/hooks/useGridMotion';
+
+/**
+ * When a thing last changed: the later of when a want last named it and when
+ * it was added. 0 when neither is known — those fall back to the order things
+ * were added in.
+ */
+function thingUpdatedAt(r: ThingRecord): number {
+  return Math.max(Date.parse(r.lastUsed) || 0, Date.parse(r.createdAt ?? '') || 0);
+}
 
 interface MemoGridProps {
   records: ThingRecord[];
@@ -30,6 +43,8 @@ interface MemoGridProps {
   /** Reports the filtered list upward so the page can navigate it. */
   onGetFiltered?: (records: ThingRecord[]) => void;
   gridRef?: React.RefObject<HTMLDivElement | null>;
+  /** The order card, the grid's first item, stood on by the keyboard. */
+  orderFocused?: boolean;
 }
 
 const GRID_CLASS = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 items-start';
@@ -47,6 +62,7 @@ export const ThingGrid: React.FC<MemoGridProps> = ({
   onEditConstellation,
   onGetFiltered,
   gridRef,
+  orderFocused = false,
 }) => {
 
   const manualOrder = useThingStore((s) => s.manualOrder);
@@ -67,7 +83,17 @@ export const ThingGrid: React.FC<MemoGridProps> = ({
   // One flat list in the saved manual order. Search, type filter, sort mode and
   // grouping were removed with the control row; drag reorder is what shapes
   // this list now.
-  const filtered = useMemo(() => applyManualOrder(records, manualOrder), [records, manualOrder]);
+  // お気に入り (the user's order) or 最近 (the thing updated last first) —
+  // the order card's.
+  const listOrder = useListOrderStore((s) => s.order.thing);
+  const filtered = useMemo(() => {
+    const manual = applyManualOrder(records, manualOrder);
+    if (listOrder !== 'recent') return manual;
+    return manual
+      .map((r, i) => ({ r, i, at: thingUpdatedAt(r) }))
+      .sort((a, b) => (b.at - a.at) || ((b.r.addedOrder ?? -1) - (a.r.addedOrder ?? -1)) || (a.i - b.i))
+      .map(({ r }) => r);
+  }, [records, manualOrder, listOrder]);
 
   // Report the display order for keyboard navigation (flatten sections in group mode).
   useEffect(() => {
@@ -77,7 +103,8 @@ export const ThingGrid: React.FC<MemoGridProps> = ({
   // Drag/keyboard reorder is only meaningful in the pure manual view: the
   // "Default" sort with no grouping. Other views reorder temporarily but must
   // never overwrite the saved manual order, and select mode owns clicks.
-  const reorderEnabled = !selectMode;
+  // Only in お気に入り, too: a move is a change to that order.
+  const reorderEnabled = !selectMode && listOrder === 'favorite';
 
   const reorder = useReorderableGroup<ThingRecord>({
     items: filtered,
@@ -176,6 +203,9 @@ export const ThingGrid: React.FC<MemoGridProps> = ({
               </div>
             </div>
           )}
+          <ListOrderCard list="thing" focused={orderFocused} sizeClass={ENTITY_CARD_HEIGHT}>
+            <CardCursorMan visible={orderFocused} />
+          </ListOrderCard>
           {filtered.map((r, index) => renderCard(r, index))}
         </div>
       )}

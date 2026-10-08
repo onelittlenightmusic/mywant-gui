@@ -159,6 +159,8 @@ export const useThingStore = create<ThingStore>()(
           background: t.background,
           count: t.stats?.count ?? 0,
           lastUsed: t.stats?.lastUsed ?? '',
+          addedOrder: t.addedOrder,
+          createdAt: t.createdAt,
           topWantTypes: t.stats?.topWantTypes ?? [],
           labels: t.labels,
         }));

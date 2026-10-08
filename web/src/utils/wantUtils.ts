@@ -39,6 +39,31 @@ export function listedWants<T extends Want>(wants: T[], orderOverride: string[] 
 }
 
 /**
+ * When a want last changed: the newest of its fields' update times (the
+ * server's state_timestamps) — a restart, a fetch, an answer all bring it up —
+ * else when it was made (mywant.io/created-at). 0 when neither is known.
+ */
+export function wantUpdatedAt(want: Want): number {
+  let latest = Date.parse(want.metadata?.labels?.['mywant.io/created-at'] ?? '') || 0;
+  for (const at of Object.values(want.state_timestamps ?? {})) {
+    const t = Date.parse(at);
+    if (t > latest) latest = t;
+  }
+  return latest;
+}
+
+/**
+ * A list in the 最近 order (ListOrderCard): the want updated last first. Ties,
+ * and wants with no time known, keep the order they came in — the user's own.
+ */
+export function newestWantsFirst<T extends Want>(wants: T[]): T[] {
+  return wants
+    .map((w, i) => ({ w, i, at: wantUpdatedAt(w) }))
+    .sort((a, b) => (b.at - a.at) || (a.i - b.i))
+    .map(({ w }) => w);
+}
+
+/**
  * Update want parameters: only the ones that changed go to the server (PATCH),
  * a removed one as null — not the whole want rebuilt from this copy, whose
  * labels the canvas may have moved on from since it was read.

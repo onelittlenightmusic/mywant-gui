@@ -1,3 +1,4 @@
+import { useListOrderStore } from '@/stores/listOrderStore';
 import { useCallback, useEffect, useRef } from 'react';
 import { Want } from '@/types/want';
 import { useReorderableGroup } from '@/components/reorderable/useReorderableGroup';
@@ -33,6 +34,7 @@ export interface ListReorderApi {
 
 export function useListReorder(api: ListReorderApi) {
   const { canvasMode, filteredWants, selectedWant, containerRef, onCommit } = api;
+  const listOrder = useListOrderStore(s => s.order.want);
 
   const apiRef = useRef(api);
   apiRef.current = api;
@@ -51,7 +53,8 @@ export function useListReorder(api: ListReorderApi) {
     getId: getWantId,
     containerRef,
     selectedId: canvasMode ? null : selectedWantIdForReorder,
-    enabled: !canvasMode && !!selectedWant,
+    // Only in お気に入り: a move is a change to that order, and 最近 is not it.
+    enabled: !canvasMode && !!selectedWant && listOrder === 'favorite',
     onCommit,
   });
 

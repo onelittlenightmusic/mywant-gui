@@ -28,6 +28,14 @@ export interface ThingRecord {
   count: number;
   /** RFC3339 timestamp of the most recent use, or '' if none. */
   lastUsed: string;
+  /**
+   * Its place among all things in the order they were added (0 the first).
+   * Every thing has one, including those added before the server kept when —
+   * the list's 最近 order falls back to it (see thingUpdatedAt).
+   */
+  addedOrder?: number;
+  /** When it was added, RFC 3339 — absent for things added before it was kept. */
+  createdAt?: string;
   /** The want types this value is most used with, count desc (up to 3). */
   topWantTypes: WantTypeCount[];
   /**
@@ -87,6 +95,10 @@ export interface ThingFull {
   /** Every character's name for this value, not just the current user's. */
   definitions?: ThingDefinition[];
   stats?: MemoStat;
+  /** Its place in the order things were added (see ThingRecord.addedOrder). */
+  addedOrder?: number;
+  /** When it was added, RFC 3339 — absent for things added before it was kept. */
+  createdAt?: string;
   /** The live wants naming this value right now. */
   wantIDs?: string[];
   /**

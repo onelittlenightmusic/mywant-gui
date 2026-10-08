@@ -11,7 +11,11 @@ import { WantChildrenBubble } from './WantChildrenBubble';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { CountBadge } from '@/components/common/CountBadge';
 import { computeGridColumns, GRID_COLUMN_WIDTH } from '@/utils/gridUtils';
-import { isWantArchived, listedWants } from '@/utils/wantUtils';
+import { isWantArchived, listedWants, newestWantsFirst } from '@/utils/wantUtils';
+import { ListOrderCard } from '@/components/common/ListOrderCard';
+import { useDisplaySettings } from '@/hooks/useDisplaySettings';
+import { GRID_CARD_HEIGHT } from './WantCard/hooks/cardStyles';
+import { useListOrderStore } from '@/stores/listOrderStore';
 import type { ReorderPosition } from '@/components/reorderable/useReorderableGroup';
 import { useGridMotion } from '@/hooks/useGridMotion';
 import { useWantStore } from '@/stores/wantStore';
@@ -208,10 +212,14 @@ export const WantGrid: React.FC<WantGridProps> = ({
    */
   const orderOverride = useWantStore(s => s.orderOverride);
 
-  const filteredWants = useMemo(
-    () => listedWants(hierarchicalWants, orderOverride),
-    [hierarchicalWants, orderOverride],
-  );
+  // お気に入り (the user's order) or 最近 (newest first) — the order card's.
+  const listOrder = useListOrderStore(s => s.order.want);
+  // The order card stands as tall as the want cards around it.
+  const cardHeight = useDisplaySettings().card_height;
+  const filteredWants = useMemo(() => {
+    const listed = listedWants(hierarchicalWants, orderOverride);
+    return listOrder === 'recent' ? newestWantsFirst(listed) : listed;
+  }, [hierarchicalWants, orderOverride, listOrder]);
 
   const filteredArchivedWants = useMemo(
     () => hierarchicalWants.filter(isWantArchived),
@@ -253,7 +261,8 @@ export const WantGrid: React.FC<WantGridProps> = ({
   }, [bubbleParentWant, allWants]);
 
   // bubbleRowEndIndex: the index of the last grid item in the same row as the parent.
-  // Grid items are ordered: filteredWants (0..N-1), drafts (N..N+D-1), Add Want button (N+D).
+  // Grid items are ordered: the order card, then filteredWants (0..N-1), drafts
+  // (N..N+D-1), Add Want button (N+D) — indices count from the first want.
   // The column count is read back out of the real CSS layout rather than trusted
   // from state, so `repeat(auto-fill, ...)` is resolved exactly as rendered.
   const [bubbleRowEndIndex, setBubbleRowEndIndex] = useState(-1);
@@ -274,10 +283,12 @@ export const WantGrid: React.FC<WantGridProps> = ({
     if (bubbleParentIndex < 0 || !gridRef.current) return;
     const tracks = window.getComputedStyle(gridRef.current).gridTemplateColumns;
     const actualCols = Math.max(1, tracks.split(' ').filter(Boolean).length);
-    // Total grid items = filteredWants + drafts + 1 (Add Want button); max index = total - 1
+    // Total grid items = filteredWants + drafts + 1 (Add Want button); max index = total - 1.
+    // The order card leads the grid, so a want's place in it is its index + 1:
+    // the row is found by place, and its end said back as an index.
     const maxIndex = filteredWants.length + drafts.length;
     const rowEnd = Math.min(
-      Math.floor(bubbleParentIndex / actualCols) * actualCols + actualCols - 1,
+      Math.floor((bubbleParentIndex + 1) / actualCols) * actualCols + actualCols - 1 - 1,
       maxIndex
     );
     setBubbleRowEndIndex(prev => (prev === rowEnd ? prev : rowEnd));
@@ -371,6 +382,9 @@ export const WantGrid: React.FC<WantGridProps> = ({
           </div>
         </div>
       )}
+      <ListOrderCard list="want" focused={focusedSlotId === '__list-order__'} sizeClass={GRID_CARD_HEIGHT[cardHeight]}>
+        <CardCursorMan visible={focusedSlotId === '__list-order__'} />
+      </ListOrderCard>
       {(() => {
         return filteredWants.map((want, index) => {
           const wantId = want.metadata?.id || want.id;
@@ -421,7 +435,7 @@ const isSelected = isSelectMode ? (wantId && selectedWantIds.has(wantId)) : sele
                   onWantDropped={onWantDropped}
                   onDraftClick={onDraftClick}
                   onDraftDelete={onDraftDelete}
-                  parentIndex={bubbleParentIndex}
+                  parentIndex={bubbleParentIndex + 1}
                   gridColumns={gridColumns}
                   caretCenterX={bubbleCaretCenterX ?? undefined}
                   />
@@ -465,7 +479,7 @@ const isSelected = isSelectMode ? (wantId && selectedWantIds.has(wantId)) : sele
                 onWantDropped={onWantDropped}
                 onDraftClick={onDraftClick}
                 onDraftDelete={onDraftDelete}
-                parentIndex={bubbleParentIndex}
+                parentIndex={bubbleParentIndex + 1}
                 gridColumns={gridColumns}
                 caretCenterX={bubbleCaretCenterX ?? undefined}
               />
@@ -530,7 +544,7 @@ const isSelected = isSelectMode ? (wantId && selectedWantIds.has(wantId)) : sele
             onWantDropped={onWantDropped}
             onDraftClick={onDraftClick}
             onDraftDelete={onDraftDelete}
-            parentIndex={bubbleParentIndex}
+            parentIndex={bubbleParentIndex + 1}
             gridColumns={gridColumns}
             caretCenterX={bubbleCaretCenterX ?? undefined}
           />

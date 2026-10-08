@@ -44,6 +44,7 @@ import {
   CARD_SHELL_BASE,
   CARD_SURFACE_BASE,
   CARD_HOVER_RING,
+  ENTITY_CARD_HEIGHT,
   hoverRingVars,
   focusGlowVars,
 } from '@/components/dashboard/WantCard/hooks/cardStyles';
@@ -407,7 +408,8 @@ export const EntityCard: React.FC<EntityCardProps> = ({
     CARD_SHELL_BASE,
     CARD_HOVER_RING,
     'group hover:shadow-md dark:hover:shadow-blue-900/20 transition-all duration-300',
-    'cursor-pointer select-none h-full flex flex-col min-h-[6rem] sm:min-h-[10rem]',
+    'cursor-pointer select-none h-full flex flex-col',
+    ENTITY_CARD_HEIGHT,
     CARD_FOCUS_BASE,
     // A keepFocus card is the pinned subject of a sidebar, not one cell in a
     // grid — `selected` here means "this is what the panel is about", not

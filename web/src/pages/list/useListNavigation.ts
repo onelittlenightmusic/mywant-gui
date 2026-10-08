@@ -1,3 +1,4 @@
+import { useListOrderStore } from '@/stores/listOrderStore';
 import { useMemo } from 'react';
 import { Want } from '@/types/want';
 import { useHierarchicalKeyboardNavigation } from '@/hooks/useHierarchicalKeyboardNavigation';
@@ -60,8 +61,12 @@ export function useListNavigation(api: ListNavigationApi) {
   const bubbleParentNavIndex = useMemo(() => {
     if (expandedChain.length === 0 || filteredWants.length === 0) return -1;
     const parentId = expandedChain[0]?.metadata?.id || expandedChain[0]?.id;
-    return filteredWants.findIndex(w => (w.metadata?.id || w.id) === parentId);
+    const i = filteredWants.findIndex(w => (w.metadata?.id || w.id) === parentId);
+    // Its place in the grid, which the order card leads.
+    return i < 0 ? -1 : i + 1;
   }, [expandedChain, filteredWants]);
+  const toggleOrder = useListOrderStore(s => s.toggle);
+  const isSlot = (id: string | null) => id === '__add-want__' || id === '__open-archive__' || id === '__list-order__';
 
   useHierarchicalKeyboardNavigation({
     items: hierarchicalWants,
@@ -72,7 +77,7 @@ export function useListNavigation(api: ListNavigationApi) {
       // branches diverge into three different handlers, which is exactly how
       // two of them ended up silent and the third played the opening whoosh.
       playSound('gridMove');
-      if (item.id === '__add-want__' || item.id === '__open-archive__') {
+      if (isSlot(item.id)) {
         setFocusedSlotId(item.id);
         sidebar.clearSelection();
         return;
@@ -94,6 +99,7 @@ export function useListNavigation(api: ListNavigationApi) {
     onSelect: (itemId: string) => {
       if (itemId === '__add-want__') { onCreateWant(); return; }
       if (itemId === '__open-archive__') { setArchiveOpen(v => !v); return; }
+      if (itemId === '__list-order__') { toggleOrder('want'); return; }
       if (isSelectMode) { onSelectWant(itemId); return; }
       const hasChildren = hierarchicalWants.some(i => i.parentId === itemId);
       if (hasChildren) onToggleExpand(itemId);
@@ -107,12 +113,13 @@ export function useListNavigation(api: ListNavigationApi) {
     sectionBreaks: archiveOpen ? ['__open-archive__'] : undefined,
   });
 
-  // Enter/A triggers actions on virtual navigation slots (Add Want, Open Archive).
+  // Enter/A triggers actions on virtual navigation slots (the order card, Add Want, Open Archive).
   useInputActions({
-    enabled: !canvasMode && (focusedSlotId === '__add-want__' || focusedSlotId === '__open-archive__'),
+    enabled: !canvasMode && isSlot(focusedSlotId),
     onConfirm: () => {
       if (focusedSlotId === '__add-want__') { onCreateWant(); return; }
       if (focusedSlotId === '__open-archive__') { setArchiveOpen(v => !v); return; }
+      if (focusedSlotId === '__list-order__') { toggleOrder('want'); return; }
     },
   });
 }
