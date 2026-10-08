@@ -111,47 +111,11 @@ const resolveLucideIcon = (name: string): LucideIcon | null => {
  * in YAML therefore survives; a second, unrelated stop does not, because that is
  * the thing that cannot be a solid.
  */
-const FACE_TOP_HI = 1.06;
-const FACE_TOP_LO = 0.88;
-const FACE_RIGHT  = 0.66;
-const FACE_FRONT  = 0.41;
-// On a LIGHT board the shadowed faces catch bounce light off the bright ground,
-// so they sit far closer to the top face. At the dark-theme ratios above they
-// came out as dark slabs stuck to a white page — the block looked like it was
-// wearing pasted-on skirts rather than being one shaded solid. Still ordered
-// top > right > front, just a compressed ladder.
-const FACE_RIGHT_LIGHT = 0.85;
-const FACE_FRONT_LIGHT  = 0.72;
-
-/**
- * `hex`, scaled toward black (k < 1) or toward white (k > 1).
- * Returns the input untouched if it isn't a 6-digit hex.
- */
-export const shade = (hex: string, k: number): string => {
-  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex);
-  if (!m) return hex;
-  const n = parseInt(m[1], 16);
-  const ch = (v: number) => {
-    const out = k <= 1 ? v * k : v + (255 - v) * (k - 1);
-    return Math.round(Math.min(255, Math.max(0, out))).toString(16).padStart(2, '0');
-  };
-  return `#${ch((n >> 16) & 255)}${ch((n >> 8) & 255)}${ch(n & 255)}`;
-};
-
-/** The lit top face of a block in `base`. 160deg = light from the upper left,
- *  the same direction CubicWalls projects its depth and a thing's sphere puts
- *  its highlight. */
-export const bodyTopFace = (base: string): string =>
-  `linear-gradient(160deg, ${shade(base, FACE_TOP_HI)} 0%, ${shade(base, FACE_TOP_LO)} 100%)`;
-
-/** The right face — turned away from the light. `isLight` is the board's mode:
- *  a compressed ladder on a light board (see FACE_RIGHT_LIGHT). */
-export const bodyRightFace = (base: string, isLight = false): string =>
-  shade(base, isLight ? FACE_RIGHT_LIGHT : FACE_RIGHT);
-
-/** The front/bottom face — turned furthest from it. */
-export const bodyFrontFace = (base: string, isLight = false): string =>
-  shade(base, isLight ? FACE_FRONT_LIGHT : FACE_FRONT);
+// The ladder itself — shade, the three faces and their ratios — lives in
+// shared/cubicBlock, framework-free, so a block drawn off the board (the
+// browser extension's way back to MyWant) is shaded by the same rule.
+import { shade, bodyTopFace, bodyRightFace, bodyFrontFace } from '@/shared/cubicBlock';
+export { shade, bodyTopFace, bodyRightFace, bodyFrontFace };
 
 // ── Pattern accent hex colors (shared) ───────────────────────────────────────
 export const PATTERN_COLOR: Record<string, string> = {
