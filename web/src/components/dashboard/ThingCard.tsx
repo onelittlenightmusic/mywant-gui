@@ -2,7 +2,9 @@ import React from 'react';
 import { hasExtensionRoute } from '@/extensions/registry';
 import { useNavigate } from 'react-router-dom';
 import { useIconFont } from '@/hooks/useDisplaySettings';
-import { Type, Trash2, Heart, Plus, Check, Folder, Pin, PinOff, Pencil, Navigation, Archive, ArchiveRestore } from 'lucide-react';
+import { Type, Trash2, Heart, Plus, Check, Folder, Pin, PinOff, Pencil, Navigation, Archive, ArchiveRestore, Copy } from 'lucide-react';
+import { copyText } from '@/utils/clipboard';
+import { notify } from '@/stores/noticeStore';
 import { ThingRecord } from '@/types/thing';
 import { classNames } from '@/utils/helpers';
 import { EntityCard, EntityCardAction } from '@/components/common/EntityCard';
@@ -131,6 +133,19 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
       onClick: () => onAddWant(record),
       tone: 'primary' as const,
     }] : []),
+    {
+      // What the thing is, to paste elsewhere: its value — the link itself for
+      // a url or a photo shared from Google Photos, the words for anything
+      // else. copyText, not navigator.clipboard: a phone on the LAN's plain
+      // http has no clipboard API, and this has to work there too.
+      icon: <Copy className="w-5 h-5 text-white" />,
+      label: 'Copy',
+      title: `Copy "${record.value}"`,
+      onClick: () => {
+        void copyText(record.value).then(ok => notify(ok ? `コピーしました：${record.value}` : 'コピーできませんでした'));
+      },
+      tone: 'info' as const,
+    },
     {
       icon: <Pencil className="w-5 h-5 text-white" />,
       label: 'Edit',
