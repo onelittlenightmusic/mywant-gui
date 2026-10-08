@@ -1,3 +1,4 @@
+import { thingBackgroundSrc } from '@/utils/thingBackground';
 import { create } from 'zustand';
 import { openConnectionMenu } from '@/stores/connectionMenu';
 import { subscribeWithSelector } from 'zustand/middleware';
@@ -8,6 +9,10 @@ import type { ThingUsage } from '@/types/thing';
 import type { DataTypeInfo } from '@/hooks/useDataTypes';
 import { useThingPlacementStore } from './thingPlacementStore';
 import { useConstellationStore } from './constellationStore';
+
+/** The picture this thing carries of its own — see ThingTile.picture. */
+const ownPicture = (background: string | undefined, labels: Record<string, string>) =>
+  background?.startsWith('@') ? thingBackgroundSrc(background, labels) : undefined;
 
 /** Canvas coordinates for a thing ride on the value's own labels. */
 export const THING_CANVAS_LABEL_X = 'mywant.io/canvas-x';
@@ -50,6 +55,13 @@ export interface ThingTile {
   y?: number;
   /** Put away — only ever true on an entry of `archivedTiles`. */
   archived?: boolean;
+  /**
+   * The thing's own picture, where its subtype keeps one on the thing (a
+   * "@label" background): a shared photo, a page's screenshot, an album's
+   * cover. A kind's shared file (a station's) is not a ball's: every station
+   * would wear the same one.
+   */
+  picture?: string;
 }
 
 interface ThingTileStore {
@@ -348,6 +360,7 @@ export const useThingTileStore = create<ThingTileStore>()(
             archivedTiles.push({
               id: t.id, value: t.value, subtype: t.subtype, icon: t.icon, color: t.color,
               wantIDs: t.wantIDs ?? [], listWantIDs: t.listWantIDs ?? [], x, y, archived: true,
+              picture: ownPicture(t.background, labels),
             });
             continue;
           }
@@ -368,6 +381,7 @@ export const useThingTileStore = create<ThingTileStore>()(
             listWantIDs: t.listWantIDs ?? [],
             x,
             y,
+            picture: ownPicture(t.background, labels),
           });
         }
         set({

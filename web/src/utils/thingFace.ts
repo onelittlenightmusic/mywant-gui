@@ -94,7 +94,7 @@ export function thingNameShadow(color: string, isLight: boolean): string {
  * The opaque base is there because the board's backdrop is not the tile's to
  * control: the same translucent colour reads differently over every image.
  */
-export function sphereBackground(color: string, isLight: boolean): string {
+export function sphereBackground(color: string, isLight: boolean, picture?: string): string {
   const base = isLight ? '#ffffff' : '#0f172a';
   return [
     // Front to back: highlight, rim, the thing's colour, an opaque base.
@@ -108,6 +108,10 @@ export function sphereBackground(color: string, isLight: boolean): string {
     // whole cell beside the want blocks, and at that size a shallow rim read as
     // a flat disc. A solid needs its shading to be visible, not merely present.
     `radial-gradient(circle at 44% 40%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.36) 100%)`,
+    // A thing with a picture of its own (a shared photo, a cover) wears it
+    // as its surface, under the same highlight and rim: still a ball, lit
+    // from the same place. The colour stays beneath for while it loads.
+    ...(picture ? [`url(${JSON.stringify(picture)}) center / cover no-repeat`] : []),
     `linear-gradient(${thingFaceBackground(color, isLight)}, ${thingFaceBackground(color, isLight)})`,
     `linear-gradient(${base}, ${base})`,
   ].join(', ');
