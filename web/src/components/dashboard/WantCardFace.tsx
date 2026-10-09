@@ -74,11 +74,12 @@ export function boardLiftFilter(depth = 1, isLight = false): string {
 
 /** The same lift as a `box-shadow`, for the things that aren't clipped and so
  *  don't need to pay for a filter. */
-export function boardLiftShadow(depth = 1): string {
+export function boardLiftShadow(depth = 1, isLight = false): string {
   const y = +(4 * depth).toFixed(1);
   const x = +(y * BOARD_LIGHT_RATIO).toFixed(1);
   const blur = +(8 * depth).toFixed(1);
-  return `${x}px ${y}px ${blur}px rgba(0,0,0,0.38)`;
+  // As dark as boardLiftFilter lands on each board.
+  return `${x}px ${y}px ${blur}px rgba(0,0,0,${isLight ? 0.16 : 0.38})`;
 }
 
 /**

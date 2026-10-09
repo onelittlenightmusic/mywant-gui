@@ -1065,7 +1065,11 @@ export const WantCard: React.FC<WantCardProps> = ({
         ref={(node) => { cardRef.current = node; touchReorder.ref.current = node; }}
         data-free-cursor-item
         data-want-card-index={index}
-        draggable={!isSelectMode && !isBeingProcessed && !sliderActive}
+        // Not in an app: HTML5 drag never fires on a phone (the touch reorder
+        // moves the card there), and a draggable element is what WKWebView
+        // lifts into its own drag on a long hold — taking the touch away from
+        // the long press that opens the card's actions.
+        draggable={!nativeHost && !isSelectMode && !isBeingProcessed && !sliderActive}
         onDragStart={handleDragStart}
         // A mouse drag ends with no mouseup on the card: the hold is let go here.
         onDragEnd={() => { longPress.cancel(); onReorderDragEnd?.(); }}
@@ -1087,6 +1091,7 @@ export const WantCard: React.FC<WantCardProps> = ({
         onTouchStart={longPress.onTouchStart}
         onTouchMove={longPress.onTouchMove}
         onTouchEnd={longPress.onTouchEnd}
+        onTouchCancel={longPress.onTouchCancel}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}

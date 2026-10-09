@@ -1,4 +1,5 @@
 import { thingBackgroundSrc } from '@/utils/thingBackground';
+import { CANVAS_LABEL_SIZE, tileSizeOf, type TileSize } from '@/utils/canvasSize';
 import { create } from 'zustand';
 import { openConnectionMenu } from '@/stores/connectionMenu';
 import { subscribeWithSelector } from 'zustand/middleware';
@@ -56,6 +57,12 @@ export interface ThingTile {
   /** Put away — only ever true on an entry of `archivedTiles`. */
   archived?: boolean;
   /**
+   * How big it is on the board: a whole cell, a half or a quarter
+   * (utils/canvasSize). `x` / `y` are then its slot's corner, a multiple of
+   * its size; where it counts as standing is its centre's cell (thingCellPos).
+   */
+  size?: TileSize;
+  /**
    * The thing's own picture, where its subtype keeps one on the thing (a
    * "@label" background): a shared photo, a page's screenshot, an album's
    * cover. A kind's shared file (a station's) is not a ball's: every station
@@ -91,6 +98,11 @@ interface ThingTileStore {
   ensureTiles: () => void;
   /** Persist a dragged position onto the thing's labels. */
   setPosition: (id: string, x: number, y: number) => Promise<void>;
+  /**
+   * Make a thing a whole cell, a half or a quarter. It keeps its centre —
+   * on the nearest dot, or made whole, the cell its centre is in.
+   */
+  setSize: (id: string, size: TileSize) => Promise<void>;
   /**
    * Move tiles to where the server says they now are — one tick of thing
    * motion, applied to the board.
@@ -175,6 +187,32 @@ function numberLabel(labels: Record<string, string> | undefined, key: string): n
   if (raw === undefined) return undefined;
   const n = Number(raw);
   return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * Where a thing counts as standing — the cell its centre is in, in the board's
+ * grid units — from its corner and size. A whole thing's is its corner; a
+ * half in a cell's right half is still that cell (0.5 + 0.25 - 0.5 = 0.25,
+ * which rounds to 0), so "what is underfoot", stacks, roads and constellations
+ * read a small thing as the cell it is in.
+ */
+export function thingCellPos(t: { x: number; y: number; size?: number }): { x: number; y: number } {
+  const off = (t.size ?? 1) / 2 - 0.5;
+  return { x: t.x + off, y: t.y + off };
+}
+
+/**
+ * thingCellPos turned back: the corner of a thing centred at (cx, cy).
+ *
+ * A half or a quarter is centred on a dot of the ground's finest grid — a
+ * quarter of a cell — not held to its own size's slots: carried, it goes to
+ * any dot the board draws, as the character can stand on any (the GUI's
+ * moveStepAt). Four places in a cell for a half used to be all there were.
+ */
+export function thingCornerOf(cx: number, cy: number, size: number): { x: number; y: number } {
+  if (size >= 1) return { x: cx, y: cy };
+  const dot = (v: number) => Math.round(v * 4) / 4;
+  return { x: dot(cx) + 0.5 - size / 2, y: dot(cy) + 0.5 - size / 2 };
 }
 
 /** The pin as three states: on, off, or never answered. */
@@ -361,6 +399,7 @@ export const useThingTileStore = create<ThingTileStore>()(
               id: t.id, value: t.value, subtype: t.subtype, icon: t.icon, color: t.color,
               wantIDs: t.wantIDs ?? [], listWantIDs: t.listWantIDs ?? [], x, y, archived: true,
               picture: ownPicture(t.background, labels),
+              size: tileSizeOf(labels),
             });
             continue;
           }
@@ -382,6 +421,7 @@ export const useThingTileStore = create<ThingTileStore>()(
             x,
             y,
             picture: ownPicture(t.background, labels),
+            size: tileSizeOf(labels),
           });
         }
         set({
@@ -394,10 +434,14 @@ export const useThingTileStore = create<ThingTileStore>()(
       }
     },
 
-    setPosition: async (id, x, y) => {
+    setPosition: async (id, cx, cy) => {
       const prev = get().tiles;
       // Where it was, so a move that goes nowhere can be told from a move.
       const before = prev.find(t => t.id === id);
+      // Told where it stands on the board — its centre's cell, as the board
+      // reads every thing — and written as its slot's corner, on its size's
+      // grid. A whole thing's are the same number.
+      const { x, y } = thingCornerOf(cx, cy, before?.size ?? 1);
       const moved = before?.x !== x || before?.y !== y;
       set({ tiles: prev.map(t => (t.id === id ? { ...t, x, y } : t)) });
       try {
@@ -419,12 +463,34 @@ export const useThingTileStore = create<ThingTileStore>()(
       if (moved) await joinWhoeverItLandedBeside(id, x, y);
     },
 
+    setSize: async (id, size) => {
+      const prev = get().tiles;
+      const t = prev.find(x => x.id === id);
+      // Kept centred where it was — on the nearest dot (thingCornerOf), or,
+      // made whole, in the cell its centre is in.
+      const c = t?.x !== undefined && t?.y !== undefined ? thingCellPos({ x: t.x, y: t.y, size: t.size }) : undefined;
+      const corner = c && (size >= 1 ? { x: Math.round(c.x), y: Math.round(c.y) } : thingCornerOf(c.x, c.y, size));
+      const x = corner?.x;
+      const y = corner?.y;
+      set({ tiles: prev.map(p => (p.id === id ? { ...p, size, ...(x !== undefined && y !== undefined ? { x, y } : {}) } : p)) });
+      try {
+        await apiClient.setThingLabel(id, CANVAS_LABEL_SIZE, String(size));
+        if (x !== undefined && y !== undefined) {
+          await apiClient.setThingLabel(id, THING_CANVAS_LABEL_X, String(x));
+          await apiClient.setThingLabel(id, THING_CANVAS_LABEL_Y, String(y));
+        }
+      } catch {
+        set({ tiles: prev });
+      }
+    },
+
     applyMoves: (moves) => {
       if (moves.length === 0) return;
       const next = new Map<string, { x: number; y: number }>();
       for (const m of moves) {
         // Real numbers: a thing in flight is between cells, and rounding here
-        // would step it from square to square instead of sliding.
+        // would step it from square to square instead of sliding. The server
+        // moves the labels themselves, so these are corners, as tiles hold.
         if (Number.isFinite(m.x) && Number.isFinite(m.y)) next.set(m.id, { x: m.x, y: m.y });
       }
       const prev = get().tiles;

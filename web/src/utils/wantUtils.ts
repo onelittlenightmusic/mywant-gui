@@ -39,13 +39,38 @@ export function listedWants<T extends Want>(wants: T[], orderOverride: string[] 
 }
 
 /**
- * When a want last changed: the newest of its fields' update times (the
- * server's state_timestamps) — a restart, a fetch, an answer all bring it up —
- * else when it was made (mywant.io/created-at). 0 when neither is known.
+ * State fields that change while a want is at work rather than when it has
+ * something new: the engine's own (a leading `_`), who ran it, a poll's
+ * heartbeat, how far along it is, a tool's raw output before it is read.
+ * robot's last_poll_at moves every few seconds and the Yahoo web want's
+ * action_by_agent with it, and both sat at the top of 最近 without anything
+ * new in them.
+ */
+const BOOKKEEPING_FIELDS = new Set([
+  'action_by_agent', 'last_poll_at', 'achieving_percentage', 'mrs_raw_output',
+  'status', 'completed', 'achieved', 'current_session_state',
+]);
+
+/**
+ * When a want last had something new.
+ *
+ * Its result, when it has one (`final_result`, which the engine keeps): a
+ * check that has started is not news, what it found is — smartgolf rose to the
+ * top as it began to look, and belongs there when it has found out. Without a
+ * result, the newest of its fields that are not bookkeeping (above). Else when
+ * it was made (mywant.io/created-at). 0 when none is known. The server stamps
+ * a field only when its value changes.
+ *
+ * The keyboard's 最近 reads wants the same way (mywant-ios PaletteFetch).
  */
 export function wantUpdatedAt(want: Want): number {
-  let latest = Date.parse(want.metadata?.labels?.['mywant.io/created-at'] ?? '') || 0;
-  for (const at of Object.values(want.state_timestamps ?? {})) {
+  const created = Date.parse(want.metadata?.labels?.['mywant.io/created-at'] ?? '') || 0;
+  const stamps = want.state_timestamps ?? {};
+  const result = Date.parse(stamps['final_result'] ?? '');
+  if (result) return Math.max(result, created);
+  let latest = created;
+  for (const [key, at] of Object.entries(stamps)) {
+    if (key.startsWith('_') || BOOKKEEPING_FIELDS.has(key)) continue;
     const t = Date.parse(at);
     if (t > latest) latest = t;
   }

@@ -16,6 +16,7 @@
  * opens — "Details" is always the first tile so opening is one more action in
  * the same grid rather than a special case.
  */
+import { hostTrace } from '@/lib/nativeHost';
 import React, { useRef, useEffect, useState } from 'react';
 import { X, Move } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
@@ -302,6 +303,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
   };
   /** Let go: a hold that committed and never moved opens the actions. */
   const lpEnd = () => {
+    hostTrace(`longpress.card end armed=${firedRef.current && !!posRef.current}`);
     if (firedRef.current && posRef.current) openActions();
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     posRef.current = null;
@@ -442,6 +444,10 @@ export const EntityCard: React.FC<EntityCardProps> = ({
     onTouchStart: (e: React.TouchEvent) => { const t = e.touches[0]; lpStart(t.clientX, t.clientY); },
     onTouchMove: (e: React.TouchEvent) => { const t = e.touches[0]; lpMove(t.clientX, t.clientY); },
     onTouchEnd: lpEnd,
+    // The system's own long press takes a held touch away in an app's web
+    // view (touchcancel, not touchend); a committed, unmoved hold is still the
+    // long press — see useLongPress's `cancelled`.
+    onTouchCancel: lpEnd,
   };
 
   const noSelectStyle = {

@@ -2,7 +2,8 @@ import React from 'react';
 import { hasExtensionRoute } from '@/extensions/registry';
 import { useNavigate } from 'react-router-dom';
 import { useIconFont } from '@/hooks/useDisplaySettings';
-import { Type, Trash2, Heart, Plus, Check, Folder, Pin, PinOff, Pencil, Navigation, Archive, ArchiveRestore, Copy } from 'lucide-react';
+import { Type, Trash2, Heart, Plus, Check, Folder, Pin, PinOff, Pencil, Navigation, Archive, ArchiveRestore, Copy, Scaling } from 'lucide-react';
+import { nextTileSize, tileSizeLabel } from '@/utils/canvasSize';
 import { copyText } from '@/utils/clipboard';
 import { notify } from '@/stores/noticeStore';
 import { ThingRecord } from '@/types/thing';
@@ -85,6 +86,8 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
   const setPinned = useThingTileStore((s) => s.setPinned);
   const archived = useThingTileStore((s) => s.archived.has(record.id));
   const setArchived = useThingTileStore((s) => s.setArchived);
+  const setSize = useThingTileStore((s) => s.setSize);
+  const size = useThingTileStore((s) => s.tiles.find(t => t.id === record.id)?.size ?? 1);
   const ensureTiles = useThingTileStore((s) => s.ensureTiles);
   React.useEffect(() => { ensureTiles(); }, [ensureTiles]);
 
@@ -132,6 +135,16 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
       title: `Start a new want from "${record.value}"`,
       onClick: () => onAddWant(record),
       tone: 'primary' as const,
+    }] : []),
+    // Its size on the board — a whole cell, a half or a quarter — while it is
+    // on it. Each press is the next size; a small thing then sets down on its
+    // size's finer grid.
+    ...(onCanvas && !archived ? [{
+      icon: <Scaling className="w-5 h-5 text-white" />,
+      label: `Size ${tileSizeLabel(size)}`,
+      title: `${tileSizeLabel(nextTileSize(size))} にする`,
+      onClick: () => { void setSize(record.id, nextTileSize(size)); },
+      tone: 'accent' as const,
     }] : []),
     {
       // What the thing is, to paste elsewhere: its value — the link itself for

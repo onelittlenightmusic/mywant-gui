@@ -174,6 +174,18 @@ export function onHostPress(handler: (id: string) => void): void {
 }
 
 /** A Lucide component's name, for the app to map to a glyph of its own. */
+/**
+ * A line for the app's device log, framed by an app (its PageErrorLog hears
+ * it beside the page's errors); nothing in a browser. For finding out on the
+ * phone how far a gesture got, where there is no console to read.
+ */
+export function hostTrace(text: string): void {
+  if (!nativeHost) return;
+  try {
+    (window as any).webkit?.messageHandlers?.mywantPageError?.postMessage({ kind: 'trace', text, path: location.pathname });
+  } catch { /* no app listening */ }
+}
+
 export function iconName(icon: { displayName?: string } | undefined, fallback: string): string {
   return icon?.displayName ?? fallback;
 }

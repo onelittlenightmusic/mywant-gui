@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useWantStore } from '@/stores/wantStore';
 import { playHapticClick } from '@/utils/haptic';
+import { hostTrace } from '@/lib/nativeHost';
 
 interface UseLongPressOptions {
   disabled?: boolean;
@@ -66,7 +67,20 @@ export function useLongPress(id: string | null, { disabled = false, onCommit }: 
   const openedAtRef = useRef(0);
   const end = () => {
     if (armedRef.current) { setQuickActionsWantId(id); openedAtRef.current = Date.now(); }
+    hostTrace(`longpress.want end armed=${armedRef.current} id=${id}`);
     cancel();
+  };
+  /**
+   * The touch taken away. In an app's web view (WKWebView) a finger held on
+   * past half a second is claimed by the system's own long press — text
+   * selection, a link's preview, a drag — and the page gets touchcancel
+   * instead of touchend. A hold that had committed and not moved is the long
+   * press, whoever ended it: it opens the actions as a release would. Without
+   * this, holding a card the way a long press is held opened nothing.
+   */
+  const cancelled = () => {
+    hostTrace(`longpress.want cancel armed=${armedRef.current} id=${id}`);
+    end();
   };
   /** The click the release sends right after opening the actions is part of
    *  that press, not a tap on the card. */
@@ -88,6 +102,7 @@ export function useLongPress(id: string | null, { disabled = false, onCommit }: 
     onTouchStart: (e: React.TouchEvent) => { const t = e.touches[0]; start(t.clientX, t.clientY); },
     onTouchMove: (e: React.TouchEvent) => { const t = e.touches[0]; checkMove(t.clientX, t.clientY); },
     onTouchEnd: end,
+    onTouchCancel: cancelled,
     cancel,
     holding,
     swallowsClick,

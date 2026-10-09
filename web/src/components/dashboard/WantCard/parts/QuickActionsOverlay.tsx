@@ -1,5 +1,12 @@
 import React from 'react';
-import { Play, PlayCircle, Square, Trash2, Pause, RotateCcw, Settings, X, Archive, ArchiveRestore, Tag, ExternalLink } from 'lucide-react';
+import { Play, PlayCircle, Square, Trash2, Pause, RotateCcw, Settings, X, Archive, ArchiveRestore, Tag, ExternalLink, Scaling } from 'lucide-react';
+import { apiClient } from '@/api/client';
+import { useWantStore } from '@/stores/wantStore';
+import { CANVAS_LABEL_X, CANVAS_LABEL_Y, CANVAS_LABEL_LENGTH } from '@/utils/wantPlacement';
+import {
+  CANVAS_LABEL_SIZE, CANVAS_LABEL_SUB_X, CANVAS_LABEL_SUB_Y,
+  nextTileSize, snapDown, tileSizeLabel, tileSizeOf, tileSubOf,
+} from '@/utils/canvasSize';
 import { Want } from '@/types/want';
 import { OverlayActionGrid, OverlayItem } from '@/components/overlay';
 import { openWantApp } from '@/utils/wantUtils';
@@ -54,6 +61,33 @@ export const QuickActionsOverlay: React.FC<QuickActionsOverlayProps> = ({
    */
   const isSystem = !!want.metadata?.isSystemWant;
 
+  // Its size on the board: a whole cell, a half or a quarter (utils/canvasSize).
+  // Only for a one-cell want on the board — a long one stays whole. Made whole
+  // again only into a cell it has to itself: sharing it with small ones, it
+  // would be bounced off to the nearest free cell.
+  const labels = want.metadata?.labels ?? {};
+  const wantId = want.metadata?.id || want.id || '';
+  const onBoard = labels[CANVAS_LABEL_X] !== undefined && labels[CANVAS_LABEL_Y] !== undefined;
+  const oneCell = (parseInt(labels[CANVAS_LABEL_LENGTH] ?? '0', 10) || 0) === 0;
+  const size = tileSizeOf(labels);
+  const nextSize = nextTileSize(size);
+  const sharesCell = useWantStore(st => st.wants.some(w => {
+    const l = w.metadata?.labels;
+    return (w.metadata?.id || w.id) !== wantId && l?.[CANVAS_LABEL_X] === labels[CANVAS_LABEL_X] && l?.[CANVAS_LABEL_Y] === labels[CANVAS_LABEL_Y];
+  }));
+  const blockedWhole = nextSize === 1 && sharesCell;
+  const resize = async () => {
+    const sub = tileSubOf(labels, size);
+    const patch: Record<string, string> = {
+      [CANVAS_LABEL_SIZE]: String(nextSize),
+      // Its slot on the new size's grid, in the cell it is in.
+      [CANVAS_LABEL_SUB_X]: String(nextSize < 1 ? snapDown(sub.x, nextSize) : 0),
+      [CANVAS_LABEL_SUB_Y]: String(nextSize < 1 ? snapDown(sub.y, nextSize) : 0),
+    };
+    const updated = await apiClient.patchWant(wantId, { labels: patch }).catch(() => null);
+    if (updated) useWantStore.getState().patchWant(updated);
+  };
+
   // Row-major layout: [Start/Stop, Restart, Edit, Archive/Unarchive/Suspend/Resume, Close, Delete]
   const items: OverlayItem[] = [
     // Row 0
@@ -95,6 +129,16 @@ export const QuickActionsOverlay: React.FC<QuickActionsOverlayProps> = ({
     ...(onAddAura
       ? [{ icon: <Tag className="w-5 h-5 text-white" />, label: 'Add Aura',
            onClick: () => { onAddAura(); onClose(); }, tone: 'special' as const, delay: 150 }]
+      : []),
+    // Appended, like the ones above, so nothing already reached for moves.
+    // Stays open: each press is the next size, read on its label.
+    ...(onBoard && oneCell
+      ? [{ icon: <Scaling className="w-5 h-5 text-white" />, label: `Size ${tileSizeLabel(size)}`,
+           onClick: () => { void resize(); }, tone: 'accent' as const, delay: 170,
+           disabled: blockedWhole,
+           title: blockedWhole
+             ? 'このマスにはほかの want がいるので、1 には戻せません'
+             : `${tileSizeLabel(nextSize)} にする` }]
       : []),
     // This want on its own, in a new tab — the /w/:id page a home-screen icon
     // points at. Appended, so it never shifts the actions above it.
