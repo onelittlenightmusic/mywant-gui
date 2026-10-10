@@ -1,4 +1,5 @@
 import { hostPanelRoute } from '@/lib/nativeHost';
+import { thingDisplayName } from '@/utils/thingFace';
 import { ConstellationFilterPanel } from '@/components/sidebar/ConstellationFilterPanel';
 import React from 'react';
 import { Globe, Waypoints, RefreshCw } from 'lucide-react';
@@ -235,7 +236,7 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
       : editingThing ? `Edit ${editingThing.value}`
       : cursorGroup ? cursorGroup.name
       : selectedWant ? (selectedWant.metadata?.name || selectedWant.metadata?.id || 'Want Details')
-      : (cursorThingRecord?.value ?? ''),
+      : (cursorThingRecord ? thingDisplayName(cursorThingRecord.value) : ''),
     titleIcon: api.filterOpen ? Waypoints : sidebar.showGlobal ? Globe : (selectedWant && !cursorGroup ? sidebarTitleIcon : undefined),
     titleIconClassName: sidebar.showGlobal ? 'text-green-500' : undefined,
     titleIconStyle: sidebar.showGlobal || !selectedWant || cursorGroup

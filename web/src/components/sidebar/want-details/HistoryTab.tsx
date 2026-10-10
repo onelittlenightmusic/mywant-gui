@@ -1,7 +1,9 @@
 /** The History tab — past parameter, state and log snapshots. */
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
-import { Bot, FileText, Database, History } from 'lucide-react';
+import { Bot, FileText, Database, History, Sparkles } from 'lucide-react';
+import { outputSummary, outputWhen, shortWhen } from '@/utils/outputSummary';
+import { outputEntryKey } from '@/stores/outputFocusStore';
 import { Want } from '@/types/want';
 import { useConfigStore } from '@/stores/configStore';
 import { useSidebarFocusStore } from '@/stores/sidebarFocusStore';
@@ -119,7 +121,9 @@ export const HistoryTab: React.FC<{
   results: any;
   historySubTab: HistorySubTab;
   setHistorySubTab: (t: HistorySubTab) => void;
-}> = ({ want, results, historySubTab, setHistorySubTab }) => {
+  /** An answer to light up and bring into view — see outputFocusStore. */
+  highlightOutput?: string | null;
+}> = ({ want, results, historySubTab, setHistorySubTab, highlightOutput }) => {
   const config = useConfigStore(state => state.config);
   const isBottom = usePanelAtBottom();
 
@@ -149,7 +153,16 @@ export const HistoryTab: React.FC<{
     (want.history?.agentHistory && want.history.agentHistory.length > 0)
   );
 
+  const outputs = want.history?.resultHistory ?? [];
+  // The answer asked about, scrolled to once it is drawn.
+  useEffect(() => {
+    if (historySubTab !== 'outputs' || !highlightOutput) return;
+    const el = listRef.current?.querySelector<HTMLElement>(`[data-output-key="${CSS.escape(highlightOutput)}"]`);
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [historySubTab, highlightOutput, outputs.length]);
+
   const HISTORY_SUB_TABS = [
+    { id: 'outputs' as HistorySubTab, label: 'Outputs', icon: Sparkles, hasData: outputs.length > 0 },
     { id: 'state'  as HistorySubTab, label: 'State',  icon: Database,  hasData: hasStateContent },
     { id: 'log'    as HistorySubTab, label: 'Log',    icon: FileText,  hasData: hasLogContent },
     { id: 'agents' as HistorySubTab, label: 'Agents', icon: Bot,       hasData: hasAgentsContent },
@@ -163,6 +176,40 @@ export const HistoryTab: React.FC<{
       )}
 
       <div ref={listRef} className="flex-1 overflow-y-auto px-3 sm:px-4 pt-0.5 pb-3 space-y-2">
+        {/* What the want found — its answers, newest first. The same ones
+            the board draws as balls beside the want; tapping one opens here
+            with it lit. */}
+        {historySubTab === 'outputs' && (
+          <>
+            {outputs.slice().reverse().map((entry) => {
+              const key = outputEntryKey(entry);
+              const lit = key === highlightOutput;
+              return (
+                <div
+                  key={key}
+                  data-output-key={key}
+                  className={`rounded-lg border px-3 py-2 transition-colors ${lit
+                    ? 'border-sky-400 bg-sky-50 dark:bg-sky-900/30 ring-2 ring-sky-400'
+                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}
+                >
+                  <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {shortWhen(outputWhen(entry))}{entry.type ? ` · ${entry.type}` : ''}
+                  </div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100 break-words">
+                    {outputSummary(entry) || '—'}
+                  </div>
+                </div>
+              );
+            })}
+            {outputs.length === 0 && (
+              <div className="text-center py-10 text-gray-400 dark:text-gray-500">
+                <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="text-xs">No outputs yet</p>
+              </div>
+            )}
+          </>
+        )}
+
         {historySubTab === 'state' && (
           <>
             {want.history?.parameterHistory?.map((entry, index) => (

@@ -69,6 +69,10 @@ export interface ThingTile {
    * would wear the same one.
    */
   picture?: string;
+  /** Its place in the order things were added — the newest is the largest. */
+  addedOrder?: number;
+  /** When it was added, RFC 3339 — a thing just shared is placed where the character is. */
+  createdAt?: string;
 }
 
 interface ThingTileStore {
@@ -422,6 +426,8 @@ export const useThingTileStore = create<ThingTileStore>()(
             y,
             picture: ownPicture(t.background, labels),
             size: tileSizeOf(labels),
+            addedOrder: t.addedOrder,
+            createdAt: t.createdAt,
           });
         }
         set({

@@ -136,6 +136,12 @@ export const CANVAS_ACTIONS = {
    */
   CONTEXT_MENU: 'contextMenu',
   /**
+   * Keyboard h / gamepad R3 — the history of what is underfoot: a want's
+   * column of answers, focused (guiex AnswerBallsLayer). Pressed again inside
+   * the column, it is how you leave it.
+   */
+  HISTORY: 'history',
+  /**
    * A direction — arrow key, D-pad, software pad. The one action that carries
    * an argument, because a direction is what it is about; everything else here
    * is a button that either happened or did not.

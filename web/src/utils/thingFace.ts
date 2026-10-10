@@ -141,6 +141,24 @@ export const DROP_CAP_SCALE = 3;
  * Split by code point, not by UTF-16 unit, so a name starting with an emoji or
  * a surrogate-pair kanji keeps its first character whole.
  */
+/**
+ * What a thing is called on its face — its value, except where the value is a
+ * link: a photo shared from Google Photos is "https://photos.app.goo.gl/…",
+ * which says nothing on a card or a ball, so it is "Google Photos"; any other
+ * link is named for the site it lives on. The value itself is unchanged (the
+ * panel's Name field still edits it); this is only how it is shown.
+ */
+export function thingDisplayName(value: string): string {
+  if (!/^https?:\/\//i.test(value)) return value;
+  try {
+    const u = new URL(value);
+    if (/(^|\.)photos\.(app\.goo\.gl|google\.com)$/.test(u.hostname)) return 'Google Photos';
+    return u.hostname.replace(/^www\./, '');
+  } catch {
+    return value;
+  }
+}
+
 export function dropCap(value: string): { initial: string; rest: string } {
   const chars = [...value];
   return {

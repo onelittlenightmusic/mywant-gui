@@ -1,13 +1,11 @@
 import { useHostPanel } from '@/lib/nativeHost';
+import { thingDisplayName } from '@/utils/thingFace';
 import { Waypoints } from 'lucide-react';
 import { ConstellationFilterPanel, useConstellationFilter } from '@/components/sidebar/ConstellationFilterPanel';
 import { useConstellationFilterStore } from '@/stores/constellationFilterStore';
 import { isThingArchived } from '@/stores/thingTileStore';
 import { ItemMinimap, usePageMinimap, type MinimapItem } from '@/components/dashboard/ItemMinimap';
-import { resolveLucideIcon } from '@/utils/subtypeIcons';
-import { iconEmbossFilter } from '@/components/dashboard/WantCardFace';
-import { thingBackgroundSrc, THING_BACKGROUND_SCRIM } from '@/utils/thingBackground';
-import { dropCap, DROP_CAP_SCALE, thingFaceText, thingNameShadow, thingInk } from '@/utils/thingFace';
+import { thingMinimapItem } from '@/components/dashboard/thingMinimapItem';
 import { useColorMode } from '@/hooks/useColorMode';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -232,39 +230,10 @@ export const ThingPage: React.FC = () => {
   // The grid's order when it has drawn; otherwise (an app's map sheet draws no
   // grid) the same things it would show — never every record, archived and
   // filtered-out ones included.
-  const minimapItems = useMemo<MinimapItem[]>(() => (filtered.length ? filtered : listed).map(r => {
-    const Icon = resolveLucideIcon(r.icon) ?? Circle;
-    const isLight = !isDarkMode;
-    const bg = thingBackgroundSrc(r.background, r.labels);
-    const { initial, rest } = dropCap(r.value);
-    return {
-      id: r.id,
-      title: r.value,
-      background: `${r.color}${isDarkMode ? '40' : '33'}`,
-      icon: (
-        <>
-          {bg && (
-            <>
-              <img src={bg} alt="" aria-hidden draggable={false}
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" />
-              <div className={THING_BACKGROUND_SCRIM} />
-            </>
-          )}
-          <Icon
-            className="absolute right-1 bottom-0.5 pointer-events-none"
-            style={{ width: 13, height: 13, color: thingInk(r.color, isLight), filter: iconEmbossFilter(isLight) }}
-            strokeWidth={1.75}
-          />
-          <span className="relative z-10 font-bold leading-none flex items-baseline gap-px whitespace-nowrap pointer-events-none"
-            style={{ color: thingFaceText(r.color, isLight), textShadow: thingNameShadow(r.color, isLight) }}>
-            <span style={{ fontSize: 7 * DROP_CAP_SCALE, lineHeight: 1 }}>{initial}</span>
-            {rest && <span style={{ fontSize: 7, lineHeight: 1 }}>{rest}</span>}
-          </span>
-        </>
-      ),
-    };
-  }), [filtered, listed, isDarkMode]);
+  const minimapItems = useMemo<MinimapItem[]>(
+    () => (filtered.length ? filtered : listed).map(r => thingMinimapItem(r, isDarkMode)),
+    [filtered, listed, isDarkMode],
+  );
 
   // A card asked for its editor — the same panel naming a thing uses, opened
   // on an existing one. See thingEditStore.
@@ -288,7 +257,7 @@ export const ThingPage: React.FC = () => {
     // In an app on a phone, the app's own sheet (lib/nativeHost, useHostPanel).
     hostRoute: panelRoute,
     open: filterOpen || (!selectMode && (adding || !!editingThing || (!!selected && selected.id !== quietId))),
-    title: filterOpen ? 'Filter' : adding ? 'Add Thing' : editingThing ? `Edit ${editingThing.value}` : (selected ? selected.value : ''),
+    title: filterOpen ? 'Filter' : adding ? 'Add Thing' : editingThing ? `Edit ${editingThing.value}` : (selected ? thingDisplayName(selected.value) : ''),
     // The thing detail opens on a card that already names its subject and
     // carries its own way out, exactly as it does on the board — so the frame
     // draws no header over it here either. The two surfaces show one panel; it

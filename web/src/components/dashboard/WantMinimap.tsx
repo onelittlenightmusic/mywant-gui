@@ -68,7 +68,8 @@ interface MinimapDraftCardProps {
 /**
  * Miniature version of a regular Want card
  */
-const MinimapCard: React.FC<MinimapCardProps> = ({ want, isSelected, onClick, onDoubleClick }) => {
+/** A want as a minimap tile — the want list's map, and a constellation's members in the group's panel. */
+export const MinimapCard: React.FC<MinimapCardProps> = ({ want, isSelected, onClick, onDoubleClick }) => {
   const [isBlinking, setIsBlinking] = useState(false);
   const colorMode = useColorMode();
   const isDark = colorMode === 'dark';

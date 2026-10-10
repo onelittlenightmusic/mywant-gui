@@ -1,4 +1,5 @@
 import React from 'react';
+import { thingDisplayName } from '@/utils/thingFace';
 import { hasExtensionRoute } from '@/extensions/registry';
 import { useNavigate } from 'react-router-dom';
 import { useIconFont } from '@/hooks/useDisplaySettings';
@@ -183,7 +184,7 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
     <EntityCard
       navId={entityCardId('thing', record.id)}
       className={className}
-      title={record.value}
+      title={thingDisplayName(record.value)}
       selected={selected}
       keepFocus={keepFocus}
       onView={() => onView(record)}

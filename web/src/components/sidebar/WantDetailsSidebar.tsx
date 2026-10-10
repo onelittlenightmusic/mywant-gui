@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useOutputFocusStore } from '@/stores/outputFocusStore';
 import { nativePanelPage, useHostCardSlot } from '@/lib/nativeHost';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { Settings, Eye, Database, Check, History, MessageSquare, ArrowDownUp } from 'lucide-react';
@@ -155,6 +156,11 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
   // whichever tab is currently active.
   const [activeSettingsTab, setActiveSettingsTab] = useState<FormTab>('params');
   const [historySubTab, setHistorySubTab] = useState<HistorySubTab>('state');
+  // An answer of this want asked to be shown (the board's answer ball):
+  // History › Outputs, with it lit.
+  const [highlightOutput, setHighlightOutput] = useState<string | null>(null);
+  const outputFocus = useOutputFocusStore();
+
 
   // Pending key for pre-populating expose/import add form when navigating from result cards
   const [pendingExposeKey, setPendingExposeKey] = useState<string | null>(null);
@@ -308,6 +314,14 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
       setActiveTab(normalizeTab(initialTab));
     }
   }, [initialTab, initialTabVersion, wantId]);
+  // After the initialTab effect, which sets the tab for a newly shown want and
+  // would otherwise put this one back on Settings.
+  useEffect(() => {
+    if (!outputFocus.version || outputFocus.wantId !== wantId) return;
+    setActiveTab('history');
+    setHistorySubTab('outputs');
+    setHighlightOutput(outputFocus.entryKey);
+  }, [outputFocus.version, outputFocus.wantId, outputFocus.entryKey, wantId]);
 
   // The tab now follows the user from want to want, and two of them are not on
   // every want: Versions only exists for a series, Chat only for an interactive
@@ -761,7 +775,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
             )}
             {showPrevTab && prevTabId === 'history' && (
               <div className={classNames('absolute inset-0 overflow-hidden pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')}>
-                <HistoryTab want={wantDetails} results={selectedWantResults} historySubTab={historySubTab} setHistorySubTab={setHistorySubTab} />
+                <HistoryTab want={wantDetails} results={selectedWantResults} historySubTab={historySubTab} setHistorySubTab={setHistorySubTab} highlightOutput={highlightOutput} />
               </div>
             )}
             {showPrevTab && prevTabId === 'versions' && (
@@ -858,7 +872,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
 
             {activeTab === 'history' && (
               <div className={classNames('absolute inset-0 overflow-hidden z-10', isMovingRight ? 'animate-slide-in-right' : 'animate-slide-in-left')}>
-                <HistoryTab want={wantDetails} results={selectedWantResults} historySubTab={historySubTab} setHistorySubTab={setHistorySubTab} />
+                <HistoryTab want={wantDetails} results={selectedWantResults} historySubTab={historySubTab} setHistorySubTab={setHistorySubTab} highlightOutput={highlightOutput} />
               </div>
             )}
 

@@ -21,5 +21,5 @@ export const SECTION_CONTAINER_CLASS = 'border border-gray-200 dark:border-gray-
 // Sub-tab types and lists — declared at module scope so both WantDetailsSidebar
 // (for the common sub-tab (B+L1/R1) handler) and the individual tab components can use them.
 // ---------------------------------------------------------------------------
-export type HistorySubTab = 'state' | 'log' | 'agents';
-export const HISTORY_SUB_TAB_LIST: HistorySubTab[] = ['state', 'log', 'agents'];
+export type HistorySubTab = 'outputs' | 'state' | 'log' | 'agents';
+export const HISTORY_SUB_TAB_LIST: HistorySubTab[] = ['outputs', 'state', 'log', 'agents'];

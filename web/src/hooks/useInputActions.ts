@@ -157,6 +157,12 @@ export interface UseInputActionsOptions {
    */
   onButtonX?: () => void;
   /**
+   * Keyboard h, or the right stick pressed (R3) — "the history of what I am
+   * standing on": on the board, the column of a want's answers off its tile's
+   * top-right corner (guiex AnswerBallsLayer), focused at once.
+   */
+  onHistory?: () => void;
+  /**
    * Called when x/X (keyboard) or Gamepad X button (index 2) is released.
    * Pairs with onButtonX for press-to-start/release-to-commit interactions
    * (e.g. the canvas rotation guide).
@@ -355,6 +361,7 @@ type GamepadActionType =
   | 'y-button-release'
   | 'button-x'
   | 'button-x-release'
+  | 'history-button'
   | 'confirm-long'
   | 'confirm-long-release'
   | 'confirm-released'
@@ -421,6 +428,7 @@ const BUTTON_MAP: Readonly<Record<number, GamepadActionType>> = {
   7: 'aim-button',        // R2 / RT (Right Trigger) — aim mode
   8: 'menu-toggle',       // Select / Back / View / Share
   9: 'context-menu',  // Start / Options / Menu
+  11: 'history-button', // R3 — the right stick pressed: the history underfoot
   12: 'up',           // D-pad Up
   13: 'down',         // D-pad Down
   14: 'left',         // D-pad Left
@@ -1753,6 +1761,7 @@ export function useInputActions({
   onAimButtonRelease,
   onYButtonRelease,
   onButtonX,
+  onHistory,
   onButtonXRelease,
   onTabForward,
   onTabBackward,
@@ -1799,6 +1808,7 @@ export function useInputActions({
   const onAimButtonReleaseRef = useRef(onAimButtonRelease);
   const onYButtonReleaseRef  = useRef(onYButtonRelease);
   const onButtonXRef         = useRef(onButtonX);
+  const onHistoryRef         = useRef(onHistory);
   const onButtonXReleaseRef  = useRef(onButtonXRelease);
   // Physical y hold state, the mirror of xHeldRef — see isButtonYHeld().
   const yHeldRef              = useRef(false);
@@ -1913,6 +1923,7 @@ export function useInputActions({
   onAimButtonReleaseRef.current = onAimButtonRelease;
   onYButtonReleaseRef.current = onYButtonRelease;
   onButtonXRef.current        = onButtonX;
+  onHistoryRef.current        = onHistory;
   onButtonXReleaseRef.current = onButtonXRelease;
   onTabForwardRef.current     = onTabForward;
   onTabBackwardRef.current    = onTabBackward;
@@ -2159,6 +2170,14 @@ export function useInputActions({
           if (!e.repeat) onAimButtonRef.current?.();
           break;
 
+
+        case 'h':
+        case 'H':
+          if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && onHistoryRef.current) {
+            consume();
+            if (!e.repeat) onHistoryRef.current();
+          }
+          break;
 
         case 'x':
         case 'X':
@@ -2474,6 +2493,7 @@ export function useInputActions({
         case 'toggle-release':    xHeldRef.current = false; onToggleReleaseRef.current?.(); break;
         case 'button-x':          xHeldRef.current = true; onButtonXRef.current?.();       break;
         case 'button-x-release':  onButtonXReleaseRef.current?.();                         break;
+        case 'history-button':    onHistoryRef.current?.();                                break;
         case 'menu-toggle':  onMenuToggleRef.current?.();  break;
         case 'context-menu': onContextMenuRef.current?.(); break;
         case 'y-button':         yHeldRef.current = true;  onYButtonRef.current?.();        break;

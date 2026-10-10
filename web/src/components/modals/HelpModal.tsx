@@ -78,6 +78,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                 <ShortcutRow keys={['↑', '↓', '←', '→']} label="Move CursorMan" />
                 <ShortcutRow keys={['W', '↑↓←→']} label="Focus next Want (CursorMan follows)" />
                 <ShortcutRow keys={['Shift', '↑↓←→']} label="Move focused Want tile (CursorMan follows)" />
+                <ShortcutRow keys={['H']} label="The Want's answers underfoot — walk them with ↑↓, Enter shows, Shift+Enter joins" />
                 <ShortcutRow keys={['Esc', 'Space']} either label="Hold: Rotation / Length Guide" />
               </div>
             </div>
@@ -138,6 +139,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               <GamepadAction btn="Start" color="text-gray-500" action="Quick Actions" />
               <GamepadAction btn="L-Stick" color="text-gray-500" action="Canvas Scroll" />
               <GamepadAction btn="R-Stick" color="text-gray-500" action="Canvas Zoom" />
+              <GamepadAction btn="R3 (press R-Stick)" color="text-gray-500" action="Answers of the Want underfoot" />
               <GamepadAction btn="A (Long)" color="text-green-600" action="Canvas Drag / Recommend" />
               <GamepadAction btn="B (Long)" color="text-red-600" action="Rotation / Length Guide (canvas)" />
             </div>
