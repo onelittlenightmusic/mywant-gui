@@ -1,4 +1,5 @@
 import { thingBackgroundSrc } from '@/utils/thingBackground';
+import { thingDisplayName } from '@/utils/thingFace';
 import { CANVAS_LABEL_SIZE, tileSizeOf, type TileSize } from '@/utils/canvasSize';
 import { create } from 'zustand';
 import { openConnectionMenu } from '@/stores/connectionMenu';
@@ -242,7 +243,9 @@ const BESIDE: Array<[number, number]> = [[1, 0], [-1, 0], [0, 1], [0, -1]];
  */
 function thingValue(id: string): string {
   const record = useThingStore.getState().records.find(r => r.id === id);
-  return (record?.value ?? id).replace(/\//g, '-'); // a group name may not contain '/'
+  // As the thing is shown (thingDisplayName): a shared photo's group starts as
+  // "Google Photos", not as its link with the slashes turned into dashes.
+  return thingDisplayName(record?.value ?? id).replace(/\//g, '-'); // a group name may not contain '/'
 }
 
 /**

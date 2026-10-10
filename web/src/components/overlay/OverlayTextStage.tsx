@@ -3,6 +3,7 @@ import { ArrowLeft, Check } from 'lucide-react';
 import { OverlayCell } from './OverlayCell';
 import { OVERLAY_STAGGER_MS, type OverlayTone } from './tones';
 import { useOverlayDesign } from './design';
+import { useInputActions } from '@/hooks/useInputActions';
 
 export interface OverlayTextStageProps {
   /** What is being asked for, over the field ("New constellation", "Say"). */
@@ -49,8 +50,26 @@ export const OverlayTextStage: React.FC<OverlayTextStageProps> = ({
   const canSubmit = !!value.trim() && !busy;
   const submit = () => { if (canSubmit) onSubmit(value); };
 
+  // A pad's A and B: what Enter and Escape are on the keyboard. The field has
+  // the focus, and a pad press is no key — it reached nothing, so the name a
+  // pad had picked (the board fills one in) could not be accepted at all. The
+  // pad only (the field's own keydown answers the keyboard). Claimed for this
+  // stage's own box (focusScope): live while the focus is in it, the innermost
+  // claim there — the capture stack's rule — so A here is not the board's, and
+  // a stage the focus has left claims nothing.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useInputActions({
+    gamepadOnly: true,
+    captureInput: true,
+    focusScope: () => rootRef.current,
+    ignoreWhenInputFocused: false,
+    ignoreWhenInSidebar: false,
+    onConfirm: submit,
+    onCancel: () => onBack(),
+  });
+
   return (
-    <div className="absolute inset-0 flex flex-col" style={{ animation: design.enterAnimation }}>
+    <div ref={rootRef} className="absolute inset-0 flex flex-col" style={{ animation: design.enterAnimation }}>
       <div className="flex-1 min-h-0 flex flex-col justify-center gap-1.5 px-3 pt-2">
         <span className={`${design.header} justify-center`}>{header}</span>
         <input
