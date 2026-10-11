@@ -105,6 +105,26 @@ export default function DevicesPage() {
     }
   }, [devices, characters]);
 
+  /**
+   * One device setting, written. The seq is only a guard: every device's
+   * heartbeat writes gui_state every half minute, so the seq moves on its own,
+   * and a page whose live updates lag (SSE through a proxy) is always behind —
+   * every press came back 412 and the choice snapped back. The write is one
+   * key, which the server merges, so a refusal is answered by reading the seq
+   * afresh and writing again.
+   */
+  const writeSetting = async (updates: Record<string, unknown>) => {
+    try {
+      const { seq } = await apiClient.updateGUIState(updates, guiSeq);
+      setGuiSeq(seq);
+    } catch (err: any) {
+      if (err?.status !== 412) throw err;
+      const fresh = await apiClient.getGUIState();
+      const { seq } = await apiClient.updateGUIState(updates, fresh.seq);
+      setGuiSeq(seq);
+    }
+  };
+
   // The browser that browser-run work is pinned to. Unset means whichever
   // browser polls first, which is how it behaved before there was a home.
   const handleToggleHome = async (id: string) => {
@@ -113,10 +133,9 @@ export default function DevicesPage() {
     setHomeDevice(next);
     setSaving(true);
     try {
-      const { seq } = await apiClient.updateGUIState({ homeBrowserDevice: next }, guiSeq);
-      setGuiSeq(seq);
-    } catch (err: any) {
-      if (err?.status === 412) await load();
+      await writeSetting({ homeBrowserDevice: next });
+    } catch {
+      await load();
     } finally {
       setSaving(false);
     }
@@ -128,10 +147,9 @@ export default function DevicesPage() {
     setActiveDevice(next);
     setSaving(true);
     try {
-      const { seq } = await apiClient.updateGUIState({ activeLocationDevice: next }, guiSeq);
-      setGuiSeq(seq);
-    } catch (err: any) {
-      if (err?.status === 412) await load();
+      await writeSetting({ activeLocationDevice: next });
+    } catch {
+      await load();
     } finally {
       setSaving(false);
     }

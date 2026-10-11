@@ -19,6 +19,9 @@ import { type Mark } from '@/components/common/MarkButton';
 import { LogCard } from '@/components/common/LogCard';
 import { useThingNames } from '@/hooks/useThingNames';
 import { ThemeOrderSection } from './ThemeOrderSection';
+import { LabelsSection } from '@/components/forms/sections/LabelsSection';
+import { apiClient } from '@/api/client';
+
 
 interface MemoDetailsSidebarProps {
   record: ThingRecord | null;
@@ -117,8 +120,8 @@ function sourceIcon(source: string) {
  * The thing's provenance: its type, plus a newest-first timeline of when
  * (and by which want / character) the value was named into its catalog.
  */
-/** The three things there are to know about a thing. */
-type ThingTab = 'settings' | 'constellation' | 'history';
+/** What there is to know about a thing: what it is, what it is labelled, who it belongs with, what it has been used for. */
+type ThingTab = 'settings' | 'labels' | 'constellation' | 'history';
 
 export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record, onAddWant, onDelete, getOrigin, onArranged }) => {
   const [activeTab, setActiveTab] = useState<ThingTab>('settings');
@@ -143,7 +146,7 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
    * badges belong to the bar and are added where it is drawn.
    */
   const THING_TABS: ReadonlyArray<{ id: ThingTab }> = [
-    { id: 'settings' }, { id: 'constellation' }, { id: 'history' },
+    { id: 'settings' }, { id: 'labels' }, { id: 'constellation' }, { id: 'history' },
   ];
   // Same L1/R1 and Tab as the want panel, from the same hook — a detail panel
   // is walked the same way whatever it is about. No `focus` half: this panel
@@ -231,6 +234,21 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
     }] : []),
   ];
 
+  // Every label the thing carries — its theme memberships and colours too
+  // (constellation/…, constellation-color/…), which Themes is where to change.
+  const ownLabels: Record<string, string> = record.labels ?? {};
+  // Written back as what changed: each label set or removed on its own.
+  const saveLabels = async (next: Record<string, string>) => {
+    const id = record.id;
+    for (const k of Object.keys(ownLabels)) {
+      if (!(k in next)) await apiClient.removeThingLabel(id, k).catch(() => {});
+    }
+    for (const [k, v] of Object.entries(next)) {
+      if (ownLabels[k] !== v) await apiClient.setThingLabel(id, k, v).catch(() => {});
+    }
+    void useThingStore.getState().fetchThings();
+  };
+
   return (
     <div className="h-full flex flex-col" ref={panelRef} onFocus={() => setSidebarFocused(true)}>
       {/* The thing's own card, and it stays.
@@ -279,6 +297,7 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
       <SidebarTabBar
         tabs={THING_TABS.map(t => (
           t.id === 'settings' ? { id: t.id, label: 'Settings', icon: Settings }
+          : t.id === 'labels' ? { id: t.id, label: 'Labels', icon: Tag, badge: Object.keys(ownLabels).length || null }
           : t.id === 'constellation' ? { id: t.id, label: 'Themes', icon: Folder, badge: recordGroups.length || null }
           : { id: t.id, label: 'History', icon: Clock, badge: events?.length ?? null }
         ))}
@@ -307,6 +326,20 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
               <InfoRow label="Firings" value={events ? events.length : '…'} />
             </div>
           </>
+        )}
+
+        {activeTab === 'labels' && (
+          // The want panel's LABELS tab, about a thing: the same editor, its
+          // labels written back one at a time (things/labels).
+          <LabelsSection
+            labels={ownLabels}
+            onChange={(next) => { void saveLabels(next); }}
+            isCollapsed={false}
+            onToggleCollapse={() => {}}
+            hideHeader={true}
+            isActive={sidebarFocused}
+            navigationCallbacks={{ onNavigateUp: () => {}, onNavigateDown: () => {} }}
+          />
         )}
 
         {activeTab === 'constellation' && (
