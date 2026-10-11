@@ -71,8 +71,18 @@ async function upsertDevice(device: BrowserDevice, retries = 3): Promise<void> {
   }
 }
 
-export const myDeviceId = loadOrCreateSessionId();
-export const myDeviceName = parseDeviceName();
+/**
+ * The device this page is part of, when an app shows it: the MyWant app puts
+ * its own id and name here before the page loads (mywant-ios GUIPageView), so
+ * the page and the app are one device in the list — "MyWant app on iPhone",
+ * This device — rather than the app plus a "Browser on iOS" nobody opened.
+ */
+const hostDevice = (typeof window !== 'undefined'
+  ? (window as unknown as { __mywantHostDevice?: { id?: string; name?: string } }).__mywantHostDevice
+  : undefined);
+
+export const myDeviceId = hostDevice?.id || loadOrCreateSessionId();
+export const myDeviceName = hostDevice?.name || parseDeviceName();
 
 export function useDeviceSession() {
   const mountedRef = useRef(true);

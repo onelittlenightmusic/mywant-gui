@@ -106,23 +106,16 @@ export default function DevicesPage() {
   }, [devices, characters]);
 
   /**
-   * One device setting, written. The seq is only a guard: every device's
+   * One device setting, written — without the seq guard. Every device's
    * heartbeat writes gui_state every half minute, so the seq moves on its own,
-   * and a page whose live updates lag (SSE through a proxy) is always behind —
-   * every press came back 412 and the choice snapped back. The write is one
-   * key, which the server merges, so a refusal is answered by reading the seq
-   * afresh and writing again.
+   * and a page whose live updates lag (SSE through a proxy, as on Fly) was
+   * always behind: the press was refused and the choice snapped back. The
+   * write is one key, which the server merges into the rest, so there is
+   * nothing for the guard to protect.
    */
   const writeSetting = async (updates: Record<string, unknown>) => {
-    try {
-      const { seq } = await apiClient.updateGUIState(updates, guiSeq);
-      setGuiSeq(seq);
-    } catch (err: any) {
-      if (err?.status !== 412) throw err;
-      const fresh = await apiClient.getGUIState();
-      const { seq } = await apiClient.updateGUIState(updates, fresh.seq);
-      setGuiSeq(seq);
-    }
+    const { seq } = await apiClient.updateGUIState(updates);
+    setGuiSeq(seq);
   };
 
   // The browser that browser-run work is pinned to. Unset means whichever
