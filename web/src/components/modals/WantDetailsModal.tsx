@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useBoardChanged } from '@/api/boardSync';
 import { RefreshCw, Eye, BarChart3, AlertTriangle, User, Users, Clock, CheckCircle, XCircle, Minus, Bot, Save, Edit, X, Check } from 'lucide-react';
 import { Want } from '@/types/want';
 import { StatusChangeIcon } from '@/components/dashboard/WantCard/parts/StatusChangeIcon';
@@ -9,7 +10,6 @@ import { useWantStore } from '@/stores/wantStore';
 import { formatDate, formatDuration, classNames, truncateText } from '@/utils/helpers';
 import { stringifyYaml, validateYaml } from '@/utils/yaml';
 import { BaseModal } from './BaseModal';
-import { useSSEEvent } from '@/hooks/useSSEEvent';
 
 interface WantDetailsModalProps {
   isOpen: boolean;
@@ -54,14 +54,14 @@ export const WantDetailsModal: React.FC<WantDetailsModalProps> = ({
 
   // SSE push: immediately refetch when this want is changed from another tab/browser.
   const wantIdForSSE = want?.metadata?.id || want?.id;
-  useSSEEvent<string[]>('want_changed', useCallback((ids) => {
+  useBoardChanged(({ wants: ids, all }) => {
     if (!isOpen || !wantIdForSSE) return;
-    if (ids.length === 0 || ids.includes(wantIdForSSE)) {
+    if (all || ids.includes(wantIdForSSE)) {
       fetchWantDetails(wantIdForSSE).then(({ updated }) => {
         if (updated) fetchWantResults(wantIdForSSE);
       });
     }
-  }, [isOpen, wantIdForSSE, fetchWantDetails, fetchWantResults]));
+  });
 
   const handleRefresh = () => {
     if (want) {

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { onBoardChanged, touchesWants } from '@/api/boardSync';
 import { subscribeSSE } from '@/api/sseClient';
 import { useSystemPauseStore } from '@/stores/systemPauseStore';
 import { useNavBadgeStore, hasAnyNavBadge } from '@/stores/navBadgeStore';
@@ -39,7 +40,7 @@ export function useSystemPauseSync(): void {
   useEffect(() => {
     void loadAttention();
     const t = setInterval(() => { if (document.visibilityState === 'visible') void loadAttention(); }, 5000);
-    const unsub = subscribeSSE('want_changed', () => { void loadAttention(); });
+    const unsub = onBoardChanged((c) => { if (touchesWants(c)) void loadAttention(); });
     const onVisible = () => { if (document.visibilityState === 'visible') void loadAttention(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => { clearInterval(t); unsub(); document.removeEventListener('visibilitychange', onVisible); };

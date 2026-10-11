@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useBoardChanged, touchesThings } from '@/api/boardSync';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { WantListPage } from '@/pages/list/WantListPage';
@@ -157,7 +158,9 @@ function App() {
   // answer has no other way to find that out. Bound here, at the root, because
   // a world can be opened from the Worlds page, from a world card on the
   // canvas, or from outside this tab entirely.
-  useSSEEvent('thing_changed', () => { void useThingStore.getState().fetchThings(); });
+  // Through the board's one change event (api/boardSync) — which also says
+  // `all` for whatever changed while the stream was down.
+  useBoardChanged((c) => { if (touchesThings(c)) void useThingStore.getState().fetchThings(); });
 
   // What the server decided a shared cell meant, shown. A thing that slid into
   // a bin on its own was archived in silence — the board only ever animated the

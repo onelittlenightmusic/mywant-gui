@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useBoardChanged, touchesWants } from '@/api/boardSync';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
 import { useMinimapFocusStore } from '@/stores/minimapFocusStore';
 import { WantExecutionStatus, Want } from '@/types/want';
@@ -12,13 +13,11 @@ import { hasExtensionRoute } from '@/extensions/registry';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { useConfigStore } from '@/stores/configStore';
 import { useConstellationStore } from '@/stores/constellationStore';
-import { onSSEReconnect } from '@/api/sseClient';
 import { writeWantState } from '@/api/wantState';
 import { smartPollWants, seedWantETags } from '@/stores/wantHashCache';
 import { useRightSidebarExclusivity } from '@/hooks/useRightSidebarExclusivity';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { apiClient } from '@/api/client';
-import { useSSEEvent } from '@/hooks/useSSEEvent';
 import { useCharacterStore } from '@/stores/characterStore';
 import { notify } from '@/stores/noticeStore';
 import { Recommendation, ConfigModifications } from '@/types/interact';
@@ -354,17 +353,15 @@ export function useWorkspace({ board }: { board: BoardLink }) {
   // so the timer never learned anything the stream had not already said. Idle,
   // the two of them made 69 requests in six seconds on a board nobody was
   // touching.
-  useSSEEvent('want_changed', () => {
-    if (wants.length > 0) smartPollWants();
+  //
+  // Through the board's one change event (api/boardSync), which also says
+  // `all` when the stream comes back — the catch-up for what was said while it
+  // was down, once, rather than every second in case it ever drops.
+  useBoardChanged((c) => {
+    if (!touchesWants(c)) return;
+    if (c.all || wants.length > 0) smartPollWants();
     fetchLabels();
   });
-
-  // What the timer was quietly also doing: covering a dropped stream.
-  //
-  // Events sent while the connection was down are gone, and listening harder
-  // does not get them back — so the catch-up is explicit, and happens once when
-  // the stream comes back rather than every second in case it ever does.
-  useEffect(() => onSSEReconnect(() => { smartPollWants(); fetchLabels(); }), [smartPollWants, fetchLabels]);
 
   useEffect(() => {
     if (sidebar.selectedItem) {

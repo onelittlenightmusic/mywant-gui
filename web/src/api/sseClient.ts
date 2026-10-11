@@ -97,6 +97,26 @@ function connect() {
   };
 }
 
+/**
+ * A page coming back after a while away gets a fresh stream at once. iOS stops
+ * a page's sockets while it is in the background and does not always say so:
+ * the EventSource stays "open", nothing arrives, and the events in between
+ * (a thing pinned from the share sheet) are simply never seen. Reopened, the
+ * reconnect handlers run and everyone catches up.
+ */
+const AWAY_MS = 5000;
+let hiddenAt = 0;
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+    if (!hiddenAt || Date.now() - hiddenAt < AWAY_MS || handlerSets.size === 0) return;
+    hiddenAt = 0;
+    es?.close();
+    es = null;
+    connect();
+  });
+}
+
 function ensureConnected() {
   if (!es || es.readyState === EventSource.CLOSED) {
     connect();

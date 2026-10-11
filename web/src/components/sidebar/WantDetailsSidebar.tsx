@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useBoardChanged } from '@/api/boardSync';
 import { useOutputFocusStore } from '@/stores/outputFocusStore';
 import { nativePanelPage, useHostCardSlot } from '@/lib/nativeHost';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
@@ -29,7 +30,6 @@ import {
 } from './DetailsSidebar';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useCardGridNavigation } from '@/hooks/useCardGridNavigation';
-import { useSSEEvent } from '@/hooks/useSSEEvent';
 import { FormTab, FORM_TABS, SETTINGS_FORM_TABS } from '@/components/forms/FormTabBar';
 import { SidebarTabBar } from '@/components/common/SidebarTabBar';
 import { usePanelTabs } from '@/hooks/usePanelTabs';
@@ -340,10 +340,9 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
   // SSE push: immediately refetch when this want is changed from another tab/browser.
   // This replaces the old autoRefresh polling interval — SSE delivers changes in real time,
   // so a periodic poll just produces redundant 304s.
-  useSSEEvent<string[]>('want_changed', (ids) => {
+  useBoardChanged(({ wants: ids, all }) => {
     if (!wantId) return;
-    // Empty ids = broadcast (e.g. batch delete) → always refresh.
-    if (ids.length === 0 || ids.includes(wantId)) {
+    if (all || ids.includes(wantId)) {
       // 削除で飛んでくる want_changed もあるので、すでに一覧から消えていれば
       // 取りに行かない（行くと必ず 404 になる）。
       const stillExists = useWantStore.getState().wants
