@@ -4,8 +4,8 @@ import { apiClient } from '@/api/client';
 import { useWantStore } from '@/stores/wantStore';
 import { CANVAS_LABEL_X, CANVAS_LABEL_Y, CANVAS_LABEL_LENGTH } from '@/utils/wantPlacement';
 import {
-  CANVAS_LABEL_SIZE, CANVAS_LABEL_SUB_X, CANVAS_LABEL_SUB_Y,
-  nextTileSize, snapDown, tileSizeLabel, tileSizeOf, tileSubOf,
+  CANVAS_LABEL_SIZE,
+  nextTileSize, offsetLabels, snapOffset, tileOffsetOf, tileSizeLabel, tileSizeOf,
 } from '@/utils/canvasSize';
 import { Want } from '@/types/want';
 import { OverlayActionGrid, OverlayItem } from '@/components/overlay';
@@ -77,12 +77,12 @@ export const QuickActionsOverlay: React.FC<QuickActionsOverlayProps> = ({
   }));
   const blockedWhole = nextSize === 1 && sharesCell;
   const resize = async () => {
-    const sub = tileSubOf(labels, size);
+    // Resized about its centre: the centre stays, on the nearest dot the
+    // new size fits (utils/canvasSize snapOffset).
+    const off = tileOffsetOf(labels, size);
     const patch: Record<string, string> = {
       [CANVAS_LABEL_SIZE]: String(nextSize),
-      // Its slot on the new size's grid, in the cell it is in.
-      [CANVAS_LABEL_SUB_X]: String(nextSize < 1 ? snapDown(sub.x, nextSize) : 0),
-      [CANVAS_LABEL_SUB_Y]: String(nextSize < 1 ? snapDown(sub.y, nextSize) : 0),
+      ...offsetLabels({ x: snapOffset(off.x, nextSize), y: snapOffset(off.y, nextSize) }),
     };
     const updated = await apiClient.patchWant(wantId, { labels: patch }).catch(() => null);
     if (updated) useWantStore.getState().patchWant(updated);

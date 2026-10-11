@@ -1476,6 +1476,19 @@ class MyWantApiClient {
     return response.data;
   }
 
+  /**
+   * The capture target: the tile whose constellation /things/share's `capture`
+   * adds to (engine capture_target.go). Null when the net is down.
+   */
+  async getCaptureTarget(): Promise<{ id: string; kind: 'want' | 'thing'; constellation: string; label: string } | null> {
+    const response = await this.client.get<{ target: { id: string; kind: 'want' | 'thing'; constellation: string; label: string } | null }>('/api/v1/capture-target');
+    return response.data.target ?? null;
+  }
+
+  async putCaptureTarget(target: { id: string; kind: 'want' | 'thing'; constellation: string; label: string } | null): Promise<void> {
+    await this.client.put('/api/v1/capture-target', { target });
+  }
+
   // Constellation id == its name; kind must accompany update/delete to pick the thing or
   // want label namespace. The name may be non-ASCII, so encode the path segment.
   async updateConstellation(name: string, updates: { name?: string; members?: string[]; color?: string; kind: ConstellationKind }): Promise<{ name: string }> {

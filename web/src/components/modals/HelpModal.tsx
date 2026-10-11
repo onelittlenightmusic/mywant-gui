@@ -79,7 +79,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                 <ShortcutRow keys={['W', '↑↓←→']} label="Focus next Want (CursorMan follows)" />
                 <ShortcutRow keys={['Shift', '↑↓←→']} label="Move focused Want tile (CursorMan follows)" />
                 <ShortcutRow keys={['H']} label="The Want's answers underfoot — walk them with ↑↓, Enter shows, Shift+Enter joins" />
-                <ShortcutRow keys={['Esc', 'Space']} either label="Hold: Rotation / Length Guide" />
+                <ShortcutRow keys={['Esc', 'Space']} either label="Hold on a Want / Thing: shape guide — ↑↓ size, ←→ turn, Tab length, Enter to set" />
               </div>
             </div>
           </div>
