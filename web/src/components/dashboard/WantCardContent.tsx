@@ -530,7 +530,11 @@ export const WantCardContent: React.FC<WantCardContentProps> = ({
   const isControl = labels['user-control'] === 'true';
   const isFullScreen = labels['full-screen-display'] === 'true';
 
-  const plugin = getWantCardPlugin(wantType, labels);
+  // A plugin that brings only a tile face (see WantCardPlugin.TileFace) leaves
+  // the card's body as it was: only one with a ContentSection draws the card.
+  const registered = getWantCardPlugin(wantType, labels);
+  const plugin = registered?.ContentSection ? registered : undefined;
+  const PluginContent = plugin?.ContentSection;
   const isWeatherType = WEATHER_TYPES.has(wantType);
   // Type renderer: built-in type-based content (no plugin registration needed)
   const TypeRenderer = isWeatherType ? WeatherContentSection : null;
@@ -639,10 +643,10 @@ export const WantCardContent: React.FC<WantCardContentProps> = ({
           )}
 
           {/* Plugin content section */}
-          {plugin && (
+          {PluginContent && (
             <div className="wc-ct flex-1 overflow-hidden min-h-0 flex flex-col">
               <div className={`wc-body ${contentFontSize} flex-1 min-h-0 flex flex-col justify-center`}>
-                <plugin.ContentSection
+                <PluginContent
                   // Keyed by the want it is about: a plugin section that holds
                   // a local editor buffer (the note's textarea, say) is at a
                   // fixed spot in the tree — the sidebar's card copy, a reused

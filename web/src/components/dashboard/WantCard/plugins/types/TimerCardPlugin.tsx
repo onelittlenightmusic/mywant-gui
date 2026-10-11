@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
+import { WantCardPluginProps, WantTileFaceProps, registerWantCardPlugin } from '../registry';
 import { useInputActions } from '@/hooks/useInputActions';
 import { WantCardLayout } from '../../WantCardLayout';
 import {
-  EVERY_PRESETS, TimerMode, parseAt,
+  EVERY_PRESETS, TimerMode, parseAt, angleForEvery, WEEKDAY_VALS,
 } from '@/components/forms/timerUtils';
+import { stateString, tileFacePalette, untilLabel, useNow } from '../../tileFace/tileFaceKit';
 import { TimerEveryDial } from '@/components/forms/TimerEveryDial';
 import { TimerClockFace } from '@/components/forms/TimerClockFace';
 import { EnumToggleGroup } from '@/components/common/EnumToggleGroup';
@@ -235,7 +236,112 @@ const TimerContentSection: React.FC<WantCardPluginProps> = ({
   );
 };
 
+// ── Tile face ────────────────────────────────────────────────────────────────
+
+/** The next time an `at` timer fires: today or tomorrow, or that weekday. */
+function nextAtFire(h24: number, min: number, recurrence: string, weekday: string, now: number): number {
+  const d = new Date(now);
+  d.setHours(h24, min, 0, 0);
+  const idx = WEEKDAY_VALS.indexOf(weekday);
+  if (recurrence === 'week' && idx >= 0) {
+    const jsDay = (idx + 1) % 7;                       // WEEKDAY_VALS starts on Monday
+    d.setDate(d.getDate() + ((jsDay - d.getDay() + 7) % 7));
+    if (d.getTime() <= now) d.setDate(d.getDate() + 7);
+  } else if (d.getTime() <= now) {
+    d.setDate(d.getDate() + 1);
+  }
+  return d.getTime();
+}
+
+/** '5m' → '5分ごと'. */
+function everyLabel(every: string): string {
+  const m = /^(\d+)\s*([smhd])$/.exec(every);
+  if (!m) return every;
+  const unit = { s: '秒', m: '分', h: '時間', d: '日' }[m[2] as 's' | 'm' | 'h' | 'd'];
+  return `${m[1]}${unit}ごと`;
+}
+
+const polar = (cx: number, cy: number, r: number, deg: number) => {
+  const a = (deg - 90) * (Math.PI / 180);
+  return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+};
+
+/**
+ * The timer's tile face: a real clock. In `at` mode its hands stand at the
+ * time it fires, and in the last hour an arc on the rim runs from now to then,
+ * shrinking as it comes. In `every` mode the hand points at its interval on
+ * the same ladder the card's dial uses. Under it, the same in words.
+ */
+const TimerTileFace: React.FC<WantTileFaceProps> = ({ want, width, height, isLight }) => {
+  const now = useNow();
+  const palette = tileFacePalette(isLight);
+  const mode = stateString(want.state, 'timer_mode') === 'at' ? 'at' : 'every';
+  const every = stateString(want.state, 'every');
+
+  const vbH = Math.max(60, Math.round((100 * height) / Math.max(1, width)));
+  const panelH = vbH - 10;
+  const r = Math.max(14, Math.min(30, (panelH - 22) / 2));
+  const cx = 50, cy = 5 + 4 + r;
+
+  let hands: React.ReactNode = null;
+  let arc: React.ReactNode = null;
+  let label = '';
+
+  if (mode === 'at') {
+    const { h24, min } = parseAt(stateString(want.state, 'at'));
+    const next = nextAtFire(h24, min, stateString(want.state, 'at_recurrence'),
+      stateString(want.state, 'at_weekday'), now);
+    label = untilLabel(next, now);
+    const hourTip = polar(cx, cy, r * 0.5, ((h24 % 12) + min / 60) * 30);
+    const minTip = polar(cx, cy, r * 0.78, min * 6);
+    hands = (
+      <>
+        <line x1={cx} y1={cy} x2={hourTip.x} y2={hourTip.y} stroke={palette.ink} strokeWidth="3.4" strokeLinecap="round" />
+        <line x1={cx} y1={cy} x2={minTip.x} y2={minTip.y} stroke={palette.accent} strokeWidth="2.2" strokeLinecap="round" />
+      </>
+    );
+    const remainingMin = (next - now) / 60_000;
+    if (remainingMin > 0 && remainingMin <= 60) {
+      const from = (new Date(now).getMinutes() + new Date(now).getSeconds() / 60) * 6;
+      const sweep = remainingMin * 6;
+      const a = polar(cx, cy, r, from);
+      const b = polar(cx, cy, r, from + sweep);
+      arc = (
+        <path d={`M ${a.x} ${a.y} A ${r} ${r} 0 ${sweep > 180 ? 1 : 0} 1 ${b.x} ${b.y}`}
+          fill="none" stroke="#e8772e" strokeWidth="4" strokeLinecap="round" />
+      );
+    }
+  } else {
+    label = every ? everyLabel(every) : '';
+    const i = EVERY_PRESETS.indexOf(every);
+    // The card's dial ladder (angleForEvery), turned from its frame to the clock's.
+    const deg = i >= 0 ? angleForEvery(i) * (180 / Math.PI) + 90 : 0;
+    const tip = polar(cx, cy, r * 0.8, deg);
+    hands = <line x1={cx} y1={cy} x2={tip.x} y2={tip.y} stroke={palette.accent} strokeWidth="2.6" strokeLinecap="round" />;
+  }
+
+  return (
+    <svg width={width} height={height} viewBox={`0 0 100 ${vbH}`} role="img"
+      aria-label={['timer', label].filter(Boolean).join(' ')}
+      style={{ display: 'block', fontFamily: 'inherit' }}>
+      <rect x="5" y="5" width="90" height={panelH} rx="9" fill={palette.panel} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={palette.accent} strokeWidth="2" />
+      {[0, 90, 180, 270].map(d => {
+        const o = polar(cx, cy, r, d), n = polar(cx, cy, r - 4, d);
+        return <line key={d} x1={o.x} y1={o.y} x2={n.x} y2={n.y} stroke={palette.ink} strokeWidth="1.6" strokeLinecap="round" />;
+      })}
+      {arc}
+      {hands}
+      <circle cx={cx} cy={cy} r="2.6" fill={palette.ink} />
+      {label && (
+        <text x="50" y={panelH + 1} textAnchor="middle" fill={palette.ink} fontSize="11" fontWeight="700">{label}</text>
+      )}
+    </svg>
+  );
+};
+
 registerWantCardPlugin({
   types: ['timer'],
   ContentSection: TimerContentSection,
+  TileFace: TimerTileFace,
 });

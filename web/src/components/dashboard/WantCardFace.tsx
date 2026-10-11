@@ -22,6 +22,9 @@ import { WantIcon } from './WantIcon';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { useConfigStore } from '@/stores/configStore';
 import { useCardOpacity } from '@/hooks/useCardOpacity';
+import type { Want } from '@/types/want';
+import { getWantTileFace } from './WantCard/plugins/registry';
+import { WantTileFace } from './WantCard/tileFace/WantTileFace';
 
 /**
  * Boost a hex colour into a vivid icon tint that stands out from the tile face.
@@ -402,6 +405,15 @@ export interface WantCardFaceProps {
   /** Overrides the computed icon colour/emboss — pass wantTypeIconStyle() to
    *  match the want card's badge exactly. */
   iconStyle?: React.CSSProperties;
+  /**
+   * The want this face is a tile of, and the tile's side in CSS px at the
+   * board's current zoom. Given both, and once the tile is large enough, the
+   * want's own tile face (its card plugin's TileFace) is drawn in place of the
+   * type icon and the name. Leave them out and the face is the type icon, as
+   * it always was.
+   */
+  want?: Want;
+  faceSize?: number;
 }
 
 export const WantCardFace: React.FC<WantCardFaceProps> = ({
@@ -440,6 +452,8 @@ export const WantCardFace: React.FC<WantCardFaceProps> = ({
   surfaceClass,
   backgroundNode,
   iconStyle,
+  want,
+  faceSize,
 }) => {
   // Subscribe to dynamic maps so this component re-renders when plugin icons/backgrounds load
   useWantTypeStore(s => s.categoryIconMap);
@@ -467,6 +481,8 @@ export const WantCardFace: React.FC<WantCardFaceProps> = ({
   const cardOpacity = useCardOpacity();
 
   const isLight = theme === 'light';
+  // A tile face replaces the icon only when the want has one at this size.
+  const tileFaceWant = want && faceSize && getWantTileFace(want, faceSize) ? want : undefined;
   // Canvas tiles (dark theme) tint the category icon with the want-type colour —
   // the same tone the design skins use elsewhere — instead of a flat white. Light
   // uses (WantTypeCard) keep the default text colour for contrast on white.
@@ -522,7 +538,18 @@ export const WantCardFace: React.FC<WantCardFaceProps> = ({
         </div>
       )}
 
-      {/* Centered content: icon + name */}
+      {/* The want's own tile face, when the tile is big enough for it… */}
+      {tileFaceWant && (
+        <WantTileFace
+          want={tileFaceWant}
+          size={faceSize!}
+          isLight={isLight}
+          className="absolute z-10 inset-0"
+        />
+      )}
+
+      {/* …otherwise centered content: icon + name */}
+      {!tileFaceWant && (
       <div
         className="absolute z-10 flex flex-col items-center justify-center gap-1.5 px-2"
         style={iconContainerStyle ?? { inset: 0 }}
@@ -568,6 +595,7 @@ export const WantCardFace: React.FC<WantCardFaceProps> = ({
           </p>
         )}
       </div>
+      )}
 
       {/* Caller-supplied overlays (status bar, bottom bar, selected glow, etc.) */}
       {children}

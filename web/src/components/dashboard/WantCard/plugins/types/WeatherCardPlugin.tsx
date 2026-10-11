@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Cloud, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Sun, type LucideIcon } from 'lucide-react';
 import { Want } from '@/types/want';
-import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
+import { WantCardPluginProps, WantTileFaceProps, registerWantCardPlugin } from '../registry';
 import { WantCardLayout } from '../../WantCardLayout';
+import { ensureTileFaceMotion } from '../../tileFace/tileFaceKit';
 
 type WeatherCondition = 'sunny' | 'cloudy' | 'rain' | 'snow' | 'storm' | 'fog' | 'default';
 
@@ -229,5 +231,81 @@ function GetWeatherCondition(want: Want): WeatherCondition {
   return 'default';
 }
 
-// weather / weather_effect are rendered directly in WantCardContent via type detection.
-// No plugin registration needed.
+// ── Tile face ────────────────────────────────────────────────────────────────
+
+/**
+ * The sky a tile's window shows, per condition, and the ink that reads on it.
+ * Solid, not the card's gradient: at tile size a gradient is only a blur, and
+ * a solid sky is what lets the ink's contrast be promised (all ≥ 4.5:1).
+ */
+const TILE_SKY: Record<WeatherCondition, { sky: string; ink: string; glyph: LucideIcon }> = {
+  sunny:   { sky: '#f2a93b', ink: '#2e1a00', glyph: Sun },
+  cloudy:  { sky: '#4a68a8', ink: '#ffffff', glyph: Cloud },
+  rain:    { sky: '#1f3554', ink: '#e6f0ff', glyph: CloudRain },
+  snow:    { sky: '#c4daf3', ink: '#14304f', glyph: CloudSnow },
+  storm:   { sky: '#2a2350', ink: '#f0e9ff', glyph: CloudLightning },
+  fog:     { sky: '#9aa6ae', ink: '#162027', glyph: CloudFog },
+  default: { sky: '#4f53a8', ink: '#ffffff', glyph: CloudSun },
+};
+
+/** "Overcast +23°C(80%)" → { temp: "23°", humidity: "80%" }. */
+function readWeatherNumbers(text: string): { temp: string; humidity: string } {
+  const t = /([+-]?\d+(?:\.\d+)?)\s*°\s*C/i.exec(text);
+  const h = /\((\d+)\s*%\)/.exec(text);
+  return {
+    temp: t ? `${Math.round(parseFloat(t[1]))}°` : '',
+    humidity: h ? `${h[1]}%` : '',
+  };
+}
+
+/**
+ * The weather card's sky, as a window on the tile: the condition's glyph
+ * drifting in it, the temperature large enough to read across the board, and
+ * the condition and humidity under it. What the card says, at tile size.
+ */
+const WeatherTileFace: React.FC<WantTileFaceProps> = ({ want, width, height }) => {
+  useEffect(ensureTileFaceMotion, []);
+  const condition = GetWeatherCondition(want);
+  const { sky, ink, glyph: Glyph } = TILE_SKY[condition] ?? TILE_SKY.default;
+  const text = (want.state?.current?.weather_text as string) || '';
+  const { temp, humidity } = readWeatherNumbers(text);
+  const label = [WEATHER_CONFIGS[condition]?.label ?? '', humidity].filter(Boolean).join(' ・ ');
+
+  // Drawn in a 100-wide box so it scales with the tile as one picture.
+  const vbH = Math.max(60, Math.round((100 * height) / Math.max(1, width)));
+  const winH = vbH - 10;
+  const falling = condition === 'rain' || condition === 'snow';
+
+  return (
+    <svg width={width} height={height} viewBox={`0 0 100 ${vbH}`} role="img"
+      aria-label={[WEATHER_CONFIGS[condition]?.label, temp, humidity].filter(Boolean).join(' ')}
+      style={{ display: 'block', fontFamily: 'inherit' }}>
+      <rect x="5" y="5" width="90" height={winH} rx="9" fill={sky} />
+      <g className="mw-tf-bob">
+        <Glyph x={54} y={8} size={36} color={ink} strokeWidth={1.8} />
+      </g>
+      {falling && [0, 1, 2, 3].map(i => (
+        <line key={i} className="mw-tf-fall" x1={60 + i * 8} y1={46} x2={58 + i * 8} y2={52}
+          stroke={ink} strokeWidth={1.6} strokeLinecap="round"
+          style={{ animationDelay: `${i * 0.3}s` }} />
+      ))}
+      {temp ? (
+        <>
+          <text x="12" y={winH - 12} fill={ink} fontSize="30" fontWeight="700">{temp}</text>
+          <text x="12" y={winH + 1} fill={ink} fontSize="9.5" fontWeight="500">{label}</text>
+        </>
+      ) : (
+        <text x="12" y={winH - 4} fill={ink} fontSize="15" fontWeight="700">{label || text}</text>
+      )}
+    </svg>
+  );
+};
+
+// The card for weather / weather_effect is drawn directly in WantCardContent
+// via type detection; this registers only the weather want's tile face.
+registerWantCardPlugin({
+  types: ['weather'],
+  TileFace: WeatherTileFace,
+  hasTileFace: (want) =>
+    !!(want.state?.current?.weather_condition || want.state?.current?.weather_text),
+});
