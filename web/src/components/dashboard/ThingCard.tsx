@@ -23,6 +23,8 @@ import { useThingTileStore } from '@/stores/thingTileStore';
 import { useMarkJumpStore } from '@/stores/markJumpStore';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { thingBackgroundSrc, THING_BACKGROUND_SCRIM } from '@/utils/thingBackground';
+import { thingPictureKind } from '@/utils/thingPicture';
+import { ThingPicture, useThingPictureSource } from './ThingPicture';
 
 interface MemoCardProps {
   record: ThingRecord;
@@ -42,10 +44,17 @@ interface MemoCardProps {
   onAddWant?: (record: ThingRecord) => void;
   /** Passed through to the card shell — the canvas float card sizes itself this way. */
   className?: string;
+  /**
+   * The card as a picture of itself — what the board shows of a thing up
+   * close (ThingTileDetail): no actions, never selected, never takes focus,
+   * and a nav id of its own, so the keys never land on it and it is never
+   * mistaken for the card in a grid or a panel.
+   */
+  display?: boolean;
 }
 
 /** Turn a hex like "#06b6d4" into an rgba tint. */
-export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, keepFocus, selectMode = false, checked = false, constellations = [], onEditConstellation, onView, onDelete, onAddWant, className }) => {
+export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, keepFocus, selectMode = false, checked = false, constellations = [], onEditConstellation, onView, onDelete, onAddWant, className, display = false }) => {
   const Icon = resolveLucideIcon(record.icon) ?? Type;
   const wantTypes = useWantTypeStore((s) => s.wantTypes);
   const iconFont = useIconFont() as IconFamily;
@@ -80,6 +89,18 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
     () => thingBackgroundSrc(record.background, record.labels),
     [record.background, record.labels],
   );
+
+  /**
+   * The thing's picture (ThingPicture) — the same one the board shows of it up
+   * close. A clock takes the glyph's place in the middle; a map goes behind
+   * the card, as a photo does, unless the card has a photo already.
+   */
+  const picture = useThingPictureSource({
+    id: record.id, subtype: record.typeName, value: record.value, icon: record.icon, color: record.color,
+    picture: record.background?.startsWith('@') ? backgroundSrc : undefined,
+  });
+  const pictureKind = thingPictureKind(picture);
+  const mapBehind = pictureKind === 'map' && !backgroundSrc;
 
   const onCanvas = useThingTileStore((s) => s.onCanvas.has(record.id));
   const requestJump = useMarkJumpStore((s) => s.requestJump);
@@ -182,20 +203,21 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
 
   return (
     <EntityCard
-      navId={entityCardId('thing', record.id)}
+      navId={display ? `${entityCardId('thing', record.id)}:display` : entityCardId('thing', record.id)}
       className={className}
       title={thingDisplayName(record.value)}
-      selected={selected}
-      keepFocus={keepFocus}
-      onView={() => onView(record)}
-      actions={actions}
+      selected={display ? false : selected}
+      keepFocus={display || keepFocus}
+      onView={() => { if (!display) onView(record); }}
+      actions={display ? [] : actions}
       badgeShape="thing"
       iconBadgeColor={record.color}
       icon={
         <div className="flex flex-col items-center justify-center gap-0.5 w-full [&_svg]:!w-1/2 [&_svg]:!h-1/2">
           {/* The thing's own colour, lifted to read — the glyph is the object
               now, not a pale mark on a disc. See EntityCard's thing badge. */}
-          <Icon style={{ color: vividIconColor(record.color, !isDark), filter: emboss }} strokeWidth={1.75} />
+          {/* Over the badge's disc: a clock is a face of its own. */}
+          <ThingPicture source={picture} isLight={!isDark} kind={pictureKind === 'clock' ? 'clock' : 'glyph'} className="relative z-[1]" />
           <span
             className="text-[8px] sm:text-[10px] font-semibold leading-none text-center max-w-full truncate"
             style={{ color: vividIconColor(record.color, !isDark) }}
@@ -231,6 +253,11 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
               thing and is most of why the card is worth looking at. The glyph
               and the title carry their own emboss and halo, so the scrim only
               has to take the edge off rather than cover the ends. */}
+          <div className={THING_BACKGROUND_SCRIM} />
+        </>
+      ) : mapBehind ? (
+        <>
+          <ThingPicture source={picture} isLight={!isDark} kind="map" className="absolute inset-0" />
           <div className={THING_BACKGROUND_SCRIM} />
         </>
       ) : undefined}

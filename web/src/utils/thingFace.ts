@@ -166,3 +166,82 @@ export function dropCap(value: string): { initial: string; rest: string } {
     rest: chars.length > 2 ? '…' : chars.slice(1).join(''),
   };
 }
+
+/**
+ * A value laid out to fit a box whole — never cut, never "…": first smaller
+ * letters, then, when one line would have to be smaller than `minPx`, more
+ * lines, broken between words where there are spaces and between characters
+ * where there are none ("6:50" stays "6:50"; a long station name takes two
+ * lines). Whatever layout lets the letters be biggest wins, even if that is
+ * still under `minPx` — a small whole value tells two things apart, a
+ * truncated one may not.
+ *
+ * Measured in the board's font at `weight`, so what fits here fits when drawn.
+ */
+export function fitThingValue(
+  value: string,
+  boxW: number,
+  boxH: number,
+  opts: { maxPx: number; minPx: number; weight?: number; lineHeight?: number },
+): { lines: string[]; fontPx: number } {
+  const lh = opts.lineHeight ?? 1.08;
+  const width = measureAt1px(opts.weight ?? 700);
+  const chars = [...value];
+  if (chars.length === 0) return { lines: [''], fontPx: opts.maxPx };
+  let best = { lines: [value], fontPx: Math.min(opts.maxPx, boxW / width(value), boxH / lh) };
+  if (best.fontPx >= opts.minPx) return best;
+  for (let n = 2; n <= Math.min(4, chars.length); n++) {
+    const lines = splitEven(chars, n, width);
+    const widest = Math.max(...lines.map(width));
+    const px = Math.min(opts.maxPx, boxW / widest, boxH / (n * lh));
+    if (px > best.fontPx) best = { lines, fontPx: px };
+  }
+  return best;
+}
+
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+const measureCache = new Map<string, number>();
+
+/** A string's width at 1px in the page's font, cached. */
+function measureAt1px(weight: number): (s: string) => number {
+  if (measureCtx === undefined) {
+    measureCtx = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+  }
+  return (s: string) => {
+    const key = `${weight}|${s}`;
+    const hit = measureCache.get(key);
+    if (hit !== undefined) return hit;
+    let w: number;
+    if (measureCtx) {
+      const family = getComputedStyle(document.body).fontFamily || 'sans-serif';
+      measureCtx.font = `${weight} 100px ${family}`;
+      w = measureCtx.measureText(s).width / 100;
+    } else {
+      w = [...s].reduce((a, c) => a + (c.charCodeAt(0) > 0xff ? 1 : 0.6), 0);
+    }
+    if (measureCache.size > 2000) measureCache.clear();
+    measureCache.set(key, w);
+    return w;
+  };
+}
+
+/** `chars` in `n` lines of about equal width, broken after a space when one is near. */
+function splitEven(chars: string[], n: number, width: (s: string) => number): string[] {
+  const total = width(chars.join(''));
+  const lines: string[] = [];
+  let start = 0;
+  for (let i = 1; i < n; i++) {
+    const target = (total * i) / n;
+    let cut = start + 1;
+    while (cut < chars.length - (n - i) && width(chars.slice(0, cut + 1).join('')) <= target) cut++;
+    // A space within a few characters is the better place to break.
+    for (let d = 0; d <= 3; d++) {
+      if (chars[cut - d] === ' ' && cut - d > start) { cut = cut - d + 1; break; }
+      if (chars[cut + d] === ' ' && cut + d < chars.length - 1) { cut = cut + d + 1; break; }
+    }
+    lines.push(chars.slice(start, cut).join('').trim());
+    start = cut;
+  }
+  lines.push(chars.slice(start).join('').trim());
+  return lines.filter(l => l.length > 0);
+}
