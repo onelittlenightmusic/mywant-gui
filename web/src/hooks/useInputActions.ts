@@ -176,7 +176,7 @@ export interface UseInputActionsOptions {
    */
   onRecommend?: () => void;
   /**
-   * Called on Gamepad Y + L1/R1 — one step along the canvas skill slot, back
+   * Called on Gamepad Y + D-pad left/right — one step along the canvas skill slot, back
    * (-1) or forward (+1).
    *
    * Gamepad only, and deliberately: the keyboard equips a skill by its digit
@@ -1420,21 +1420,24 @@ function _processGamepad(gi: number, gp: Gamepad): void {
       // the release must still be the release of what was actually emitted.
       const onBumper = action === 'tab-backward' || action === 'tab-forward';
       const chord = _cancelHeld && onBumper;
-      // Y + bumper walks the canvas skill slot, the way B + bumper walks the
-      // sub-tabs: the slot's own button, and the two nearest things to it.
+      // Y + the D-pad's left / right walks the canvas skill slot: the slot's
+      // own button held, and the ladder stepped sideways. The D-pad rather
+      // than the stick, because with Y held the stick is aiming (the throw,
+      // the kata ring); and rather than the bumpers, which it used to be —
+      // left and right is how a row of choices is walked everywhere else.
+      // Not repeated when held (skill-* is not a NAV_ACTION): one press, one
+      // step.
       //
       // Read off the pad itself rather than through a held flag. Y's press is
       // dispatched from this same sweep, so the physical state in THIS frame is
       // the one the chord is about, and there is no second copy of it to fall
       // out of step (which per-instance Y-held tracking has form for).
-      //
-      // Asked after B's chord so the older combination keeps its meaning when
-      // both are somehow down.
-      const skillChord = !chord && onBumper && (gp.buttons[3]?.pressed ?? false);
+      const onSideways = action === 'left' || action === 'right';
+      const skillChord = !chord && onSideways && (gp.buttons[3]?.pressed ?? false);
       const resolved: GamepadActionType = chord
         ? (action === 'tab-forward' ? 'sub-tab-forward' : 'sub-tab-backward')
         : skillChord
-          ? (action === 'tab-forward' ? 'skill-next' : 'skill-prev')
+          ? (action === 'right' ? 'skill-next' : 'skill-prev')
           : action;
       if (chord) _markCancelChord();
       state.action = resolved;
