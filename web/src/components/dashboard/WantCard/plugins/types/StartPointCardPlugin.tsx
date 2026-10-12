@@ -62,4 +62,5 @@ const StartPointContentSection: React.FC<WantCardPluginProps> = ({ want, isInner
 registerWantCardPlugin({
   types: ['startpoint'],
   ContentSection: StartPointContentSection,
+  tileFace: true,
 });

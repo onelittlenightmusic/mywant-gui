@@ -148,4 +148,5 @@ registerWantCardPlugin({
   types: ['gmail_memo'],
   ContentSection: GmailMemoContentSection,
   hideFinalResult: true,
+  tileFace: true,
 });

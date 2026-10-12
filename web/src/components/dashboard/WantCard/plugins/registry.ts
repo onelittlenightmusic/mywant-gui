@@ -43,6 +43,16 @@ export interface WantCardPlugin {
   ContentSection: React.ComponentType<WantCardPluginProps>;
   /** When true, suppresses the default final result JSON display */
   hideFinalResult?: boolean;
+  /**
+   * Shown on the want's own tile when the board is zoomed in close — the same
+   * ContentSection, drawn at card size and scaled onto the tile's face, so the
+   * board and the card never show two different pictures of one want.
+   *
+   * Display only: the face takes no input (pressing it presses the tile). Leave
+   * unset for a card whose content is a control, an iframe, or does work as
+   * soon as it is mounted — a board can hold many of them at once.
+   */
+  tileFace?: boolean;
 }
 
 const pluginRegistry = new Map<string, WantCardPlugin>();

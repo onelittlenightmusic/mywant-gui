@@ -80,4 +80,5 @@ registerWantCardPlugin({
   types: ['claude_info'],
   ContentSection: ClaudeInfoContentSection,
   hideFinalResult: true,
+  tileFace: true,
 });

@@ -231,3 +231,14 @@ function GetWeatherCondition(want: Want): WeatherCondition {
 
 // weather / weather_effect are rendered directly in WantCardContent via type detection.
 // No plugin registration needed.
+
+// Registered as well as built in (WantCardContent's TypeRenderer), so that what
+// asks the registry for a weather want's card — the board's tile face — finds
+// it. The card draws the same either way: a plugin's section in the same
+// wrapper, its final result hidden as a type renderer's is.
+registerWantCardPlugin({
+  types: ['weather', 'weather_effect'],
+  ContentSection: WeatherContentSection,
+  hideFinalResult: true,
+  tileFace: true,
+});

@@ -154,4 +154,5 @@ registerWantCardPlugin({
   types: ['smartgolf_check_reserved'],
   ContentSection: SmartgolfCheckReservedContent,
   hideFinalResult: true,
+  tileFace: true,
 });
