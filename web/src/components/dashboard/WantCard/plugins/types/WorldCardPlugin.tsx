@@ -109,5 +109,4 @@ const WorldContentSection: React.FC<WantCardPluginProps> = ({ want }) => {
 registerWantCardPlugin({
   types: ['world'],
   ContentSection: WorldContentSection,
-  tileFace: true,
 });

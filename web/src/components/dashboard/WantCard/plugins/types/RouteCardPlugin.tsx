@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { apiClient } from '@/api/client';
 import { Bike, Car, Footprints, ArrowLeftRight, MapPin } from 'lucide-react';
-import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
+import { WantCardPluginProps, registerWantCardPlugin, TileFaceContext } from '../registry';
+import { StaticMap } from '@/components/common/ThingMap';
 import { WantCardLayout } from '../../WantCardLayout';
 import { useConfigStore } from '@/stores/configStore';
 
@@ -216,6 +217,23 @@ async function solve(places: string[], mode: ModeKey, country?: string): Promise
   };
 }
 
+/**
+ * The answer to one question, remembered for the session: the card and the
+ * want's tile face (and a card mounted again) ask the same question, and
+ * these are somebody else's servers. A failure is not remembered — 再試行
+ * asks again (its nonce is part of the question anyway).
+ */
+const solvedCache = new Map<string, Promise<Solved>>();
+function solveOnce(question: string, places: string[], mode: ModeKey, country?: string): Promise<Solved> {
+  let run = solvedCache.get(question);
+  if (!run) {
+    run = solve(places, mode, country);
+    solvedCache.set(question, run);
+    run.catch(() => solvedCache.delete(question));
+  }
+  return run;
+}
+
 /** Write the want's params back — the card's controls are edits to the question.
  *  Only these params (PATCH): no read-modify-write of a whole want that a list
  *  response may have projected. */
@@ -279,7 +297,7 @@ const RouteContentSection: React.FC<WantCardPluginProps> = ({ want, isExpanded }
     let cancelled = false;
     setBusy(true);
     setError(null);
-    solve([fromResolved, ...via, toResolved], mode, geocodeCountry || undefined)
+    solveOnce(question, [fromResolved, ...via, toResolved], mode, geocodeCountry || undefined)
       .then(r => { if (!cancelled) setSolved(r); })
       .catch(e => { if (!cancelled) { setSolved(null); setError(e instanceof Error ? e.message : '経路を引けません'); } })
       .finally(() => { if (!cancelled) setBusy(false); });
@@ -380,9 +398,25 @@ const RouteContentSection: React.FC<WantCardPluginProps> = ({ want, isExpanded }
   // reading it back as digits tells the user nothing they wanted to know.
   const shown = (p: string) => (asCoords(p) ? '現在地' : p);
 
+  // On the want's tile up close the map is a picture of itself (StaticMap):
+  // no map element, so none of the Leaflet effects above starts.
+  const still = useContext(TileFaceContext);
   const map = (
     <div className="relative w-full h-full">
-      <div ref={mapRef} className="absolute inset-0 rounded-lg overflow-hidden" />
+      {still ? (
+        <StaticMap
+          path={solved?.points}
+          pathColor={MODES[mode].color}
+          dots={solved ? [
+            { lat: solved.points[0][0], lng: solved.points[0][1], color: MODES[mode].color },
+            { lat: solved.points[solved.points.length - 1][0], lng: solved.points[solved.points.length - 1][1], color: '#ef4444' },
+            ...(here ? [{ lat: here[0], lng: here[1], color: '#2563eb' }] : []),
+          ] : undefined}
+          className="absolute inset-0 rounded-lg"
+        />
+      ) : (
+        <div ref={mapRef} className="absolute inset-0 rounded-lg overflow-hidden" />
+      )}
       {(!solved || busy) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-400 bg-black/5 rounded-lg px-3 text-center">
           <span>{error ?? (busy ? '経路を検索中…' : '出発地と目的地を入れてください')}</span>

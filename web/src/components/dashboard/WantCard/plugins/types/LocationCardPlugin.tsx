@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { WantCardPluginProps, registerWantCardPlugin, TileFaceContext } from '../registry';
+import { StaticMap } from '@/components/common/ThingMap';
 import { WantCardLayout } from '../../WantCardLayout';
 import { useCharacterStore } from '@/stores/characterStore';
 import { useThingStore } from '@/stores/thingStore';
@@ -58,6 +59,9 @@ export const LocationContentSection: React.FC<WantCardPluginProps> = ({ want }) 
   // Re-running the marker effect on every store tick would rebuild the layer
   // constantly; key it on the values that actually change the pins.
   const marksKey = marks.map(m => `${m.name}|${m.lat}|${m.lng}|${m.color}`).join(';');
+  // On the want's tile up close the map is a picture of itself (StaticMap):
+  // no map element, so none of the Leaflet effects below starts.
+  const still = useContext(TileFaceContext);
 
   useEffect(() => {
     if (!hasLocation || !mapRef.current) return;
@@ -178,7 +182,15 @@ export const LocationContentSection: React.FC<WantCardPluginProps> = ({ want }) 
         <div className="h-full relative overflow-hidden rounded-xl bg-gray-900">
           {hasLocation ? (
             <>
-              <div ref={mapRef} className="absolute inset-0" style={{ zIndex: 0 }} />
+              {still ? (
+                <StaticMap
+                  center={{ lat: lat!, lng: lng! }}
+                  dots={[...marks.map(m => ({ lat: m.lat, lng: m.lng, color: m.color, title: m.name })), { lat: lat!, lng: lng!, color: '#3b82f6' }]}
+                  className="absolute inset-0"
+                />
+              ) : (
+                <div ref={mapRef} className="absolute inset-0" style={{ zIndex: 0 }} />
+              )}
               {/* Address overlay */}
               {(city || address) && (
                 <div className="absolute bottom-0 left-0 right-0 z-10 px-2 py-1"

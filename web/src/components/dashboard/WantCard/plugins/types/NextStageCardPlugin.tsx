@@ -46,5 +46,4 @@ const NextStageContentSection: React.FC<WantCardPluginProps> = ({ want, isInnerF
 registerWantCardPlugin({
   types: ['next_stage'],
   ContentSection: NextStageContentSection,
-  tileFace: true,
 });

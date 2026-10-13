@@ -238,4 +238,7 @@ const TimerContentSection: React.FC<WantCardPluginProps> = ({
 registerWantCardPlugin({
   types: ['timer'],
   ContentSection: TimerContentSection,
+  // Not on the tile's face yet: its content is a running clock, live as soon as it is
+  // mounted (see WantCardPlugin.tileFace).
+  tileFace: false,
 });

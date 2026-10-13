@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { EmbeddedPage } from '@/components/dashboard/WantCard/plugins/embeddedPage';
 
 interface BrowserFrameProps {
   iframeUrl: string;
@@ -52,7 +53,7 @@ export const BrowserFrame: React.FC<BrowserFrameProps> = ({
           REC
         </span>
       </div>
-      <iframe
+      <EmbeddedPage
         ref={iframeRef}
         src={iframeUrl}
         title={`Browser recording - want ${wantId}`}

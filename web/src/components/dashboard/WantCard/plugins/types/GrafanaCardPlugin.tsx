@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
+import { EmbeddedPage } from '../embeddedPage';
 
 const GrafanaContentSection: React.FC<WantCardPluginProps> = ({ want, isExpanded }) => {
   const goal = (want.state as any)?.goal ?? {};
@@ -37,7 +38,7 @@ const GrafanaContentSection: React.FC<WantCardPluginProps> = ({ want, isExpanded
 
   return (
     <div className="flex flex-col w-full h-full min-h-0">
-      <iframe
+      <EmbeddedPage
         src={src}
         className="w-full flex-1 min-h-0 border-0"
         style={{ height: isExpanded ? '100%' : '100%' }}
@@ -58,4 +59,6 @@ registerWantCardPlugin({
   types: ['grafana_panel'],
   ContentSection: GrafanaContentSection,
   hideFinalResult: true,
+  // No face: the panel is only ever live in its frame, and there is no still of it.
+  tileFace: false,
 });

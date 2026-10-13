@@ -10,6 +10,7 @@ import { CheckSquare, Square, Plus, Hourglass, X as XIcon, RefreshCw, ExternalLi
 import { Want, SelectModeProps } from '@/types/want';
 import { useConstellationStore, membersById } from '@/stores/constellationStore';
 import { WantCardContent } from '../WantCardContent';
+import { EmbeddedPage } from './plugins/embeddedPage';
 import { classNames, suppressDragImage } from '@/utils/helpers';
 import { getCardBackgroundStyle, resolveIconForFamily, type IconFamily } from '@/components/dashboard/WantTypeVisuals';
 import { wantTypeIconStyle, cardInkVars } from '@/components/dashboard/WantCardFace';
@@ -1267,7 +1268,7 @@ export const WantCard: React.FC<WantCardProps> = ({
                   <XIcon className="w-3 h-3" />
                 </button>
               </div>
-              <iframe
+              <EmbeddedPage
                 ref={iframeRef}
                 src={iframeUrl}
                 className="flex-1 w-full border-0"
@@ -1495,7 +1496,7 @@ export const WantCard: React.FC<WantCardProps> = ({
                   title="閉じる"
                 ><XIcon className="w-3 h-3" /></button>
               </div>
-              <iframe
+              <EmbeddedPage
                 ref={iframeRef}
                 src={iframeUrl}
                 className="flex-1 w-full border-0"

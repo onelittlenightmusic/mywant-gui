@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Check, X } from 'lucide-react';
 import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
+import { EmbeddedPage } from '../embeddedPage';
 import { WantCardLayout } from '../../WantCardLayout';
 import { LinkifiedText } from '@/components/common/LinkifiedText';
 import { classNames } from '@/utils/helpers';
@@ -269,7 +270,7 @@ const NoteContentSection: React.FC<WantCardPluginProps> = ({
             <span className="flex-1 text-white/50 font-mono truncate">{iframeUrl}</span>
             <button onClick={() => setIframeUrl(null)} title="Close" className="text-white/60 hover:text-white px-1"><X className="w-3.5 h-3.5" /></button>
           </div>
-          <iframe
+          <EmbeddedPage
             src={iframeUrl}
             className="flex-1 w-full border-0"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"

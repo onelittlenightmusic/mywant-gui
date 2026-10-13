@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, Globe, Map as MapIcon } from 'lucide-react';
-import { WantCardPluginProps, registerWantCardPlugin, CardEmbeddedContext } from '../registry';
+import { WantCardPluginProps, registerWantCardPlugin, CardEmbeddedContext, TileFaceContext } from '../registry';
+import { PagePicture } from '../embeddedPage';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { Want } from '@/types/want';
 import { myDeviceId } from '@/hooks/useDeviceSession';
@@ -643,9 +644,28 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
   );
 };
 
+/**
+ * The page as a picture, for the want's tile up close (TileFaceContext): the
+ * screenshot taken when the type was made — what the card itself shows of a
+ * page that cannot be framed. Never the live frame, and none of the frame's
+ * work below (filling, listening, the pill) starts. Only a want with a
+ * screenshot has a face (tileFace below).
+ */
+const WebFramePicture: React.FC<{ want: Want }> = ({ want }) => (
+  <div className="relative w-full h-full min-h-0 overflow-hidden bg-gray-100 dark:bg-gray-800">
+    <PagePicture shot={want.metadata?.labels?.['screenshot-url'] ?? ''} />
+  </div>
+);
+
+/** The web card: its page live (or its stand-in), or on a tile face, its picture. */
+const WebFrameCardContent: React.FC<WantCardPluginProps> = (props) =>
+  useContext(TileFaceContext) ? <WebFramePicture want={props.want} /> : <WebFrameContentSection {...props} />;
+
 registerWantCardPlugin({
   types: [],
   labels: { 'form-type': 'web' },
-  ContentSection: WebFrameContentSection,
+  ContentSection: WebFrameCardContent,
   hideFinalResult: true,
+  // A face is the page's screenshot; without one there is nothing of the card to show.
+  tileFace: (want) => !!want.metadata?.labels?.['screenshot-url'],
 });

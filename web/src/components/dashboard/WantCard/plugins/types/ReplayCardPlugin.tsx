@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Circle, Camera, X } from 'lucide-react';
 import { BrowserFrame } from '@/components/replay/BrowserFrame';
 import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
+import { EmbeddedPage } from '../embeddedPage';
 import { WantCardLayout } from '../../WantCardLayout';
 
 const calcBubbleStyle = (e: React.MouseEvent, widthMultiplier = 1.3): React.CSSProperties => {
@@ -218,7 +219,7 @@ const ReplayContentSection: React.FC<WantCardPluginProps> = ({ want, isChild }) 
           </div>
           <div className="flex-1 min-h-0">
             {replayIframeUrl
-              ? <iframe src={replayIframeUrl} className="w-full h-full border-0" title="Replay viewer" />
+              ? <EmbeddedPage src={replayIframeUrl} className="w-full h-full border-0" title="Replay viewer" />
               : <div className="flex items-center justify-center h-32 gap-2 text-gray-400 dark:text-gray-500">
                   <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 animate-pulse" />
                   <span>Starting replay…</span>
@@ -258,4 +259,7 @@ const ReplayContentSection: React.FC<WantCardPluginProps> = ({ want, isChild }) 
 registerWantCardPlugin({
   types: ['replay'],
   ContentSection: ReplayContentSection,
+  // No face while recording: the card is then the recording browser, live in
+  // its frame, with no still of it. Otherwise the face is the card's buttons and results.
+  tileFace: (want) => !(want.state?.current?.recording_active === true && want.state?.current?.recording_iframe_url),
 });

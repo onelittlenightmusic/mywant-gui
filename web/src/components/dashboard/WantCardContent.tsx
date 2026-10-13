@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useReducer, useCallback, useRef, useContext } from 'react';
 import { OverlayActionGrid } from '@/components/overlay';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useSystemFontSize, CARD_CONTENT_SIZE } from '@/hooks/useSystemFontSize';
@@ -149,7 +149,7 @@ const ExpandedCodeView: React.FC<{
 
 // Register all plugins (side-effect imports)
 import './WantCard/plugins';
-import { getWantCardPlugin, onPluginRegistered } from './WantCard/plugins/registry';
+import { getWantCardPlugin, onPluginRegistered, TileFaceContext } from './WantCard/plugins/registry';
 import { WeatherContentSection } from './WantCard/plugins/types/WeatherCardPlugin';
 
 // Types handled by built-in type renderers (no plugin registration needed)
@@ -565,6 +565,7 @@ export const WantCardContent: React.FC<WantCardContentProps> = ({
   // Single body-text size for every want-type card, driven by the System Font
   // setting. Plugins inherit from here instead of setting their own sizes.
   const contentFontSize = CARD_CONTENT_SIZE[useSystemFontSize()];
+  const onTileFace = useContext(TileFaceContext);
 
   return (
     <div className="h-full w-full overflow-hidden">
@@ -581,7 +582,8 @@ export const WantCardContent: React.FC<WantCardContentProps> = ({
 
         {/* Dealing through the answers — one control at each edge, overlaid so
             the face keeps its full height. See ResultPager. */}
-        <ResultPager pages={pages} />
+        {/* Not on a tile's face: a picture of the card has no pages to turn. */}
+        {!onTileFace && <ResultPager pages={pages} />}
 
         {/* Approve / Deny — the card's whole height in two tiles, the way every
             other question a card asks is laid out (OverlayActionGrid). It stays

@@ -9,6 +9,14 @@ import { Want } from '@/types/want';
  */
 export const CardEmbeddedContext = React.createContext(false);
 
+/**
+ * The content is being drawn on the want's tile, as its face up close (the
+ * canvas's WantTileFace) — a picture of the card, with no input and many on
+ * the board at once. A card that is live in itself (a framed page) draws a
+ * still of itself here instead.
+ */
+export const TileFaceContext = React.createContext(false);
+
 // Props passed to every want card plugin's ContentSection.
 // Keep this minimal — derive extra values inside each plugin from `want`.
 export interface WantCardPluginProps {
@@ -44,15 +52,21 @@ export interface WantCardPlugin {
   /** When true, suppresses the default final result JSON display */
   hideFinalResult?: boolean;
   /**
-   * Shown on the want's own tile when the board is zoomed in close — the same
-   * ContentSection, drawn at card size and scaled onto the tile's face, so the
-   * board and the card never show two different pictures of one want.
+   * Whether the card is shown on the want's own tile when the board is zoomed
+   * in close — the card's own content, drawn at card size and scaled onto the
+   * tile's face, so the board and the card never show two different pictures
+   * of one want. On unless set to false: every card is, by default.
    *
-   * Display only: the face takes no input (pressing it presses the tile). Leave
-   * unset for a card whose content is a control, an iframe, or does work as
-   * soon as it is mounted — a board can hold many of them at once.
+   * Display only: the face takes no input (pressing it presses the tile), and
+   * a board holds several at once. A card whose content is live in itself —
+   * an iframe, an interactive map, a running timer — draws a still of the
+   * same content under TileFaceContext (a map as StaticMap, a framed page as
+   * an EmbeddedPage with its screenshot). Where there is no still of what the
+   * card shows, there is no face — false, or a function of the want saying
+   * when there is one — never a stand-in the card itself does not show: the
+   * tile's own icon says more than a placeholder.
    */
-  tileFace?: boolean;
+  tileFace?: boolean | ((want: Want) => boolean);
 }
 
 const pluginRegistry = new Map<string, WantCardPlugin>();

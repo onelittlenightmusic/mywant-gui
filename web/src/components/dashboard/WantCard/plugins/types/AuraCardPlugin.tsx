@@ -113,5 +113,4 @@ const AuraContentSection: React.FC<WantCardPluginProps> = ({
 registerWantCardPlugin({
   types: ['aura'],
   ContentSection: AuraContentSection,
-  tileFace: true,
 });

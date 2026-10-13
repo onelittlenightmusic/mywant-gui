@@ -64,5 +64,4 @@ registerWantCardPlugin({
   types: ['dynamic_background'],
   ContentSection: DynamicBackgroundContentSection,
   hideFinalResult: true,
-  tileFace: true,
 });

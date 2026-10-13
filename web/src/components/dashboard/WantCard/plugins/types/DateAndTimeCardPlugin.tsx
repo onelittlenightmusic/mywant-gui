@@ -733,5 +733,4 @@ const DateAndTimeContentSection: React.FC<WantCardPluginProps> = ({ want }) => {
 registerWantCardPlugin({
   types: ['date_and_time'],
   ContentSection: DateAndTimeContentSection,
-  tileFace: true,
 });

@@ -240,5 +240,4 @@ registerWantCardPlugin({
   types: ['weather', 'weather_effect'],
   ContentSection: WeatherContentSection,
   hideFinalResult: true,
-  tileFace: true,
 });

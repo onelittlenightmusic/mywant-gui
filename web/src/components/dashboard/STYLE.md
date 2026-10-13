@@ -62,6 +62,13 @@ Thing はタイルの画面上の大きさで段階が変わる（`thingStage`�
 - 粒が小さくなっても、押す・ドラッグの当たり判定はマス全体のまま。
 - 同時に描く詳細は、見えている中で中央に近いものから near 12・mid 40 まで。
 
+## 5b. 寄ると want のタイルがカード面になる
+
+- 面はカードの延長。カードを盤面用に描き直さず、カードの本体（`WantCardContent`）をそのまま縮めて載せる（guiex `WantTileFace`）。プラグインのない種類は結果があるときだけ。
+- 面は表示だけ（inert）。結果のページ送りなどの操作は出さない。
+- 中で動き続けるものは、面では**同じ中身の静止画**にする（`TileFaceContext`）。地図は Leaflet ではなく `StaticMap`（同じタイル・同じ経路と点）。ページの埋め込みは iframe ではなく `EmbeddedPage`（面ではそのページのスクリーンショット）。
+- **カードに出ていない代わりの絵（アイコンの札など）は面に出さない。** 静止画がないときは面を持たない（`tileFace: false`、または want を見て決める関数）。タイルのアイコンのほうが多くを言う。いま面がないのは Grafana、録画中の Replay、スクリーンショットのない web want、Timer。
+
 ## 6. 縮小しても同じものに見えること
 
 折りたたんだ constellation（`ConstellationClusterLayer`）、ミニマップ、カードのバッジなど、小さく描く場所でも**同じ部品を同じ比率で**使う。小さい版だけ平たい円や白い台紙にしない。
@@ -83,7 +90,8 @@ Thing はタイルの画面上の大きさで段階が変わる（`thingStage`�
 | --- | --- |
 | `sphereBackground` / `thingFaceBackground` / `thingInk` / `thingFaceText` / `thingNameShadow` / `dropCap` / `fitThingValue` / `THING_GLYPH_*` / `DROP_CAP_SCALE` | `web/src/utils/thingFace.ts` |
 | `ThingPicture` / `thingPictureKind` | `web/src/components/dashboard/ThingPicture.tsx`、`web/src/utils/thingPicture.ts` |
-| `ClockDial` / `ThingMap` | `web/src/components/common/` |
+| `ClockDial` / `ThingMap` / `StaticMap` | `web/src/components/common/` |
+| `EmbeddedPage` / `PagePicture` | `web/src/components/dashboard/WantCard/plugins/embeddedPage.tsx` |
 | `thingStage` | `web/src/stores/boardLodStore.ts`（mywant-guiex） |
 | `ThingTileDetail`（札とカード） | `web/src/components/dashboard/ThingTileDetail.tsx`（mywant-guiex） |
 | `THING_CLIP` | `web/src/utils/thingShape.ts` |
