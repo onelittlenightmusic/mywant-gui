@@ -20,7 +20,7 @@ import { extensionMenu } from '@/extensions/registry';
 import { useOriginReveal, anchoredRevealStyle } from '@/components/ui/originReveal';
 import { useThingStore } from '@/stores/thingStore';
 import { useWantStore } from '@/stores/wantStore';
-import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, useHostPanelStore, useHostSheetStore, useHostFloatStore, useHostPadStore, dispatchHostAct, useHostExtraButtonsStore, type HostButton } from '@/lib/nativeHost';
+import { nativeHost, postToHost, onHostPress, iconName, useHostCardStore, useHostPanelStore, useHostSheetStore, useHostFloatStore, dispatchHostAct, useHostExtraButtonsStore, setHostControl, removeHostControl, type HostButton } from '@/lib/nativeHost';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { useDarkMode } from '@/hooks/useDarkMode';
@@ -664,7 +664,6 @@ export const Header: React.FC<HeaderProps> = ({
   const hostPanel = useHostPanelStore(s => s.panel);
   const hostSheet = useHostSheetStore(s => s.sheet);
   const hostFloat = useHostFloatStore(s => s.cards);
-  const hostPad = useHostPadStore(s => s.pad);
   const hostExtra = useHostExtraButtonsStore(s => s.buttons);
   const hostActionsRef = useRef<Record<string, () => void>>({});
   const hostLastRef = useRef('');
@@ -737,12 +736,18 @@ export const Header: React.FC<HeaderProps> = ({
       menuIndex: menuOpen ? focusedIdx : -1,
     };
     hostActionsRef.current = actions;
-    const message = { type: 'header' as const, buttons, menu, card, focus, panel: hostPanel, sheet: hostSheet, float: hostFloat, pad: hostPad, position: headerSetting === 'bottom' ? 'bottom' as const : 'top' as const };
+    // The buttons and the card's actions as native controls: drawn on the
+    // app's pill, a press running the very action the button has here.
+    const run = (id: string, phase: string) => { if (phase === 'press') hostActionsRef.current[id]?.(); };
+    setHostControl('pill', { id: 'pill', kind: 'pill', items: buttons }, run);
+    setHostControl('card', { id: 'card', kind: 'pill', items: card }, run);
+    const message = { type: 'header' as const, menu, focus, panel: hostPanel, sheet: hostSheet, float: hostFloat, position: headerSetting === 'bottom' ? 'bottom' as const : 'top' as const };
     const json = JSON.stringify(message);
     if (json === hostLastRef.current) return;
     hostLastRef.current = json;
     postToHost(message);
   });
+  useEffect(() => () => { removeHostControl('pill'); removeHostControl('card'); }, []);
   useEffect(() => {
     if (nativeHost) onHostPress(id => {
       // A corner card's: float:<act>:<kind>:<id> (see useHostFloatStore).

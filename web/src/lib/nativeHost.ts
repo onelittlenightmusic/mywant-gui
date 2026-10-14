@@ -17,6 +17,10 @@ import { create } from 'zustand';
  *   page → app   window.webkit.messageHandlers.mywantHost.postMessage(msg)
  *   app  → page  window.__mywantHost.press(id)
  *
+ * What the app draws as controls — the header's buttons, the software pad,
+ * the board's rings, the bubbles' frames — goes one way, native controls
+ * (useHostControl, at the end of this file).
+ *
  * The app's buttons float over the page, along the top or just above its tab
  * bar — wherever this person keeps the header. It sets --host-inset-top or
  * --host-inset-bottom to how tall they are, for what has to stay clear.
@@ -39,11 +43,9 @@ export interface HostButton {
 
 export interface HostMessage {
   type: 'header';
-  buttons: HostButton[];
+  /** The header's buttons and the card in hand's actions are native controls
+   *  (useHostControl: 'pill' and 'card'), not part of this message. */
   menu: HostButton[];
-  /** What can be done with the card in hand (the selected or expanded one) —
-   *  drawn by the app ahead of the header's buttons. See useHostCardActions. */
-  card: HostButton[];
   /** Where the header cursor is (Select / Alt+Enter walks it — the gamepad's
    *  way into the header): on the hamburger ("menu"), on a button (its id), or
    *  nowhere; whether the menu is open, and on which entry. The app draws the
@@ -56,11 +58,6 @@ export interface HostMessage {
   /** The corner cards for what is underfoot, front first, for the app to draw
    *  natively (useHostFloatStore). Empty when there are none. */
   float: HostFloatCard[];
-  /** The software pad, drawn by the app natively while it is switched on:
-   *  what A/B/X/Y do where the character stands, and whether A has latched a
-   *  mode. Its presses come back as controller frames, as a real gamepad's do.
-   *  null while the pad is off. */
-  pad: HostPad | null;
   /** Where this person keeps the header (their character's display setting):
    *  the app puts its own bar there. */
   position: 'top' | 'bottom';
@@ -72,9 +69,9 @@ interface HostBridge {
   /** The app reads the controller itself and hands the page its state. */
   ownsController?: boolean;
   controller?: (frame: { buttons: boolean[]; axes: number[] }) => void;
-  /** A button of the app's native software pad pressed (down) or let go —
-   *  up/down/left/right, A, B, X, Y, SELECT, START. See CanvasDPad's HostPad. */
-  pad?: (id: string, down: boolean) => void;
+  /** Something on one of the page's native controls (useHostControl) was
+   *  pressed, or put down or let go. */
+  input?: (control: string, item: string, phase: HostInputPhase) => void;
 }
 
 declare global {
@@ -162,7 +159,7 @@ export interface HostFocusCard {
 export interface HostCardAct { type: 'card-act'; act: string; kind: HostFloatCard['kind']; id: string }
 
 /** Hand a message to the app. Nothing happens without one. */
-export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot | HostFocusCard | HostBubbles | { type: 'haptic'; kind: 'lift' | 'drop' }
+export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot | HostFocusCard | HostControls | { type: 'haptic'; kind: 'lift' | 'drop' }
   | { type: 'drag-shape'; shape: 'circle'; x: number; y: number; w: number; h: number }
   | { type: 'card-buttons'; list: { id: string; label: string; icon: string }[] }): void {
   window.webkit?.messageHandlers?.mywantHost?.postMessage(message);
@@ -449,22 +446,9 @@ export function useHostCardSlot(kind: HostFloatCard['kind'], id: string): RefCal
 // ── The software pad, drawn by the app ──────────────────────────────────────
 //
 // Framed by an app, the board's software pad (CanvasDPad) is not drawn: the
-// app draws a gamepad natively, laid out as one is, and hands its presses to
-// the page as controller frames — the same way it hands over a real gamepad
-// (hostControllerFrame), so holding, chords and long presses are the page's
-// as ever. What the page still says is the legend.
-
-export interface HostPad {
-  labels: Partial<Record<'A' | 'B' | 'X' | 'Y', string>>;
-  aLatched: boolean;
-  /** The driven character's colour, which a held button takes. */
-  color?: string;
-}
-
-export const useHostPadStore = create<{ pad: HostPad | null; set: (pad: HostPad | null) => void }>((set) => ({
-  pad: null,
-  set: (pad) => set({ pad }),
-}));
+// app draws a gamepad natively, laid out as one is — a native control of kind
+// 'pad' (useHostControl), its presses coming back held and let go as the
+// page's own pad's are. What the page still says is the legend.
 
 /**
  * Tell a framing app where a list's focused want card is, as it moves (the
@@ -554,24 +538,25 @@ export function useHostPanel(
 // A bubble on the board (OverlayBubble — the character's actions, a Y
 // connection's choices, a name prompt…) keeps its contents here; framed by an
 // app, its frame — the outline, the tail, the shadow, the arrival — is the
-// app's, drawn natively around the box the bubble says it occupies. The app's
-// frame takes no touches, so the buttons inside are pressed as ever.
-
-export interface HostBubble { id: string; x: number; y: number; w: number; h: number; tail: boolean }
-export interface HostBubbles { type: 'bubbles'; list: HostBubble[] }
+// app's: a native control of kind 'frame' around the box the bubble occupies,
+// followed every frame. The app's frame takes no touches, so the buttons
+// inside are pressed as ever.
 
 const hostBubbles = new Map<string, { el: HTMLElement; tail: boolean }>();
 let bubbleLoop = 0;
-let lastBubbles = '';
 
 function lookAtBubbles() {
-  const list: HostBubble[] = [];
   for (const [id, { el, tail }] of hostBubbles) {
     const r = el.getBoundingClientRect();
-    if (r.width > 0) list.push({ id, x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), tail });
+    if (r.width > 0) {
+      setHostControl(id, {
+        id, kind: 'frame', items: [], tail,
+        at: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) },
+      });
+    } else {
+      removeHostControl(id);
+    }
   }
-  const key = JSON.stringify(list);
-  if (key !== lastBubbles) { lastBubbles = key; postToHost({ type: 'bubbles', list }); }
   bubbleLoop = hostBubbles.size ? requestAnimationFrame(lookAtBubbles) : 0;
 }
 
@@ -584,7 +569,8 @@ export function useHostBubble(el: HTMLElement | null, tail: boolean): void {
     if (!bubbleLoop) bubbleLoop = requestAnimationFrame(lookAtBubbles);
     return () => {
       hostBubbles.delete(id);
-      if (!hostBubbles.size) { cancelAnimationFrame(bubbleLoop); bubbleLoop = 0; lookAtBubbles(); }
+      removeHostControl(id);
+      if (!hostBubbles.size) { cancelAnimationFrame(bubbleLoop); bubbleLoop = 0; }
     };
   }, [id, el, tail]);
 }
@@ -625,4 +611,113 @@ export function hostHaptic(kind: 'lift' | 'drop'): void {
  */
 export function hostDragShape(rect: DOMRect, shape: 'circle'): void {
   if (nativeHost) postToHost({ type: 'drag-shape', shape, x: rect.left, y: rect.top, w: rect.width, h: rect.height });
+}
+
+// ── Native controls ──────────────────────────────────────────────────────────
+//
+// One way for everything the app draws natively for this page and hands back
+// presses from: the page says which controls there are — what kind each is,
+// its items, and where it stands on screen if that matters — and the app
+// draws each kind its own way (a pill of buttons, the software pad, a ring
+// of chips around the character) and sends every press back to the control
+// that drew it, by id. The same for the board's tab and the app's browser.
+//
+//   page → app   { type: 'controls', list: HostControl[] }  (the whole list, on change)
+//   app  → page  window.__mywantHost.input(control, item, phase)
+//
+// phase: 'press' for a button pressed once; 'down' and 'up' for what is held
+// (the pad's arrows and face buttons).
+
+export type HostControlKind = 'pill' | 'pad' | 'ring' | 'frame';
+export type HostInputPhase = 'press' | 'down' | 'up';
+
+export interface HostControlItem {
+  id: string;
+  label?: string;
+  /** A Lucide icon name; the app picks its own glyph for it. */
+  icon?: string;
+  /** A second, smaller line. */
+  detail?: string;
+  /** What it is, for its colour: want, thing, aim… */
+  tone?: string;
+  /** On: its mode, its latch, the one being pointed at. */
+  active?: boolean;
+  /** A pill button that is a page: where it goes. */
+  href?: string;
+  /** A pill button kept in the "…" menu rather than on the pill. */
+  more?: boolean;
+}
+
+export interface HostControl {
+  id: string;
+  kind: HostControlKind;
+  items: HostControlItem[];
+  /** Where it stands, in the page's px, for a control tied to a place on
+   *  screen (a ring's centre, a frame's box). */
+  at?: { x: number; y: number; w?: number; h?: number };
+  /** A colour the control takes (the driven character's, for the pad). */
+  color?: string;
+  /** A frame with a tail, pointing down at what it is about. */
+  tail?: boolean;
+}
+
+export interface HostControls { type: 'controls'; list: HostControl[] }
+
+type HostControlInput = (item: string, phase: HostInputPhase) => void;
+const hostControls = new Map<string, { control: HostControl; input: HostControlInput }>();
+let lastControls = '';
+let controlsQueued = false;
+
+function sendControls() {
+  controlsQueued = false;
+  const list = [...hostControls.values()].map(c => c.control);
+  const key = JSON.stringify(list);
+  if (key === lastControls) return;
+  lastControls = key;
+  postToHost({ type: 'controls', list });
+}
+
+/** The list goes out once per turn, however many controls changed in it. */
+function queueControls() {
+  if (controlsQueued) return;
+  controlsQueued = true;
+  queueMicrotask(sendControls);
+}
+
+if (nativeHost && window.__mywantHost) {
+  window.__mywantHost.input = (control, item, phase) => hostControls.get(control)?.input(item, phase);
+}
+
+/** A control for the app to draw, or to draw as it now is; presses on it come to `input`. */
+export function setHostControl(id: string, control: HostControl, input: HostControlInput = () => {}): void {
+  if (!nativeHost) return;
+  hostControls.set(id, { control, input });
+  queueControls();
+}
+
+/** The control is gone. */
+export function removeHostControl(id: string): void {
+  if (hostControls.delete(id)) queueControls();
+}
+
+/**
+ * A control the app draws natively while `control` is non-null, whose presses
+ * come back to `input`. Changing what it says (an item lit, a ring moving
+ * with the character) sends the list again; nothing at all outside an app.
+ */
+export function useHostControl(control: HostControl | null, input: HostControlInput): void {
+  const latest = useRef(input);
+  latest.current = input;
+  const id = control?.id;
+  const shape = control ? JSON.stringify(control) : '';
+  useEffect(() => {
+    if (!nativeHost || !control || !id) return;
+    hostControls.set(id, { control, input: (item, phase) => latest.current(item, phase) });
+    queueControls();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, shape]);
+  useEffect(() => {
+    if (!nativeHost || !id) return;
+    return () => { hostControls.delete(id); queueControls(); };
+  }, [id]);
 }
