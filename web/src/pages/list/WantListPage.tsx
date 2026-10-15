@@ -1,7 +1,8 @@
 import { CardEmbeddedContext } from '@/components/dashboard/WantCard/plugins/registry';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useWantStore } from '@/stores/wantStore';
-import { listedWants } from '@/utils/wantUtils';
+import { wantsInListOrder } from '@/utils/wantUtils';
+import { useListOrderStore } from '@/stores/listOrderStore';
 import { useParams } from 'react-router-dom';
 import { Waypoints } from 'lucide-react';
 import { useConstellationFilter } from '@/components/sidebar/ConstellationFilterPanel';
@@ -110,9 +111,14 @@ export const WantListPage: React.FC<{
     [wantsForGrid, constellationFilter],
   );
   // The map drawn in an app's map sheet, where no list is drawn to read it off:
-  // the same wants, by the same rule the grid uses (listedWants).
+  // the same wants, in the same order the grid uses (wantsInListOrder) —
+  // 最近 included.
   const orderOverride = useWantStore(s => s.orderOverride);
-  const sheetMapWants = useMemo(() => listedWants(gridWants, orderOverride), [gridWants, orderOverride]);
+  const listOrder = useListOrderStore(s => s.order.want);
+  const sheetMapWants = useMemo(
+    () => wantsInListOrder(gridWants, orderOverride, listOrder),
+    [gridWants, orderOverride, listOrder],
+  );
 
   // Walking the card grid — reading order, not space. See list/useListNavigation.
   useListNavigation({

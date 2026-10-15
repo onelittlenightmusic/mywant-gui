@@ -11,7 +11,7 @@ import { WantChildrenBubble } from './WantChildrenBubble';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { CountBadge } from '@/components/common/CountBadge';
 import { computeGridColumns, GRID_COLUMN_WIDTH } from '@/utils/gridUtils';
-import { isWantArchived, listedWants, newestWantsFirst } from '@/utils/wantUtils';
+import { isWantArchived, wantsInListOrder } from '@/utils/wantUtils';
 import { ListOrderCard } from '@/components/common/ListOrderCard';
 import { useDisplaySettings } from '@/hooks/useDisplaySettings';
 import { GRID_CARD_HEIGHT } from './WantCard/hooks/cardStyles';
@@ -216,10 +216,10 @@ export const WantGrid: React.FC<WantGridProps> = ({
   const listOrder = useListOrderStore(s => s.order.want);
   // The order card stands as tall as the want cards around it.
   const cardHeight = useDisplaySettings().card_height;
-  const filteredWants = useMemo(() => {
-    const listed = listedWants(hierarchicalWants, orderOverride);
-    return listOrder === 'recent' ? newestWantsFirst(listed) : listed;
-  }, [hierarchicalWants, orderOverride, listOrder]);
+  const filteredWants = useMemo(
+    () => wantsInListOrder(hierarchicalWants, orderOverride, listOrder),
+    [hierarchicalWants, orderOverride, listOrder],
+  );
 
   const filteredArchivedWants = useMemo(
     () => hierarchicalWants.filter(isWantArchived),

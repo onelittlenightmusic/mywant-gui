@@ -197,3 +197,14 @@ export function openWantApp(want: Want): void {
   const id = want.metadata?.id || want.id;
   if (id) window.open(`/w/${id}`, '_blank', 'noopener,noreferrer');
 }
+
+/**
+ * The want list's order, as its order card has it — お気に入り (the user's own,
+ * listedWants) or 最近 (newestWantsFirst) — for everything that shows the list's
+ * wants in its order: the grid, and the map drawn where no grid is (an app's
+ * map sheet), which otherwise kept お気に入り whatever the card said.
+ */
+export function wantsInListOrder<T extends Want>(wants: T[], orderOverride: string[] | null, order: string): T[] {
+  const listed = listedWants(wants, orderOverride);
+  return order === 'recent' ? newestWantsFirst(listed) : listed;
+}
