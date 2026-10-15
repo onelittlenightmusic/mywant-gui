@@ -480,6 +480,7 @@ export const WantListPage: React.FC<{
             <ThingCard
               record={t}
               selected
+              corner
               className="!scale-100 !h-full"
               onView={() => act('open')}
               onAddWant={() => act('add-want')}

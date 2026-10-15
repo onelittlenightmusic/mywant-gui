@@ -31,6 +31,10 @@ interface MemoCardProps {
   selected?: boolean;
   /** Embedded in a sidebar: do not pull DOM focus (see EntityCard). */
   keepFocus?: boolean;
+  /** The board's corner card, for what the character stands on: no
+   *  CursorMan on it (see EntityCard), and no on-the-board mark — it is on the
+   *  board, or it would not be in the corner. */
+  corner?: boolean;
   /** Multi-select mode: show a checkbox affordance; onView toggles selection. */
   selectMode?: boolean;
   checked?: boolean;
@@ -54,7 +58,7 @@ interface MemoCardProps {
 }
 
 /** Turn a hex like "#06b6d4" into an rgba tint. */
-export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, keepFocus, selectMode = false, checked = false, constellations = [], onEditConstellation, onView, onDelete, onAddWant, className, display = false }) => {
+export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, keepFocus, corner = false, selectMode = false, checked = false, constellations = [], onEditConstellation, onView, onDelete, onAddWant, className, display = false }) => {
   const Icon = resolveLucideIcon(record.icon) ?? Type;
   const wantTypes = useWantTypeStore((s) => s.wantTypes);
   const iconFont = useIconFont() as IconFamily;
@@ -208,6 +212,7 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
       title={thingDisplayName(record.value)}
       selected={display ? false : selected}
       keepFocus={display || keepFocus}
+      noCursorMan={corner}
       onView={() => { if (!display) onView(record); }}
       actions={display ? [] : actions}
       badgeShape="thing"
@@ -266,7 +271,7 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
           with no readout: nothing on the card would tell you which things are
           out there. While selecting it moves to the other corner rather than
           disappearing — a batch pin has to be able to show its own result. */}
-      {onCanvas && (
+      {onCanvas && !corner && (
         <div
           className={classNames(
             'absolute z-20 w-6 h-6 rounded-full flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-sm border border-white/30 dark:border-white/10',

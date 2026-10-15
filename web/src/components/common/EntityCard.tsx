@@ -90,6 +90,9 @@ export interface EntityCardProps {
    * CursorMan stuck the moment the sidebar opened.
    */
   keepFocus?: boolean;
+  /** No CursorMan on it, selected or not: the board's corner card, where the
+   *  character is already shown standing on the tile. */
+  noCursorMan?: boolean;
   /** Opens the page's details sidebar for this entity. */
   onView: () => void;
   actions?: EntityCardAction[];
@@ -193,6 +196,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
   title,
   selected,
   keepFocus = false,
+  noCursorMan = false,
   onView,
   actions = [],
   overlayCols = 3,
@@ -697,7 +701,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
           not in the sense of being where the cursor is standing — and the
           cursor is standing on the grid card this one is a copy of, which is
           already drawing him. Two of the same character on screen at once. */}
-      <CardCursorMan visible={selected && !keepFocus} />
+      <CardCursorMan visible={selected && !keepFocus && !noCursorMan} />
       {face}
     </div>
   );
