@@ -63,6 +63,7 @@ export const CharacterCornerIcons: React.FC<CharacterCornerIconsProps> = ({ want
           key={character.id}
           title={character.name}
           avatar={character.avatar}
+          image={character.avatarImage}
           color={character.color}
           shape={character.shape}
           size={ICON_SIZE}

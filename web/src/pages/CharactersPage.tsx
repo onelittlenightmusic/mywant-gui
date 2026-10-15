@@ -17,6 +17,8 @@ import { useGridCols } from '@/hooks/useGridCols';
 import { GRID_COLUMN_WIDTH } from '@/utils/gridUtils';
 import { useCharacterStore } from '@/stores/characterStore';
 import { AVATAR_PRESETS, COLOR_PRESETS } from '@/components/characters/characterPresets';
+import { AvatarImagePicker } from '@/components/characters/AvatarImagePicker';
+import { CharacterFace } from '@/components/characters/CharacterFace';
 import { CharacterDetailsSidebar } from '@/components/sidebar/CharacterDetailsSidebar';
 import { useCardOverlayStore, entityCardId } from '@/stores/cardOverlayStore';
 
@@ -24,6 +26,8 @@ interface NewCharForm {
   name: string;
   avatar: string;
   color: string;
+  /** A picture chosen before the character exists: set once it does. */
+  avatarImage?: string;
 }
 
 export default function CharactersPage() {
@@ -96,7 +100,8 @@ export default function CharactersPage() {
     if (!newForm.name.trim()) return;
     setSaving(true);
     try {
-      await apiClient.createCharacter({ name: newForm.name.trim(), avatar: newForm.avatar, color: newForm.color });
+      const created = await apiClient.createCharacter({ name: newForm.name.trim(), avatar: newForm.avatar, color: newForm.color });
+      if (newForm.avatarImage) await apiClient.setCharacterAvatarImage(created.id, newForm.avatarImage);
       await load();
       setCreating(false);
     } finally {
@@ -217,7 +222,7 @@ export default function CharactersPage() {
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Characters</div>
             </div>
             <div className="bg-white/70 dark:bg-gray-800/70 rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center">
-              <div className="text-2xl">{myChar ? myChar.avatar : '🤖'}</div>
+              <div className="text-2xl"><CharacterFace character={myChar} fallback="🤖" /></div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">My cursor</div>
             </div>
           </div>
@@ -225,7 +230,7 @@ export default function CharactersPage() {
         <div>
           <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">My cursor</h3>
           <div className="flex items-center gap-2 bg-white/70 dark:bg-gray-800/70 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-            <span className="text-xl" style={{ color: myChar?.color ?? myDefaultColor }}>{myChar ? myChar.avatar : '🤖'}</span>
+            <span className="text-xl" style={{ color: myChar?.color ?? myDefaultColor }}><CharacterFace character={myChar} fallback="🤖" /></span>
             <span className="text-sm text-gray-800 dark:text-gray-100">{myChar ? myChar.name : 'Default CursorMan'}</span>
           </div>
         </div>
@@ -361,6 +366,9 @@ const NewCharacterForm: React.FC<NewCharacterFormProps> = ({
           >{a}</button>
         ))}
       </div>
+      <div className="mt-1.5">
+        <AvatarImagePicker image={form.avatarImage} onPick={img => onChange({ ...form, avatarImage: img || undefined })} />
+      </div>
     </div>
 
     <div>
@@ -384,7 +392,7 @@ const NewCharacterForm: React.FC<NewCharacterFormProps> = ({
       <div
         className="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0"
         style={{ backgroundColor: form.color + '28', border: `2px solid ${form.color}` }}
-      >{form.avatar}</div>
+      ><CharacterFace character={form} /></div>
       <span className="text-sm font-semibold truncate" style={{ color: form.color }}>{form.name || 'Preview'}</span>
     </div>
 

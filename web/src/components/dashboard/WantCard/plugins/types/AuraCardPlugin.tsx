@@ -6,6 +6,7 @@ import { CardFrame, CardFrameBadge, CardFrameTitle, CardFrameNote } from '../../
 import { useCharacterStore } from '@/stores/characterStore';
 import { postWantWebhook } from '@/utils/wantWebhook';
 import { Sparkles } from 'lucide-react';
+import { CharacterFace } from '@/components/characters/CharacterFace';
 
 const AuraContentSection: React.FC<WantCardPluginProps> = ({
   want, isInnerFocused, onExitInnerFocus,
@@ -53,7 +54,7 @@ const AuraContentSection: React.FC<WantCardPluginProps> = ({
           color={color}
           round
           icon={character?.avatar
-            ? <span className="text-[1.8em] leading-none">{character.avatar}</span>
+            ? <span className="text-[1.8em] leading-none"><CharacterFace character={character} /></span>
             : <Sparkles className="w-[2em] h-[2em]" style={{ color }} />}
           style={active ? ({ '--aura-glow-color': color } as React.CSSProperties) : undefined}
         />

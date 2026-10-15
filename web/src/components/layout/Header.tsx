@@ -691,7 +691,7 @@ export const Header: React.FC<HeaderProps> = ({
     // What the page adds to the pill (its pillCells, which the app does not
     // draw): the board's mode lamp.
     for (const b of Object.values(hostExtra)) {
-      buttons.push({ id: b.id, label: b.label, icon: b.icon, active: b.active });
+      buttons.push({ id: b.id, label: b.label, icon: b.icon, active: b.active, ...(b.image ? { image: b.image } : {}) });
       actions[b.id] = b.run;
     }
     // Not one of the walked cells, but a button all the same.

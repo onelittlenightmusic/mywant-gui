@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { characterShapePath } from '@/shared/characterShapes';
 
 /**
@@ -24,8 +24,20 @@ import { characterShapePath } from '@/shared/characterShapes';
  * directly (cursorManEmojiRef in CursorManView) — a badge that cannot be moved
  * imperatively is not a drop-in for what was there.
  */
+/**
+ * How much larger the viewer's own character is drawn than everybody else —
+ * standing on the board (CursorManView), pinned on a list's card
+ * (CardCursorMan): the one person you are always looking for, and at the
+ * others' size a photo of a face was too small to make out. Everybody else
+ * stays as they are.
+ */
+export const MY_CHARACTER_SCALE = 1.25;
+
 export interface CharacterBadgeProps {
   avatar: string;
+  /** The person's picture (Character.avatarImage): drawn in the outline, a
+   *  rim of their colour round it, in place of the emoji. */
+  image?: string;
   color: string;
   /** Shape id; anything unset or unknown draws the default circle. */
   shape?: string | null;
@@ -41,7 +53,7 @@ export interface CharacterBadgeProps {
 }
 
 export const CharacterBadge = React.forwardRef<HTMLDivElement, CharacterBadgeProps>(
-  ({ avatar, color, shape, size, strokeWidth = 2.5, fontSize, style, className, title }, ref) => {
+  ({ avatar, image, color, shape, size, strokeWidth = 2.5, fontSize, style, className, title }, ref) => {
     const glyph = fontSize ?? Math.round(size * 0.56);
     return (
       <div
@@ -78,13 +90,34 @@ export const CharacterBadge = React.forwardRef<HTMLDivElement, CharacterBadgePro
             strokeWidth={(strokeWidth * 100) / size}
             strokeLinejoin="round"
           />
+          {image && <ShapeImage shape={shape} image={image} />}
         </svg>
-        <span style={{ position: 'relative', fontSize: glyph, lineHeight: 1, pointerEvents: 'none' }}>
-          {avatar}
-        </span>
+        {!image && (
+          <span style={{ position: 'relative', fontSize: glyph, lineHeight: 1, pointerEvents: 'none' }}>
+            {avatar}
+          </span>
+        )}
       </div>
     );
   },
 );
 
 CharacterBadge.displayName = 'CharacterBadge';
+
+/**
+ * A person's picture inside their outline, in the shape catalogue's 100x100
+ * box — for an SVG that has drawn the outline in their colour (CharacterBadge,
+ * the minimap's tokens). The same outline drawn in a little, so the colour
+ * stays as a rim round the picture whatever the shape.
+ */
+export const ShapeImage: React.FC<{ shape?: string | null; image: string }> = ({ shape, image }) => {
+  const clip = useId();
+  return (
+    <>
+      <clipPath id={clip}>
+        <path d={characterShapePath(shape)} transform="translate(9 9) scale(0.82)" />
+      </clipPath>
+      <image href={image} x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clip})`} />
+    </>
+  );
+};

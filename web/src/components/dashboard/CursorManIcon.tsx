@@ -3,7 +3,7 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 import { useCharacterStore, getDefaultCursorColor } from '@/stores/characterStore';
 import { Character } from '@/types/character';
 import { cursorManStickFigureInnerSvgMarkup } from '@/shared/cursorManFigure';
-import { CharacterBadge } from './CharacterBadge';
+import { CharacterBadge, ShapeImage } from './CharacterBadge';
 import { characterShapePath } from '@/shared/characterShapes';
 
 interface CursorManIconProps {
@@ -59,6 +59,7 @@ export const CursorManIcon: React.FC<CursorManIconProps> = ({ size = 22, classNa
     return (
       <CharacterBadge
         avatar={myCharacter.avatar}
+        image={myCharacter.avatarImage}
         color={myCharacter.color}
         shape={myCharacter.shape}
         size={size}
@@ -113,8 +114,9 @@ export const CursorManSVGIcon: React.FC<CursorManSVGIconProps> = ({ cx, cy, r, i
             strokeWidth={(0.9 * 100) / side}
             strokeLinejoin="round"
           />
+          {myCharacter.avatarImage && <ShapeImage shape={myCharacter.shape} image={myCharacter.avatarImage} />}
         </g>
-        <text
+        {!myCharacter.avatarImage && <text
           x={cx} y={cy}
           textAnchor="middle"
           dominantBaseline="central"
@@ -122,7 +124,7 @@ export const CursorManSVGIcon: React.FC<CursorManSVGIconProps> = ({ cx, cy, r, i
           style={{ userSelect: 'none', pointerEvents: 'none' }}
         >
           {myCharacter.avatar}
-        </text>
+        </text>}
       </g>
     );
   }

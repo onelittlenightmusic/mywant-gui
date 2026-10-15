@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, X, MousePointer2, Users, UserRound, Palette, Smile, Droplet, Shapes } from 'lucide-react';
+import { Check, X, MousePointer2, Users, UserRound, Palette, Smile, Droplet, Shapes, Image as ImageIcon } from 'lucide-react';
 import { Character } from '@/types/character';
 import { classNames } from '@/utils/helpers';
 import { AVATAR_PRESETS, COLOR_PRESETS } from '@/components/characters/characterPresets';
@@ -15,6 +15,8 @@ import type { CharacterDisplay } from '@/types/character';
 import { CardStatusRow, CardStatusItem } from '@/components/sidebar/CardStatusRow';
 import { CHARACTER_SHAPES, characterShapePath, type CharacterShapeId } from '@/shared/characterShapes';
 import { CharacterBadge } from '@/components/dashboard/CharacterBadge';
+import { AvatarImagePicker } from '@/components/characters/AvatarImagePicker';
+import { apiClient } from '@/api/client';
 
 interface CharacterDetailsSidebarProps {
   character: Character | null;
@@ -43,6 +45,7 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
   const [avatar, setAvatar] = useState('');
   const [color, setColor] = useState('');
   const [shape, setShape] = useState<CharacterShapeId>('circle');
+  const [avatarImage, setAvatarImage] = useState('');
   const [saving, setSaving] = useState(false);
   // Which half of the sheet you are looking at. Two tabs rather than one long
   // scroll: who this character is, and how they like the app — related, but not
@@ -86,6 +89,7 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
     // Anyone who has never chosen is a circle, which is what they have always
     // been drawn as — there is no "unset" state for a silhouette to be in.
     setShape(character.shape ?? 'circle');
+    setAvatarImage(character.avatarImage ?? '');
   }, [character]);
 
   // The name box takes the caret when the form opens; nothing else does.
@@ -210,6 +214,16 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
               and the avatar, which are typed and picked rather than nudged. */}
           <TabSection title="Character">
             <div className="space-y-3">
+              {/* Their own picture, drawn in place of the emoji wherever they
+                  are — applied on the pick, like the pills below; on its own
+                  endpoint, which the name's Save leaves alone. */}
+              <div>
+                <p className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 mb-1.5 font-semibold uppercase tracking-wider"><ImageIcon className="w-3 h-3" />Photo</p>
+                <AvatarImagePicker
+                  image={avatarImage}
+                  onPick={img => { setAvatarImage(img); void apiClient.setCharacterAvatarImage(character.id, img); }}
+                />
+              </div>
               <div>
                 <p className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 mb-1.5 font-semibold uppercase tracking-wider"><Droplet className="w-3 h-3" />Colour</p>
                 <div className="flex gap-1.5 flex-wrap">
@@ -325,6 +339,7 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
         <div className="flex items-center gap-2 py-1 px-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
           <CharacterBadge
             avatar={avatar}
+            image={avatarImage || undefined}
             color={color}
             shape={shape}
             size={32}

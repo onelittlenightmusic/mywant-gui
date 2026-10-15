@@ -1227,6 +1227,13 @@ class MyWantApiClient {
     return response.data;
   }
 
+  /** The character's picture (a data: URL, see shared/avatarImage), or '' to
+   *  go back to the emoji. Its own endpoint: identity updates leave it be. */
+  async setCharacterAvatarImage(id: string, image: string): Promise<Character> {
+    const response = await this.client.put<Character>(`/api/v1/characters/${id}/avatar-image`, { image });
+    return response.data;
+  }
+
   async deleteCharacter(id: string): Promise<void> {
     await this.client.delete(`/api/v1/characters/${id}`);
   }

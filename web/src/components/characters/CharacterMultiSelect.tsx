@@ -2,6 +2,7 @@ import React from 'react';
 import { Check } from 'lucide-react';
 import { Character } from '@/types/character';
 import { classNames } from '@/utils/helpers';
+import { CharacterFace } from '@/components/characters/CharacterFace';
 
 interface CharacterMultiSelectProps {
   characters: Character[];
@@ -58,7 +59,7 @@ export const CharacterMultiSelect: React.FC<CharacterMultiSelectProps> = ({
               className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] flex-shrink-0"
               style={{ backgroundColor: c.color + '33', border: `1px solid ${c.color}` }}
             >
-              {c.avatar}
+              <CharacterFace character={c} />
             </span>
             <span className="truncate max-w-[80px]">{c.name}</span>
             {selected && <Check className="w-2.5 h-2.5 flex-shrink-0" />}

@@ -7,6 +7,7 @@ import { Character } from '@/types/character';
 import { classNames } from '@/utils/helpers';
 import { CharacterSelect } from '@/components/characters/CharacterSelect';
 import { TabContent, TabSection, InfoRow } from './DetailsSidebar';
+import { CharacterFace } from '@/components/characters/CharacterFace';
 
 function timeAgo(ms: number): string {
   const secs = Math.floor((Date.now() - ms) / 1000);
@@ -75,7 +76,7 @@ export const DeviceDetailsSidebar: React.FC<DeviceDetailsSidebarProps> = ({
     }] : []),
     ...(assigned ? [{
       key: 'character',
-      icon: <span>{assigned.avatar}</span>,
+      icon: <span><CharacterFace character={assigned} /></span>,
       label: assigned.name,
     }] : []),
   ];

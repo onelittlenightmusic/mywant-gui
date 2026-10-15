@@ -1,5 +1,6 @@
 import React from 'react';
 import { CursorManIcon } from '@/components/dashboard/CursorManIcon';
+import { MY_CHARACTER_SCALE } from '@/components/dashboard/CharacterBadge';
 import type { UseGlobalFreeCursorResult } from '@/hooks/useFreeCursorNav';
 
 /**
@@ -33,7 +34,7 @@ export const FreeCursorOverlay: React.FC<Pick<UseGlobalFreeCursorResult, 'cursor
         className="fixed left-0 top-0 z-[200] pointer-events-none"
         style={{ willChange: 'transform' }}
       >
-        <CursorManIcon size={28} />
+        <CursorManIcon size={Math.round(28 * MY_CHARACTER_SCALE)} />
       </div>
     </>
   );

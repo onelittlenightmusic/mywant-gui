@@ -11,6 +11,7 @@ import {
   serverNeedsAuth,
   setExtensionContext,
 } from '@/lib/extensionContext';
+import { CharacterFace } from '@/components/characters/CharacterFace';
 
 interface DeviceCardProps {
   device: BrowserDevice;
@@ -172,7 +173,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               }}
               title={assignedCharacter.name}
             >
-              {assignedCharacter.avatar}
+              <CharacterFace character={assignedCharacter} />
             </span>
           )}
           {isMe && (
@@ -207,7 +208,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             className="inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full text-[10px] sm:text-xs"
             style={{ backgroundColor: assignedCharacter.color + '33', border: `1px solid ${assignedCharacter.color}66` }}
           >
-            {assignedCharacter.avatar}
+            <CharacterFace character={assignedCharacter} />
           </span>
         )}
       </div>

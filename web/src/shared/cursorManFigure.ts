@@ -32,7 +32,38 @@ export function cursorManStickFigureInnerSvgMarkup(color: string): string {
  * embedded in the extension as its own source text and cannot call into
  * another module (see webext/build-shared-visuals.js).
  */
-export function cursorManAvatarCircleMarkup(avatar: string, color: string, size: number): string {
+/**
+ * A character as the board draws them (CharacterBadge): their outline (a path in
+ * the shape catalogue's 100x100 box, shared/characterShapes) filled flat in
+ * their colour, with their picture inside it — the same outline drawn in a
+ * little, so a rim of the colour shows — or their emoji over the middle. For
+ * the overlays, which have no React to draw the badge with; self-contained for
+ * the same reason as the circle below.
+ */
+export function cursorManBadgeMarkup(avatar: string, color: string, size: number, shapePath: string, image?: string): string {
+  const okImage = !!image && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(image);
+  const okPath = /^[MmLlHhVvCcSsQqTtAaZz0-9 .,-]+$/.test(shapePath) ? shapePath : 'M4 50 A46 46 0 1 0 96 50 A46 46 0 1 0 4 50 Z';
+  const clip = 'mwc-shape-' + Math.random().toString(36).slice(2, 10);
+  const stroke = (2.5 * 100) / size;
+  const glyph = Math.round(size * 0.56);
+  return `<div style="position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 6px ${color}99)">`
+    + `<svg width="${size}" height="${size}" viewBox="0 0 100 100" style="position:absolute;inset:0;overflow:visible;pointer-events:none" aria-hidden="true">`
+    + `<path d="${okPath}" fill="${color}" stroke="${color}" stroke-width="${stroke}" stroke-linejoin="round"/>`
+    + (okImage
+      ? `<clipPath id="${clip}"><path d="${okPath}" transform="translate(9 9) scale(0.82)"/></clipPath>`
+        + `<image href="${image}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clip})"/>`
+      : '')
+    + `</svg>`
+    + (okImage ? '' : `<span style="position:relative;font-size:${glyph}px;line-height:1;pointer-events:none">${avatar}</span>`)
+    + `</div>`;
+}
+
+export function cursorManAvatarCircleMarkup(avatar: string, color: string, size: number, image?: string): string {
+  // The person's picture (Character.avatarImage), when they have one, in place
+  // of the emoji: filling the circle inside its rim of their colour.
+  if (image && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(image)) {
+    return `<div style="width:${size}px;height:${size}px;border-radius:50%;box-sizing:border-box;background-color:${color};border:2px solid ${color};overflow:hidden;filter:drop-shadow(0 0 6px ${color}99)"><img src="${image}" alt="" draggable="false" style="display:block;width:100%;height:100%;border-radius:50%;object-fit:cover"></div>`;
+  }
   const fontSize = Math.round(size * 0.58);
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;background-color:${color}33;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;line-height:1;filter:drop-shadow(0 0 6px ${color}99)">${avatar}</div>`;
 }

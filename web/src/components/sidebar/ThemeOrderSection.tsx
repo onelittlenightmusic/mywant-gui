@@ -25,6 +25,7 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 import { useCardOverlaySound } from '@/stores/cardOverlaySounds';
 import { Slot } from '@/extensions/Slot';
 import type { ThingPlacementSnapshot } from '@/stores/thingTileStore';
+import { CharacterFace } from '@/components/characters/CharacterFace';
 
 interface ThemeOrderSectionProps {
   record: ThingRecord;
@@ -991,7 +992,7 @@ const ThemeMemberCard: React.FC<{
         }
         headerRight={isSelf
           ? (myChar?.avatar
-              ? <span className="text-sm leading-none" title={`${myChar.name}（あなたの Thing）`}>{myChar.avatar}</span>
+              ? <span className="text-sm leading-none" title={`${myChar.name}（あなたの Thing）`}><CharacterFace character={myChar} /></span>
               : <span className="w-2 h-2 rounded-full ring-1 ring-white/60 dark:ring-black/40" style={{ backgroundColor: selfColor }} title="あなたの Thing" />)
           : undefined}
         overlay={showOverlay && (

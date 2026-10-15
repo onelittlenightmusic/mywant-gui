@@ -5,6 +5,14 @@ export interface Character {
   id: string;
   name: string;
   avatar: string;        // emoji e.g. "🧙"
+  /**
+   * The person's own picture, drawn in place of the emoji wherever a face is
+   * drawn (CharacterBadge, CharacterFace) — a small square image as a data:
+   * URL, so it travels with the character to every surface without a fetch.
+   * The emoji stays, for what cannot draw a picture. Set and cleared on its
+   * own endpoint (apiClient.setCharacterAvatarImage), never by updateCharacter.
+   */
+  avatarImage?: string;
   color: string;         // hex e.g. "#6366f1"
   /**
    * The outline this person is drawn inside, wherever they appear — a

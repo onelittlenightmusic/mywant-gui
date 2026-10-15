@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { CursorManIcon } from '@/components/dashboard/CursorManIcon';
+import { MY_CHARACTER_SCALE } from '@/components/dashboard/CharacterBadge';
 import { useCharacterStore } from '@/stores/characterStore';
 
 interface CardCursorManProps {
@@ -31,7 +32,7 @@ export const CardCursorMan: React.FC<CardCursorManProps> = ({ visible }) => {
       className="absolute z-[100] pointer-events-none flex flex-col items-center"
       style={{ top: '-10px', left: '10px', filter: `drop-shadow(0 4px 12px ${shadowColor})` }}
     >
-      <CursorManIcon size={42} />
+      <CursorManIcon size={Math.round(42 * MY_CHARACTER_SCALE)} />
       <div style={{
         width: 0, height: 0,
         marginTop: '2px',

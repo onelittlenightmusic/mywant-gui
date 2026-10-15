@@ -3,6 +3,7 @@ import { Pencil, Trash2, MousePointer2, User } from 'lucide-react';
 import { Character } from '@/types/character';
 import { EntityCard, EntityCardAction } from '@/components/common/EntityCard';
 import { entityCardId } from '@/stores/cardOverlayStore';
+import { CharacterFace } from '@/components/characters/CharacterFace';
 
 interface CharacterCardProps {
   character: Character;
@@ -56,7 +57,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
       onView={onClick}
       actions={actions}
       iconBadgeColor={character.color}
-      icon={<span className="text-4xl sm:text-5xl leading-none select-none">{character.avatar}</span>}
+      icon={<span className="text-4xl sm:text-5xl leading-none select-none"><CharacterFace character={character} /></span>}
       titleIcon={<User className="h-2 w-2 sm:h-3.5 sm:w-3.5 flex-shrink-0" style={{ color: character.color }} />}
       badges={
         <>

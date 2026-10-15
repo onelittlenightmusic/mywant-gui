@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { ChevronDown, UserX } from 'lucide-react';
 import { Character } from '@/types/character';
 import { classNames } from '@/utils/helpers';
+import { CharacterFace } from '@/components/characters/CharacterFace';
 
 interface CharacterSelectProps {
   characters: Character[];
@@ -96,7 +97,7 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({
             className="w-6 h-6 rounded-full flex items-center justify-center text-sm flex-shrink-0"
             style={{ backgroundColor: c.color + '33', border: `1.5px solid ${c.color}` }}
           >
-            {c.avatar}
+            <CharacterFace character={c} />
           </span>
           <span className="truncate font-medium" style={{ color: c.color }}>{c.name}</span>
         </button>
@@ -122,7 +123,7 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({
       >
         {current ? (
           <>
-            <span className="text-base leading-none">{current.avatar}</span>
+            <span className="text-base leading-none"><CharacterFace character={current} /></span>
             <span className="truncate" style={{ color: current.color }}>{current.name}</span>
           </>
         ) : (

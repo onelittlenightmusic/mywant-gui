@@ -39,6 +39,9 @@ export interface HostButton {
   /** Kept off the app's bar at first: in its "…" menu, for a button that is
    *  occasional rather than the page's everyday one. */
   more?: boolean;
+  /** A picture to draw in place of the label's emoji — the character's own
+   *  (Character.avatarImage) on the way back to them (camera-return). */
+  image?: string;
 }
 
 export interface HostMessage {
@@ -646,6 +649,8 @@ export interface HostControlItem {
   href?: string;
   /** A pill button kept in the "…" menu rather than on the pill. */
   more?: boolean;
+  /** A picture (a data: URL) the app draws in place of the label's emoji. */
+  image?: string;
 }
 
 export interface HostControl {
