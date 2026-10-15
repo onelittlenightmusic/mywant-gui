@@ -111,7 +111,10 @@ CharacterBadge.displayName = 'CharacterBadge';
  * stays as a rim round the picture whatever the shape.
  */
 export const ShapeImage: React.FC<{ shape?: string | null; image: string }> = ({ shape, image }) => {
-  const clip = useId();
+  // React's ids are ":r1:" — and WebKit (Safari, the iPhone app) cannot find
+  // a clipPath by a name with colons in url(#…), so the picture was clipped
+  // to nothing there and the badge showed its outline alone. Letters only.
+  const clip = 'shape-' + useId().replace(/[^A-Za-z0-9_-]/g, '');
   return (
     <>
       <clipPath id={clip}>
