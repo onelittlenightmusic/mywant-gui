@@ -10,7 +10,7 @@
 // mac/Chrome only (WebHID is Chromium-only).
 
 import { parseHidGamepadReport, isHidGamepad, makeControllerResolver, NormalizedControllerState } from '@/shared/hidGamepad';
-import { hostOwnsController, hostControllerFrame } from '@/lib/nativeHost';
+import { hostOwnsController, hostControllerFrame, postToHost } from '@/lib/nativeHost';
 
 // WebHID lib types aren't in the default TS DOM lib — treat the API loosely.
 type AnyHidDevice = any;
@@ -106,9 +106,12 @@ function enableVibration(): void {
  * Falls through to the Gamepad API when this hub does not own a device — either
  * nothing was granted, or the browser extension holds it (see the relay above),
  * in which case the pad IS visible to navigator.getGamepads() and can be
- * rumbled the standard way.
+ * rumbled the standard way. Framed by an app that reads the controller itself
+ * (hostOwnsController), the app has it, and plays it there — a web view sees
+ * no gamepad of its own.
  */
 export function rumbleTap(ms = 150): void {
+  if (hostOwnsController) { postToHost({ type: 'rumble', ms }); return; }
   if (device) {
     if (rumbleStopTimer) clearTimeout(rumbleStopTimer);
     sendOutput(0x10, [outCounter++ & 0x0f, ...RUMBLE_TAP, ...RUMBLE_TAP]);

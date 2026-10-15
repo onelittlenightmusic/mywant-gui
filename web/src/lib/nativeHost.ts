@@ -162,7 +162,8 @@ export interface HostFocusCard {
 export interface HostCardAct { type: 'card-act'; act: string; kind: HostFloatCard['kind']; id: string }
 
 /** Hand a message to the app. Nothing happens without one. */
-export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot | HostFocusCard | HostControls | { type: 'haptic'; kind: 'lift' | 'drop' }
+export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot | HostFocusCard | HostControls | { type: 'haptic'; kind: 'lift' | 'drop' | 'land' }
+  | { type: 'rumble'; ms: number }
   | { type: 'drag-shape'; shape: 'circle'; x: number; y: number; w: number; h: number }
   | { type: 'card-buttons'; list: { id: string; label: string; icon: string }[] }): void {
   window.webkit?.messageHandlers?.mywantHost?.postMessage(message);
@@ -599,10 +600,11 @@ export const useHostExtraButtonsStore = create<{
 
 /**
  * A tap felt in the hand, framed by an app: a card picked up (lift) or put
- * down (drop). A web view has no vibration of its own on iOS, so the app plays
- * it. Nothing outside an app.
+ * down (drop), the character landing on a want or a thing (land). A web view
+ * has no vibration of its own on iOS, so the app plays it. Nothing outside an
+ * app.
  */
-export function hostHaptic(kind: 'lift' | 'drop'): void {
+export function hostHaptic(kind: 'lift' | 'drop' | 'land'): void {
   if (nativeHost) postToHost({ type: 'haptic', kind });
 }
 
