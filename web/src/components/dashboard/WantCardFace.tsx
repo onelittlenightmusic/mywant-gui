@@ -377,6 +377,13 @@ export interface WantCardFaceProps {
    *  WantCanvas's form layer) would otherwise always be hidden under this
    *  face's own opaque square. */
   showBackground?: boolean;
+  /**
+   * Repaints the colours in the face's background (a CSS value — a colour, a
+   * gradient) before it is drawn. The board passes its tiers' ink here, so a
+   * block's face is as quiet as its tier says (guiex design/boardTiers); a
+   * list leaves it unset and draws the type's colours as they are.
+   */
+  paint?: (css: string) => string;
   /** Whether the face clips its content to its own box (default: true). Set
    *  false when the icon itself needs to move outside that box — a
    *  form-type:button want's icon rides its disc up above the tile at rest
@@ -440,6 +447,7 @@ export const WantCardFace: React.FC<WantCardFaceProps> = ({
   surfaceClass,
   backgroundNode,
   iconStyle,
+  paint,
 }) => {
   // Subscribe to dynamic maps so this component re-renders when plugin icons/backgrounds load
   useWantTypeStore(s => s.categoryIconMap);
@@ -458,10 +466,15 @@ export const WantCardFace: React.FC<WantCardFaceProps> = ({
   const bgHasImage = !!bgStyleRaw.backgroundImage ||
     (typeof bgStyleRaw.background === 'string' && bgStyleRaw.background.includes('url('));
   // Spotify-style: a background image fitted to the face height, pinned right.
-  const bgStyle = imageAlign === 'right' && bgHasImage
+  const bgFitted = imageAlign === 'right' && bgHasImage
     ? { ...bgStyleRaw, backgroundSize: 'auto 100%', backgroundPosition: 'right center', backgroundRepeat: 'no-repeat' }
     : bgStyleRaw;
-  const overlayBg = getCardOverlayBg(effectiveBgType, theme, context);
+  const bgStyle = paint
+    ? Object.fromEntries(Object.entries(bgFitted).map(([k, v]) =>
+        [k, typeof v === 'string' && (k === 'background' || k === 'backgroundColor' || k === 'backgroundImage') ? paint(v) : v]))
+    : bgFitted;
+  const overlayRaw = getCardOverlayBg(effectiveBgType, theme, context);
+  const overlayBg = paint && typeof overlayRaw === 'string' ? paint(overlayRaw) : overlayRaw;
   // Shared card background opacity (Settings → Cards). Applied to the
   // background layer only, never to the icon/name layer above it.
   const cardOpacity = useCardOpacity();

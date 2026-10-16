@@ -54,7 +54,7 @@ Thing はタイルの画面上の大きさで段階が変わる（`thingStage`�
 | mid | 110〜180px | マスの中に札（カードと同じ広さ）。値と小さな絵。チップは小さな粒になって左上の角に乗る |
 | near | 180px 以上（want のカード面と同じ） | その Thing のマスに Thing カードそのもの（`ThingCard` の `display`）。チップは小さな粒になってカードの左上の角に乗る。カードはマスより大きくしない |
 
-- 画素密度 3 倍のタッチ画面（iPhone）では、カード面と Thing の段階の境目をすべて 0.7 倍にする（`DETAIL_AT`、guiex `boardLodStore.ts`）。細かい文字がくっきり読め、画面が狭いので、早めに詳細を出す。盤面の詳細度（LOD・全体図）の境目は描画の負荷で決めているので変えない。
+- 画素密度 3 倍のタッチ画面（iPhone）では、カード面と Thing の段階の境目をすべて 0.55 倍にする（`DETAIL_AT`、guiex `boardLodStore.ts`）。細かい文字がくっきり読め、画面が狭いので、早めに詳細を出す。盤面の文字が消える境目も 0.6 から 0.5 に下げる。全体図に切り替わる境目は描画の負荷で決めているので変えない。
 - near は want のタイルがカード面になる境目（`FACE_FROM_SCALE` 2.0 で出て `FACE_UNTIL_SCALE` 1.8 で消える）と同じ。ほかの段階は、戻るときは境目の 0.9 倍まで下がってから（ヒステリシス）。段階が変わると、詳細は左上の角から少しだけ広がりながら現れる（0.85 倍→等倍）。
 - 寄りは Thing カードを盤面用に描き直さず、カードそのものを縮めて載せる。札の小さな絵も、カードと同じ `ThingPicture`（時刻→針の時計 `ClockDial`、写真→写真、場所→地図 `ThingMap`、それ以外→型のアイコン）。
 - 詳細は表示だけ（pointer-events なし、inert）。押す・ドラッグ・フォーカスはチップが受け持つ。
@@ -85,6 +85,54 @@ Thing はタイルの画面上の大きさで段階が変わる（`thingStage`�
 - フィルタはタイルがもともと持っている filter（影・光り方）の前に足す。影も一緒に灰色になる。
 - 座標のない Thing は盤面が空いているセルを暫定で選ぶ。書き込まない。生きている Thing の配置を先に決め、アーカイブはその残りに置く。
 
+## 8. 段（tier）：地面は静か、物体はしっかり、注目は一番強く
+
+盤面が散らかって見えるのは、ものの多さではなく、**全部が同じ強さで描かれている**から。そこで盤面を明るさで三つの段に分け、段がどこまで目立ってよいかを決める。情報は減らさない。色相（何に属するか）は残し、強さだけを段が決める。
+
+| 段 | 何があるか | 強さ |
+| --- | --- | --- |
+| ground（地面） | 背景のグリッド、床、オーラ、道、線（tether・constellation）、着地の波紋、ピン留めの写真 | 地面の色から少しだけ離れる。彩度は低い。探せば読める |
+| object（物体） | want・Thing のタイル、その側面、タイルに付く印 | 立体感はそのまま。ただし広い面は彩度を抑える |
+| focus（注目） | いま見ているもの：キャラクター、吹き出し、パネルが話題にしているタイル、選択の枠 | 盤面で一番強い |
+
+目を細めて見たとき、物体が浮き、地面が沈み、注目が一番明るいこと。確かめるには、ブラウザのコンソールで `__mywantTierView()` を実行する（灰色にして少しぼかした表示。もう一度で戻る）。
+
+### 段はレイヤーの側で決まる
+
+- 盤面の重なり順（guiex `design/zLayers.ts`）の各スロットが、自分の段を宣言している。段を書かないとスロットを足せない。描く側が段を思い出す必要はない。
+- 色はそのスロットの**インク**を通す。インクは、地面の色に対して段の幅に色を収める（OKLCH で、地面からの明るさの差と彩度の上限）。
+  - `useLayerInk('road')`：スロットが分かっているレイヤーで使う。
+  - `useInk()`：レイヤーの中で描かれる部品（フォームの矢印、道の印、タイルの素材など）で使う。どのスロットかは、外側の `<BoardSlot slot="…">` から受け取る。新しく足した部品も、置かれた場所の段に自動で従う。
+  - `tierInk(tier, color, ctx)`：フックが使えない場所で使う。
+- 色を数値で書かない。`ink('#475569')` のようにインクに渡す。重なり順も `zIndex` を数字で書かず、`Z.<slot>` を使う。
+
+### 広い面は静かに、小さな印は鮮やかに（`role`）
+
+- `ink(color, 'surface')`：広い面。タイルの上面と側面、レンガなどの素材が当たる。彩度を抑える。
+- `ink(color)`（`'mark'`）：その上の印。アイコンや文字が当たる。型の色をそのまま保つ。
+- 色の強さは面積に反比例させる。広い面が鮮やかだと、その上に何を描いても面のほうに目が行く。
+- 模様（レンガの目地、床板の継ぎ目）は `useTexture()` を通して、段が残すコントラストまで弱める。模様は境目の集まりで、境目は目を引く。
+
+### 見ているものは浮かび上がる
+
+ふだんは地面の強さで描くもの（立っている want の道、want の答えの玉）も、いま見ているときは注目の強さで描く。立っている want の道はハイライト色、立っている want や選んだ玉の答えの玉は元の明るさ。気を引くために光らせるのではなく、見ているから浮かぶ。
+
+### 寄ると明るくなる
+
+- 引いているときの盤面は地図なので、地面は静かにする。寄ると、見ている場所の道・床・模様・面の色が戻る。
+- 寄ったときは、どの段のどの値も**同じ比率**（`NEAR_GAIN`、いまは 2 倍）で強める。値ごとにばらばらに変えない。上限は、明るさの差とコントラストが 1、彩度が 0.4。
+- ズームでの混ぜ方は CSS で行う。インクは両端の色を一度だけ計算して `color-mix` に書き、盤面は寄り具合を変数 `--board-near`（0〜1）一つで知らせる。ズームしても React での描き直しは起きない。
+- 色から別の色を計算するときは、混ぜる前に両端それぞれに計算を当てる（`ink(color, 'surface', derive)`。例：壁の側面の陰）。どうしても普通の hex が要る場所（球の陰影、hex を並べたグラデーション、テーマのオーラ）は `ink.fixed(color)` を使う。そこは寄っても変わらない。
+- `color-mix` の中で CSS 変数を使えないブラウザでは、引いたときの色のまま描く。
+
+### 守らせる仕組み
+
+- `scripts/check-tiers.mjs`（guiex。ビルドで実行される）が、盤面のレイヤー（`zLayers` か `boardTiers` を読み込むファイル、各デザインのフォルダ、フォームと道の印）で、色と `zIndex` を数値で書くとビルドを落とす。
+- 既存のぶんは `tier-baseline.json` に数えてある。増えたら落ち、減らしたら `node scripts/check-tiers.mjs --update` で基準を下げる。基準は減るだけ。
+- 地面のグリッドの色は、地面の色から段が作る（`groundPatternVars` → `--canvas-dot` / `--canvas-dot-hi` / `--canvas-grid`）。どのデザインの背景もこの変数で描く。
+- 全体図（`BoardOverview`）も同じ段で描く。引いたときだけ地図が一番うるさくならないように。
+- 盤面全体に CSS の filter をかけて暗くするやり方は採らない。盤面の大きさで描かれるので、iPhone ではメモリが足りなくなる。
+
 ## 部品の置き場所
 
 | 部品 | ファイル |
@@ -98,7 +146,9 @@ Thing はタイルの画面上の大きさで段階が変わる（`thingStage`�
 | `THING_CLIP` | `web/src/utils/thingShape.ts` |
 | `boardLiftFilter` / `boardLiftShadow` / `boardEdgeFilter` / `iconEmbossFilter` / `wantTypeIconStyle` / `vividIconColor` | `web/src/components/dashboard/WantCardFace.tsx` |
 | `glowLayers` / `glowRadius` | `web/src/components/dashboard/canvasGlow.ts` |
-| 盤面の重なり順 | `web/src/design/zLayers.ts` |
+| 盤面の重なり順（スロットごとの段） | `web/src/design/zLayers.ts`（mywant-guiex） |
+| 段の幅・インク：`TIER_BANDS` / `NEAR_GAIN` / `useLayerInk` / `useInk` / `BoardSlot` / `useTexture` / `tierInk` / `inkCss` / `groundPatternVars` / `boardNear` | `web/src/design/boardTiers.ts`（mywant-guiex） |
+| 段の検査 | `web/scripts/check-tiers.mjs`、`web/scripts/tier-baseline.json`（mywant-guiex） |
 | `ARCHIVED_FILTER` | `web/src/components/dashboard/archiveLook.ts`（mywant-guiex） |
 
 見本になる実装：`CanvasThingTile.tsx`（Thing のチップ）、`ThingTileDetail.tsx`（寄ったときの詳細）、`ThingDot.tsx`（小さい Thing）、`ConstellationClusterLayer.tsx`（折りたたみ時の縮小版）。
