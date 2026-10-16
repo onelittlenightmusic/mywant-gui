@@ -618,6 +618,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
         {wantDetails && (
           <PanelIdentityRow
             title={wantDetails.metadata?.name || wantDetails.metadata?.id || ''}
+            subject={{ kind: 'want', want: wantDetails }}
             onClose={onClose}
           />
         )}

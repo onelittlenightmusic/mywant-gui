@@ -26,7 +26,7 @@ export const AppSidebarHost: React.FC = () => {
   const content = (() => {
     const body = descriptor?.content ?? null;
     const inner = shelled ? (
-      <PanelShell title={descriptor?.title ?? ''} onClose={() => descriptor?.onClose?.()}>
+      <PanelShell title={descriptor?.title ?? ''} subject={descriptor?.subject} onClose={() => descriptor?.onClose?.()}>
         {body}
       </PanelShell>
     ) : body;

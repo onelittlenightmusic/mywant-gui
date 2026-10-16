@@ -237,6 +237,12 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
       : cursorGroup ? cursorGroup.name
       : selectedWant ? (selectedWant.metadata?.name || selectedWant.metadata?.id || 'Want Details')
       : (cursorThingRecord ? thingDisplayName(cursorThingRecord.value) : ''),
+    // The thing under the character, when its panel is the one showing — the
+    // identity row's mark (see PanelIdentityRow). The want panel names its own.
+    subject: !api.filterOpen && !sidebar.showGlobal && !addingThing && !editingThing
+      && !cursorGroup && !selectedWant && cursorThingRecord
+      ? { kind: 'thing', record: cursorThingRecord }
+      : undefined,
     titleIcon: api.filterOpen ? Waypoints : sidebar.showGlobal ? Globe : (selectedWant && !cursorGroup ? sidebarTitleIcon : undefined),
     titleIconClassName: sidebar.showGlobal ? 'text-green-500' : undefined,
     titleIconStyle: sidebar.showGlobal || !selectedWant || cursorGroup

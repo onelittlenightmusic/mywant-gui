@@ -2,6 +2,8 @@ import type { ComponentType, ReactElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { Character, CharacterDisplay } from '@/types/character';
 import type { CardAction } from '@/components/dashboard/WantCard/cardActions';
+import type { Want } from '@/types/want';
+import type { ThingRecord } from '@/types/thing';
 import { registerOverlayDesign, type OverlayDesign } from '@/components/overlay/design';
 
 /**
@@ -85,7 +87,19 @@ export interface ExtensionSlots {
    * own page (/w/:id), where there is no card and a bell has the corner.
    */
   wantCardActions: ComponentType<{ actions: CardAction[]; ownPage: boolean }>;
+  /**
+   * Before the name in a detail panel's identity row — what the panel is
+   * about, drawn the way the extension draws it elsewhere (the canvas: the
+   * want's tile, the thing's ball), so a want's panel and a thing's tell
+   * apart before either name is read. `size` is the room the row has for it.
+   */
+  panelIdentityMark: ComponentType<{ subject: PanelSubject; size: number }>;
 }
+
+/** What a detail panel is about — see PanelIdentityRow. */
+export type PanelSubject =
+  | { kind: 'want'; want: Want }
+  | { kind: 'thing'; record: ThingRecord };
 
 /** What the header's bubble does with what is typed into it. */
 export interface InteractApi {

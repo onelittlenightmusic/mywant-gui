@@ -1,6 +1,7 @@
 import type React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { AnyIconComponent } from '@/components/dashboard/WantTypeVisuals';
+import type { PanelSubject } from '@/extensions/registry';
 import { create } from 'zustand';
 
 /**
@@ -22,6 +23,8 @@ export interface AppSidebarDescriptor {
    */
   hostRoute?: string;
   title?: string;
+  /** What the panel is about, for the identity row's mark (see PanelIdentityRow). */
+  subject?: PanelSubject;
   titleIcon?: LucideIcon | AnyIconComponent;
   titleIconClassName?: string;
   titleIconStyle?: React.CSSProperties;

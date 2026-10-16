@@ -258,6 +258,7 @@ export const ThingPage: React.FC = () => {
     hostRoute: panelRoute,
     open: filterOpen || (!selectMode && (adding || !!editingThing || (!!selected && selected.id !== quietId))),
     title: filterOpen ? 'Filter' : adding ? 'Add Thing' : editingThing ? `Edit ${editingThing.value}` : (selected ? thingDisplayName(selected.value) : ''),
+    subject: !filterOpen && !adding && !editingThing && selected ? { kind: 'thing', record: selected } : undefined,
     // The thing detail opens on a card that already names its subject and
     // carries its own way out, exactly as it does on the board — so the frame
     // draws no header over it here either. The two surfaces show one panel; it

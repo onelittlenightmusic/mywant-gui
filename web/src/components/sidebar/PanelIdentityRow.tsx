@@ -4,6 +4,12 @@ import { createPortal } from 'react-dom';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { HostFramedPanel, nativePanelPage } from '@/lib/nativeHost';
 import { PanelCloseButton } from './PanelCloseButton';
+import { Slot } from '@/extensions/Slot';
+import { extensionSlot, type PanelSubject } from '@/extensions/registry';
+
+/** The room beside the name for the subject's mark — the row's own height,
+ *  less a little so the mark's shadow stays inside it. */
+const MARK_SIZE = 40;
 
 /**
  * What this panel is about, and the way out of it.
@@ -36,13 +42,23 @@ export const PanelIdentityRow: React.FC<{
    * screens.
    */
   actions?: React.ReactNode;
-}> = ({ title, onClose, actions }) => (
+  /**
+   * What the panel is about, for an extension to draw before the name (the
+   * panelIdentityMark slot). Nothing is drawn in the public edition.
+   */
+  subject?: PanelSubject;
+}> = ({ title, onClose, actions, subject }) => (
   // 50px is what the close button (min-h-[44px]) plus this row's own padding
   // comes to. Without a floor, a panel that cannot be closed — the Web Want
   // detail follows the focused card and has no way out — drew a shorter row,
   // and its name sat 13px above every other panel's name. The row is the same
   // row whether or not there is a button in it.
   <div className="flex items-center gap-2 pb-1.5 min-h-[50px] min-w-0">
+    {subject && extensionSlot('panelIdentityMark').length > 0 && (
+      <div className="flex-shrink-0" style={{ width: MARK_SIZE, height: MARK_SIZE }}>
+        <Slot name="panelIdentityMark" subject={subject} size={MARK_SIZE} />
+      </div>
+    )}
     <h2 className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate min-w-0 flex-1">
       {title}
     </h2>
@@ -122,8 +138,9 @@ export const PanelShell: React.FC<{
   title: string;
   onClose?: () => void;
   actions?: React.ReactNode;
+  subject?: PanelSubject;
   children: React.ReactNode;
-}> = ({ title, onClose, actions, children }) => {
+}> = ({ title, onClose, actions, subject, children }) => {
   const isBottom = usePanelAtBottom();
   const framed = useContext(HostFramedPanel);
   // Nothing left for the row to hold: no name, no close (an app's sheet has
@@ -157,6 +174,7 @@ export const PanelShell: React.FC<{
           <PanelIdentityRow
             title={title}
             onClose={onClose}
+            subject={subject}
             actions={
               <>
                 {!isBottom && actions}
