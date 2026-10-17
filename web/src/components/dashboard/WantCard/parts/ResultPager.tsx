@@ -16,8 +16,10 @@ import type { ResultPages } from '../hooks/useResultPages';
  * Each control is at the edge it deals toward — left goes back through the
  * answers, right comes forward — and simply is not there when there is nothing
  * that way, which says where you are in the deck without a disabled button to
- * read. The number is the only text: which card of how many, newest first, so
- * 1/4 is now and 4/4 is the oldest answer kept.
+ * read. Where you are in the deck is a row of dots, one per answer, laid as
+ * the controls deal — the oldest at the left, now at the right — with the one
+ * showing larger. A long deck shows the few around it, the dots at an end that
+ * runs on shrinking to say there are more that way.
  *
  * Nothing here at all on a card with a single answer, which is most of the
  * board.
@@ -61,20 +63,48 @@ export const ResultPager: React.FC<{ pages: ResultPages }> = ({ pages }) => {
         </button>
       )}
 
-      {/* Which card of how many. Amber once you are off the front of the deck,
-          the one place a remembered answer still says so in words — the tint on
-          the face says it at a glance, this says it exactly. */}
-      <span
-        className={[
-          'absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded px-1',
-          'text-[0.55rem] font-semibold tabular-nums leading-tight',
-          page > 0
-            ? 'bg-amber-500/25 text-amber-900 dark:text-amber-100'
-            : 'bg-black/15 text-white/60 dark:text-white/60',
-        ].join(' ')}
+      {/* Which card of how many, as dots. Amber once you are off the front of
+          the deck, as the tint on the face says. */}
+      <div
+        aria-label={`${page + 1}/${total}`}
+        className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-[3px] rounded-full bg-black/15 px-1 py-[2px]"
       >
-        {page + 1}/{total}
-      </span>
+        {shownDots(page, total).map(({ i, size }) => (
+          <span
+            key={i}
+            className={[
+              'rounded-full transition-all',
+              i === page
+                ? page > 0 ? 'bg-amber-400' : 'bg-white'
+                : 'bg-white/55',
+            ].join(' ')}
+            style={{ width: size, height: size }}
+          />
+        ))}
+      </div>
     </div>
   );
 };
+
+/** At most this many dots; a longer deck shows the ones around the page. */
+const MAX_DOTS = 7;
+const DOT = 4;
+const DOT_NOW = 7;
+const DOT_MORE = 2.5;
+
+/**
+ * The dots drawn, left to right — oldest first, so the page index runs down —
+ * each with its size: the page showing largest, a dot at an end with more
+ * beyond it smallest.
+ */
+function shownDots(page: number, total: number): { i: number; size: number }[] {
+  const n = Math.min(total, MAX_DOTS);
+  const lo = Math.min(Math.max(0, page - Math.floor(n / 2)), total - n);
+  const hi = lo + n - 1;
+  const out: { i: number; size: number }[] = [];
+  for (let i = hi; i >= lo; i--) {
+    const more = (i === hi && hi < total - 1) || (i === lo && lo > 0);
+    out.push({ i, size: i === page ? DOT_NOW : more ? DOT_MORE : DOT });
+  }
+  return out;
+}
