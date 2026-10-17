@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ResultHistoryEntry, Want } from '@/types/want';
+import { outputEntryKey } from '@/stores/outputFocusStore';
+import { useResultPageStore } from '@/stores/resultPageStore';
 
 /**
  * A want card as a small stack of cards: what it answers now, and what it
@@ -35,6 +37,11 @@ export interface ResultPage {
    * where the card's own header already says how fresh the want is.
    */
   at?: string;
+  /**
+   * The answer's key (outputEntryKey) — what the board's answer ball for it
+   * is named by. Absent on page 0.
+   */
+  key?: string;
 }
 
 export interface ResultPages {
@@ -135,6 +142,7 @@ export function useResultPages(want: Want): ResultPages {
         want: asWant(want, e),
         isPast: true,
         at: e.about || e.timestamp,
+        key: outputEntryKey(e),
       })),
     ];
   }, [want, history, live]);
@@ -169,18 +177,19 @@ export function useResultPages(want: Want): ResultPages {
   const atRef = useRef(at);
   atRef.current = at;
 
-  const turnTo = useCallback((d: number) => {
+  /** Deal `d` pages; the page dealt to, or null when there was no deal. */
+  const turnTo = useCallback((d: number): number | null => {
     const last = pages.length - 1;
     const from = Math.min(atRef.current, last);
     const to = Math.min(Math.max(0, from + d), last);
     // Nothing behind or in front: no deal, and no animation of one either —
     // a card dealt off that lands on the same answer says the stack moved when
     // it did not.
-    if (to === from) return;
+    if (to === from) return null;
     // One deal at a time. A held key repeats faster than the pair of
     // animations, and starting a second deal mid-way left the face stuck
     // off-frame where the first had pushed it.
-    if (timers.current.length > 0) return;
+    if (timers.current.length > 0) return null;
     setTurn({ dir: d, phase: 'out' });
     timers.current = [
       window.setTimeout(() => {
@@ -192,12 +201,54 @@ export function useResultPages(want: Want): ResultPages {
         timers.current = [];
       }, TURN_OUT_MS + TURN_IN_MS),
     ];
+    return to;
   }, [pages.length]);
+
+  // In step with the board's answer balls (resultPageStore): say which past
+  // answer this card is turned back to, so its ball lights; and turn to the
+  // answer a ball asks for when it is tapped. A want's cards — the float
+  // card, the panel's — turn together, so its board shows one answer lit.
+  const cardId = useId();
+  const wantId = want.metadata?.id || want.id || '';
+  const shownKey = pages[at]?.isPast ? pages[at].key : undefined;
+  useEffect(() => {
+    useResultPageStore.getState().setShown(cardId, wantId && shownKey ? { wantId, key: shownKey } : null);
+  }, [cardId, wantId, shownKey]);
+  useEffect(() => () => useResultPageStore.getState().setShown(cardId, null), [cardId]);
+
+  const request = useResultPageStore(s => s.request);
+  const heard = useRef(0);
+  useEffect(() => {
+    if (!request || request.version === heard.current || request.wantId !== wantId) return;
+    // A card opened by the tap itself still hears it; one opened later does not.
+    if (Date.now() - request.at > 2000) return;
+    heard.current = request.version;
+    let to = request.key === null ? 0 : pages.findIndex(p => p.key === request.key);
+    if (to < 0) {
+      // Not a page of its own: a copy of the answer in front of it (see the
+      // dedupe above), so the page showing that same answer.
+      const entry = (history ?? []).find(e => outputEntryKey(e) === request.key);
+      if (!entry) return;
+      to = pages.findIndex(p => same(p.want.state?.final_result, entry.result));
+      if (to < 0) return;
+    }
+    turnTo(to - atRef.current);
+  }, [request, wantId, pages, history, turnTo]);
+
+  // Turned by hand (the pager, a swipe): the want's other cards follow — not
+  // this one, which is already dealing.
+  const turnByHand = useCallback((d: number) => {
+    const to = turnTo(d);
+    if (to === null || !wantId) return;
+    const store = useResultPageStore.getState();
+    store.turnTo(wantId, pages[to]?.isPast ? pages[to].key ?? null : null);
+    heard.current = store.request?.version ?? heard.current;
+  }, [turnTo, wantId, pages]);
 
   return {
     pages,
     page: at,
-    turn: turnTo,
+    turn: turnByHand,
     current: pages[at],
     // 'next' is the deal — the card you are leaving goes off to the left —
     // and it belongs to the RIGHT-hand press, which is the one that advances.
