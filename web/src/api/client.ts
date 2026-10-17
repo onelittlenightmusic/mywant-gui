@@ -64,6 +64,21 @@ import { Cell, knownCursorManCell } from '@/utils/cursorManCell';
 const hostViewOnly = typeof window !== 'undefined' && !!window.__mywantHost && (
   new URLSearchParams(location.search).has('__panel') || location.pathname.startsWith('/panel/card/'));
 
+/** A capture into a whole want, read and proposed one of its answers. */
+export interface CaptureProposal {
+  thing: string;
+  thingLabel: string;
+  want: string;
+  wantName: string;
+  /** The answer: `<want id>/result/<key>`, and what it is for a person. */
+  answer: string;
+  answerLabel: string;
+  /** The constellation proposed — the answer's own, when it has one. */
+  constellation: string;
+  existing: boolean;
+  by?: string;
+}
+
 export interface WantHashEntry {
   id: string;
   hash: string;
@@ -1494,6 +1509,21 @@ class MyWantApiClient {
 
   async putCaptureTarget(target: { id: string; kind: 'want' | 'thing'; constellation: string; label: string } | null): Promise<void> {
     await this.client.put('/api/v1/capture-target', { target });
+  }
+
+  /**
+   * What captures into a whole want are proposed to join — one of its answers,
+   * in a constellation — waiting for a person to say yes or no.
+   */
+  async getCaptureProposals(): Promise<CaptureProposal[]> {
+    const response = await this.client.get<{ proposals: CaptureProposal[] }>('/api/v1/capture/proposals');
+    return response.data.proposals ?? [];
+  }
+
+  /** Yes (optionally under another name) joins the two; no leaves the capture on its own. */
+  async answerCaptureProposal(thing: string, accept: boolean, constellation?: string): Promise<{ accepted: boolean; constellation?: string; message?: string }> {
+    const response = await this.client.post(`/api/v1/capture/proposals/${encodeURIComponent(thing)}`, { accept, constellation });
+    return response.data;
   }
 
   // Constellation id == its name; kind must accompany update/delete to pick the thing or
