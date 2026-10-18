@@ -77,6 +77,8 @@ export interface CaptureProposal {
   constellation: string;
   existing: boolean;
   by?: string;
+  /** Until when whatever captured it asks about it itself (RFC3339). */
+  askedUntil?: string;
 }
 
 export interface WantHashEntry {
