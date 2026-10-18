@@ -387,6 +387,14 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
     onChange(next);
   }, [parameters, onChange]);
 
+  // Take a value away: the parameter goes back to unset, as if never given.
+  // The overlay's Clear and the × on a card being edited both do this.
+  const clearParam = useCallback((name: string) => {
+    const next = { ...parametersRef.current };
+    delete next[name];
+    onChangeRef.current(next);
+  }, []);
+
   const handleToggleGlobal = useCallback((paramName: string) => {
     setGlobalOverrides(prev => {
       const nowOverride = !prev[paramName];
@@ -516,12 +524,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
         icon: <Trash2 className="w-4 h-4 text-white" />,
         label: 'Clear',
         title: param.required ? '必須パラメータは削除できません' : 'この値を未設定に戻す',
-        onClick: () => {
-          close();
-          const next = { ...parametersRef.current };
-          delete next[param.name];
-          onChangeRef.current(next);
-        },
+        onClick: () => { close(); clearParam(param.name); },
         tone: 'danger' as const,
         delay: 90,
         disabled: param.required,
@@ -538,7 +541,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
   // aura/focusedIndex belong here: the builder runs during render, so without
   // them the Aura entry would describe whichever card was focused when this
   // callback was last created.
-  }, [handleToggleParamRef, handleUpdateParam, onDetailFocusEnter, aura, focusedIndex]);
+  }, [handleToggleParamRef, handleUpdateParam, clearParam, onDetailFocusEnter, aura, focusedIndex]);
 
   const hiddenOptionalCount = (parameterDefinitions ?? []).filter(
     p => !p.required && parameters[p.name] === undefined
@@ -866,6 +869,20 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                     )}
                     {isModified && (
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Modified" />
+                    )}
+                    {isEditing && !param.required && currentValue !== undefined && currentValue !== '' && (
+                      <button
+                        type="button"
+                        // Keep the input's focus: a blur would leave edit mode
+                        // before the click lands.
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={e => { e.stopPropagation(); clearParam(param.name); exitEditMode(); }}
+                        title="この値を未設定に戻す"
+                        aria-label={`Clear ${param.title || param.name}`}
+                        className="w-4 h-4 flex items-center justify-center rounded text-red-500/70 dark:text-red-400/70 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-100/60 dark:hover:bg-red-900/30 transition-colors"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
                     )}
                     <button
                       type="button"
