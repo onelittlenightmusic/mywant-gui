@@ -415,6 +415,13 @@ class MyWantApiClient {
     return this.deduplicatedGet<WantDetails>(`/api/v1/wants/${id}`);
   }
 
+  // What a want says when someone stands on its tile (/wants/{id}/voice):
+  // its type's voice script, or the default lines — null for nothing.
+  async getWantVoice(id: string): Promise<string | null> {
+    const response = await this.client.get<{ say: string | null }>(`/api/v1/wants/${encodeURIComponent(id)}/voice`);
+    return response.data.say ?? null;
+  }
+
   // A want's answers — its result history — read and edited by hand
   // (/wants/{id}/results). Each is named by its key, as outputEntryKey names it.
   async listResultHistory(id: string): Promise<ResultHistoryEntry[]> {

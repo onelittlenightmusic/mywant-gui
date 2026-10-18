@@ -150,5 +150,6 @@ Thing はタイルの画面上の大きさで段階が変わる（`thingStage`�
 | 段の幅・インク：`TIER_BANDS` / `NEAR_GAIN` / `useLayerInk` / `useInk` / `BoardSlot` / `useTexture` / `tierInk` / `inkCss` / `groundPatternVars` / `boardNear` | `web/src/design/boardTiers.ts`（mywant-guiex） |
 | 段の検査 | `web/scripts/check-tiers.mjs`、`web/scripts/tier-baseline.json`（mywant-guiex） |
 | `ARCHIVED_FILTER` | `web/src/components/dashboard/archiveLook.ts`（mywant-guiex） |
+| タイルの飾り（リボン・帽子・ネクタイ。ラベル `tile-effect` / `tile-effect-colors`）：`TileAccessories` / `tileAccessories` | `web/src/components/dashboard/TileAccessories.tsx`、`web/src/utils/tileAccessories.ts`（mywant-guiex） |
 
 見本になる実装：`CanvasThingTile.tsx`（Thing のチップ）、`ThingTileDetail.tsx`（寄ったときの詳細）、`ThingDot.tsx`（小さい Thing）、`ConstellationClusterLayer.tsx`（折りたたみ時の縮小版）。
