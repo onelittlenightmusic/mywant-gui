@@ -73,11 +73,16 @@ function shortWhen(raw: string): string {
 
 const SmartgolfCheckReservedContent: React.FC<WantCardPluginProps> = ({ want }) => {
   const cur = want.state?.current ?? {};
+  // The answer itself — the reservation. A past page read from the
+  // reservations list (the engine's history-from) has only this: none of a
+  // check's fields, so it is drawn from the reservation rather than as 予約なし.
+  const answer = (want.state?.final_result ?? {}) as Record<string, unknown>;
+  const fromAnswer = cur.is_reserved == null && typeof answer.datetime === 'string' && answer.datetime !== '';
 
-  const reserved = cur.is_reserved === true;
-  const store = String(cur.next_store ?? '');
-  const when = String(cur.next_datetime ?? '');
-  const room = roomLabel(String(cur.next_room ?? ''));
+  const reserved = cur.is_reserved === true || fromAnswer;
+  const store = String(cur.next_store ?? (fromAnswer ? answer.store ?? '' : ''));
+  const when = String(cur.next_datetime ?? (fromAnswer ? answer.datetime ?? '' : ''));
+  const room = roomLabel(String(cur.next_room ?? (fromAnswer ? answer.room ?? '' : '')));
   const url = reservationUrl(cur.next_url, store, want.metadata?.labels);
 
   /**
