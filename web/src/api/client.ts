@@ -7,7 +7,8 @@ import { WantPatch,
   UpdateWantRequest,
   SuspendResumeResponse,
   WantStatusResponse,
-  RiffProposal
+  RiffProposal,
+  ResultHistoryEntry
 } from '@/types/want';
 import { HealthCheck, ApiError, ErrorHistoryEntry, ErrorHistoryResponse, LogsResponse } from '@/types/api';
 import { Constellation, ConstellationKind } from '@/types/constellation';
@@ -412,6 +413,28 @@ class MyWantApiClient {
 
   async getWant(id: string): Promise<WantDetails> {
     return this.deduplicatedGet<WantDetails>(`/api/v1/wants/${id}`);
+  }
+
+  // A want's answers — its result history — read and edited by hand
+  // (/wants/{id}/results). Each is named by its key, as outputEntryKey names it.
+  async listResultHistory(id: string): Promise<ResultHistoryEntry[]> {
+    const response = await this.client.get<{ results: ResultHistoryEntry[] }>(`/api/v1/wants/${encodeURIComponent(id)}/results`);
+    return response.data.results ?? [];
+  }
+
+  async addResultHistory(id: string, entry: { result: unknown; fields?: Record<string, unknown>; about?: string; timestamp?: string }): Promise<ResultHistoryEntry> {
+    const response = await this.client.post<ResultHistoryEntry>(`/api/v1/wants/${encodeURIComponent(id)}/results`, entry);
+    return response.data;
+  }
+
+  async updateResultHistory(id: string, key: string, change: { result?: unknown; fields?: Record<string, unknown>; about?: string; timestamp?: string }): Promise<ResultHistoryEntry> {
+    const response = await this.client.put<ResultHistoryEntry>(`/api/v1/wants/${encodeURIComponent(id)}/results/${encodeURIComponent(key)}`, change);
+    return response.data;
+  }
+
+  /** Let an answer go — not brought back by the want's own run. */
+  async deleteResultHistory(id: string, key: string): Promise<void> {
+    await this.client.delete(`/api/v1/wants/${encodeURIComponent(id)}/results/${encodeURIComponent(key)}`);
   }
 
   async updateWant(id: string, request: UpdateWantRequest): Promise<Want> {
@@ -1525,6 +1548,16 @@ class MyWantApiClient {
   /** Yes (optionally under another name) joins the two; no leaves the capture on its own. */
   async answerCaptureProposal(thing: string, accept: boolean, constellation?: string): Promise<{ accepted: boolean; constellation?: string; message?: string }> {
     const response = await this.client.post(`/api/v1/capture/proposals/${encodeURIComponent(thing)}`, { accept, constellation });
+    return response.data;
+  }
+
+  /**
+   * A thing on the board already, caught into the capture target as one just
+   * shared would be: `proposal` when one is asked at once, `waiting` while it
+   * is read to be proposed, `constellation` when it went straight in.
+   */
+  async captureExistingThing(thing: string): Promise<{ proposal?: CaptureProposal; waiting?: boolean; constellation?: string }> {
+    const response = await this.client.post(`/api/v1/capture/things/${encodeURIComponent(thing)}`, {});
     return response.data;
   }
 

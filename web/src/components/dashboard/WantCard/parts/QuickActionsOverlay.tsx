@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, PlayCircle, Square, Trash2, Pause, RotateCcw, Settings, X, Archive, ArchiveRestore, Tag, ExternalLink, Scaling } from 'lucide-react';
+import { Play, PlayCircle, Square, Trash2, Pause, RotateCcw, Settings, X, Archive, ArchiveRestore, Tag, ExternalLink, Scaling, History } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { useWantStore } from '@/stores/wantStore';
 import { CANVAS_LABEL_X, CANVAS_LABEL_Y, CANVAS_LABEL_LENGTH } from '@/utils/wantPlacement';
@@ -29,6 +29,11 @@ interface QuickActionsOverlayProps {
   onUnarchive?: () => void;
   /** Name this want's result into its catalog — what X does, for a mouse. */
   onAddAura?: () => void;
+  /**
+   * Let go of the past answer the card is turned to — given only while it is
+   * turned to one (resultPageStore). Asked first (deleteHistory).
+   */
+  onDeleteHistory?: () => void;
 }
 
 export const QuickActionsOverlay: React.FC<QuickActionsOverlayProps> = ({
@@ -44,6 +49,7 @@ export const QuickActionsOverlay: React.FC<QuickActionsOverlayProps> = ({
   onArchive,
   onUnarchive,
   onAddAura,
+  onDeleteHistory,
 }) => {
   const status = want.status;
   const isRunning   = status === 'reaching' || status === 'reaching_with_warning' || status === 'waiting_user_action';
@@ -149,6 +155,13 @@ export const QuickActionsOverlay: React.FC<QuickActionsOverlayProps> = ({
       tone: 'info' as const,
       delay: 180,
     },
+    // The past answer the card shows, let go. Appended, and only while the
+    // card is turned back to one, so nothing above it moves.
+    ...(onDeleteHistory
+      ? [{ icon: <History className="w-5 h-5 text-white" />, label: 'Delete history',
+           onClick: () => { onDeleteHistory(); onClose(); }, tone: 'danger' as const, delay: 190,
+           title: 'この履歴を削除する' }]
+      : []),
   ];
 
   return (

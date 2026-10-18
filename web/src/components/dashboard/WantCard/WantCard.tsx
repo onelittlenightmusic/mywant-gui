@@ -2,6 +2,8 @@ import { openWebWant } from './plugins/types/WebFrameCardPlugin';
 import { CardEmbeddedContext } from './plugins/registry';
 import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
 import { HostFramedPanel, nativeHost } from '@/lib/nativeHost';
+import { useResultPageStore } from '@/stores/resultPageStore';
+import { deleteFocusedAnswer } from './deleteHistory';
 import { useDisplaySettings } from '@/hooks/useDisplaySettings';
 import { useIconFont } from '@/hooks/useDisplaySettings';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
@@ -528,6 +530,17 @@ export const WantCard: React.FC<WantCardProps> = ({
    * inside the panel was silent.
    */
   const isMaximized = !!wantId && maximizedWantId === wantId;
+  // Delete history — the past answer the want's cards are turned to
+  // (resultPageStore), asked over the card, then let go (deleteHistory): one
+  // of the long-press overlay's buttons, for every card alike.
+  const historyFocus = useResultPageStore(s => (wantId ? s.focus[wantId] : undefined));
+  const askDeleteHistory = historyFocus ? () => overlay.setOverlay(
+    buildDeleteConfirmConfig(
+      () => { overlay.clearOverlay(); void deleteFocusedAnswer(want, historyFocus); },
+      overlay.clearOverlay,
+      'この履歴を削除しますか？',
+    ),
+  ) : null;
   // What the content offers as the card's own actions (cardActions), from the
   // card's face and from its expanded copy separately: both can be mounted.
   const [compactActions, CompactActions] = useCardActionSlot();
@@ -1371,6 +1384,7 @@ export const WantCard: React.FC<WantCardProps> = ({
                 overlay.clearOverlay,
               )
             )}
+            onDeleteHistory={askDeleteHistory ?? undefined}
           />
         )}
 

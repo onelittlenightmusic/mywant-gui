@@ -7,9 +7,11 @@ import { OverlayActionGrid } from '@/components/overlay';
 export function buildDeleteConfirmConfig(
   onConfirm: () => void,
   onCancel: () => void,
+  /** What is asked — a want by default; a past answer asks its own. */
+  headerLabel: string = 'Delete?',
 ): CardOverlayConfig {
   return {
-    headerLabel: 'Delete?',
+    headerLabel,
     items: [
       { icon: <X     className="w-6 h-6 text-white" />, label: 'No',  onClick: onCancel,  tone: 'cancel', delay: 0,  keyboard: 'n' },
       { icon: <Check className="w-6 h-6 text-white" />, label: 'Yes', onClick: onConfirm, tone: 'danger', delay: 60, keyboard: 'y' },
