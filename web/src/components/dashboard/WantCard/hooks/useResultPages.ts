@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ResultHistoryEntry, Want } from '@/types/want';
 import { outputEntryKey } from '@/stores/outputFocusStore';
 import { useResultPageStore } from '@/stores/resultPageStore';
@@ -147,11 +147,25 @@ export function useResultPages(want: Want): ResultPages {
     ];
   }, [want, history, live]);
 
-  // Held, not derived: the want is refetched every few seconds by the poll, and
-  // a page number derived from it would snap back to the front of the stack
-  // mid-read. Clamped below instead of on set, because a new answer arriving
-  // while you are three pages back must not leave you off the end.
-  const [page, setPage] = useState(0);
+  // Which page is in focus is not this card's to keep: it is the want's
+  // (resultPageStore), shared by every card of it and by the board's answer
+  // balls. Held by key, not by number, so the poll refetching the want every
+  // few seconds — a new answer arriving while you are three pages back — does
+  // not move it. An answer that is a copy of a page's (see the dedupe above)
+  // is that page; one no longer kept is the front.
+  const wantId = want.metadata?.id || want.id || '';
+  const focusKey = useResultPageStore(s => (wantId ? s.focus[wantId] : undefined));
+  const target = useMemo(() => {
+    if (!focusKey) return 0;
+    const i = pages.findIndex(p => p.key === focusKey);
+    if (i >= 0) return i;
+    const entry = (history ?? []).find(e => outputEntryKey(e) === focusKey);
+    if (!entry) return 0;
+    return Math.max(0, pages.findIndex(p => same(p.want.state?.final_result, entry.result)));
+  }, [focusKey, pages, history]);
+
+  // The page drawn: it follows the focus, a deal at a time.
+  const [page, setPage] = useState(target);
   const at = Math.min(page, pages.length - 1);
 
   /**
@@ -169,86 +183,48 @@ export function useResultPages(want: Want): ResultPages {
    */
   const [turn, setTurn] = useState<{ dir: number; phase: 'out' | 'in' } | null>(null);
   const timers = useRef<number[]>([]);
+  // Dealing now: kept off the state, so StrictMode's second run of the effect
+  // does not start a second deal before the first has said so.
+  const dealing = useRef(false);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  // Where the turn starts from, read outside the state updater: scheduling
-  // timers inside one would fire them twice under StrictMode's double
-  // invocation, and a page turn is not idempotent.
-  const atRef = useRef(at);
-  atRef.current = at;
-
-  /** Deal `d` pages; the page dealt to, or null when there was no deal. */
-  const turnTo = useCallback((d: number): number | null => {
-    const last = pages.length - 1;
-    const from = Math.min(atRef.current, last);
-    const to = Math.min(Math.max(0, from + d), last);
-    // Nothing behind or in front: no deal, and no animation of one either —
-    // a card dealt off that lands on the same answer says the stack moved when
-    // it did not.
-    if (to === from) return null;
-    // One deal at a time. A held key repeats faster than the pair of
-    // animations, and starting a second deal mid-way left the face stuck
-    // off-frame where the first had pushed it.
-    if (timers.current.length > 0) return null;
-    setTurn({ dir: d, phase: 'out' });
+  // The focus moved — by this card, another, or the board: deal to it. One
+  // deal at a time; a focus that moved on meanwhile is dealt to when the one
+  // under way is done.
+  useEffect(() => {
+    if (dealing.current || target === at) return;
+    dealing.current = true;
+    const dir = target - at;
+    setTurn({ dir, phase: 'out' });
     timers.current = [
       window.setTimeout(() => {
-        setPage(to);
-        setTurn({ dir: d, phase: 'in' });
+        setPage(target);
+        setTurn({ dir, phase: 'in' });
       }, TURN_OUT_MS),
       window.setTimeout(() => {
-        setTurn(null);
+        dealing.current = false;
         timers.current = [];
+        setTurn(null);
       }, TURN_OUT_MS + TURN_IN_MS),
     ];
-    return to;
-  }, [pages.length]);
+  }, [target, at, turn]);
 
-  // In step with the board's answer balls (resultPageStore): say which past
-  // answer this card is turned back to, so its ball lights; and turn to the
-  // answer a ball asks for when it is tapped. A want's cards — the float
-  // card, the panel's — turn together, so its board shows one answer lit.
-  const cardId = useId();
-  const wantId = want.metadata?.id || want.id || '';
-  const shownKey = pages[at]?.isPast ? pages[at].key : undefined;
-  useEffect(() => {
-    useResultPageStore.getState().setShown(cardId, wantId && shownKey ? { wantId, key: shownKey } : null);
-  }, [cardId, wantId, shownKey]);
-  useEffect(() => () => useResultPageStore.getState().setShown(cardId, null), [cardId]);
-
-  const request = useResultPageStore(s => s.request);
-  const heard = useRef(0);
-  useEffect(() => {
-    if (!request || request.version === heard.current || request.wantId !== wantId) return;
-    // A card opened by the tap itself still hears it; one opened later does not.
-    if (Date.now() - request.at > 2000) return;
-    heard.current = request.version;
-    let to = request.key === null ? 0 : pages.findIndex(p => p.key === request.key);
-    if (to < 0) {
-      // Not a page of its own: a copy of the answer in front of it (see the
-      // dedupe above), so the page showing that same answer.
-      const entry = (history ?? []).find(e => outputEntryKey(e) === request.key);
-      if (!entry) return;
-      to = pages.findIndex(p => same(p.want.state?.final_result, entry.result));
-      if (to < 0) return;
-    }
-    turnTo(to - atRef.current);
-  }, [request, wantId, pages, history, turnTo]);
-
-  // Turned by hand (the pager, a swipe): the want's other cards follow — not
-  // this one, which is already dealing.
-  const turnByHand = useCallback((d: number) => {
-    const to = turnTo(d);
-    if (to === null || !wantId) return;
-    const store = useResultPageStore.getState();
-    store.turnTo(wantId, pages[to]?.isPast ? pages[to].key ?? null : null);
-    heard.current = store.request?.version ?? heard.current;
-  }, [turnTo, wantId, pages]);
+  /**
+   * Turned by hand (the pager, a swipe, ← →): `d` pages on from the answer in
+   * focus — not the one drawn, so presses quicker than the deal still count —
+   * written to the want's focus, which every card and the board follow.
+   */
+  const turnBy = useCallback((d: number) => {
+    if (!wantId) return;
+    const to = Math.min(Math.max(0, target + d), pages.length - 1);
+    if (to === target) return;
+    useResultPageStore.getState().setFocus(wantId, pages[to]?.isPast ? pages[to].key ?? null : null);
+  }, [wantId, target, pages]);
 
   return {
     pages,
     page: at,
-    turn: turnByHand,
+    turn: turnBy,
     current: pages[at],
     // 'next' is the deal — the card you are leaving goes off to the left —
     // and it belongs to the RIGHT-hand press, which is the one that advances.
