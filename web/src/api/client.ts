@@ -83,6 +83,15 @@ export interface CaptureProposal {
   askedUntil?: string;
 }
 
+/** How a want's line feels (engine core/want_voice.go, moodOf). */
+export type WantVoiceMood = 'joy' | 'eager' | 'calm' | 'waiting' | 'sad' | 'worried';
+
+/** What a want says when someone stands on it, and how it feels about it. */
+export interface WantVoiceLine {
+  say: string;
+  mood: WantVoiceMood;
+}
+
 export interface WantHashEntry {
   id: string;
   hash: string;
@@ -426,10 +435,12 @@ class MyWantApiClient {
   }
 
   // What a want says when someone stands on its tile (/wants/{id}/voice):
-  // its type's voice script, or the default lines — null for nothing.
-  async getWantVoice(id: string): Promise<string | null> {
-    const response = await this.client.get<{ say: string | null }>(`/api/v1/wants/${encodeURIComponent(id)}/voice`);
-    return response.data.say ?? null;
+  // its type's voice script, or the default lines — null for nothing — and
+  // the line's mood, which the board plays as it comes up.
+  async getWantVoice(id: string): Promise<WantVoiceLine | null> {
+    const response = await this.client.get<{ say: string | null; mood?: WantVoiceMood }>(`/api/v1/wants/${encodeURIComponent(id)}/voice`);
+    const { say, mood } = response.data;
+    return say ? { say, mood: mood ?? 'calm' } : null;
   }
 
   // A want's answers — its result history — read and edited by hand
