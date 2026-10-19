@@ -18,6 +18,7 @@
 
 import { apiClient } from '@/api/client';
 import type { Want } from '@/types/want';
+import { useReflectingStore } from '@/stores/reflectingStore';
 
 // Actions are registered by wantStore after creation to avoid circular imports
 type PatchWantFn = (updated: Want) => void;
@@ -117,12 +118,16 @@ export async function smartPollWants(): Promise<void> {
   const isStale = () => suspendDepth > 0 || epoch !== mutationEpoch;
 
   polling = true;
+  const startedAt = Date.now();
   try {
     // Phase 1: lightweight hash check
     const hashesResponse = await apiClient.listWantHashes(collectionETag);
 
     // 304 → collection unchanged, nothing to do
-    if (hashesResponse === null) return;
+    if (hashesResponse === null) {
+      useReflectingStore.getState().synced('wants', startedAt);
+      return;
+    }
 
     collectionETag = hashesResponse.collection_hash;
 
@@ -184,6 +189,7 @@ export async function smartPollWants(): Promise<void> {
       _removeWantById!(id);
       wantETags.delete(id);
     });
+    useReflectingStore.getState().synced('wants', startedAt);
   } catch (err) {
     console.error('[smartPollWants] error:', err);
   } finally {

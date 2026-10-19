@@ -75,6 +75,10 @@ interface HostBridge {
   /** Something on one of the page's native controls (useHostControl) was
    *  pressed, or put down or let go. */
   input?: (control: string, item: string, phase: HostInputPhase) => void;
+  /** The app wrote to the board on its own (the robot, a capture): the page
+   *  says "reflecting…" until its next read brings it back (reflectingStore).
+   *  Which parts — 'wants', 'things' — or, left out, both. */
+  sent?: (parts?: ('wants' | 'things')[]) => void;
 }
 
 declare global {

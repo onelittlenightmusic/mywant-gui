@@ -33,6 +33,7 @@ import { useSSEEvent } from '@/hooks/useSSEEvent';
 import { useCodingAgentRing } from '@/hooks/useCodingAgentRing';
 import { useIntersectionEffects } from '@/hooks/useIntersectionEffects';
 import { NoticeToast } from '@/components/common/NoticeToast';
+import { ReflectingIndicator } from '@/components/common/ReflectingIndicator';
 import { Slot } from '@/extensions/Slot';
 import { extensionRoutes, extensionBareRoutes, extensionPluginEndpoints, useExtensionHooks } from '@/extensions/registry';
 
@@ -180,6 +181,8 @@ function App() {
         <Slot name="appRoot" />
         {/* A notice nobody else has taken the job of showing — see noticeStore. */}
         <NoticeToast />
+        {/* A change the server took, still on its way back to the board. */}
+        <ReflectingIndicator />
         {/* Single app-wide free-roaming cursor for list/grid pages (want list,
             sidebars, agents/want-types/recipes, ...) — see useGlobalFreeCursor. */}
         <GlobalFreeCursor />

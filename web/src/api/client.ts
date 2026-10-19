@@ -59,6 +59,7 @@ import { Character, CharacterDisplay, CharacterListResponse, RemoteCursor } from
 import { KataListResponse, KataRecord, LiveKataResponse } from '@/types/kata';
 import { CANVAS_LABEL_X, CANVAS_LABEL_Y, isSystemWant } from '@/utils/wantPlacement';
 import { Cell, knownCursorManCell } from '@/utils/cursorManCell';
+import { useReflectingStore, boardPartsWritten, boardPartRead } from '@/stores/reflectingStore';
 
 /** This page is a panel or a card inside an app's frame (lib/nativeHost):
  *  it shows this person's GUI, and writes back none of its screen state. */
@@ -170,6 +171,8 @@ class MyWantApiClient {
       (config) => {
         if (!isPollingUrl(config.url))
           console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+        // When a read began, for whether it can have seen a write (reflectingStore).
+        (config as { startedAt?: number }).startedAt = Date.now();
         return config;
       },
       (error) => Promise.reject(error)
@@ -180,6 +183,13 @@ class MyWantApiClient {
       (response) => {
         if (!isPollingUrl(response.config.url))
           console.log(`API Response: ${response.status} ${response.config.url}`);
+        // The server has it; the board does not yet — or a read that brings it
+        // back. See reflectingStore.
+        const { method, url } = response.config;
+        useReflectingStore.getState().sent(boardPartsWritten(method, url));
+        const read = boardPartRead(method, url);
+        const startedAt = (response.config as { startedAt?: number }).startedAt;
+        if (read && startedAt) queueMicrotask(() => useReflectingStore.getState().synced(read, startedAt));
         return response;
       },
       (error: AxiosError) => {

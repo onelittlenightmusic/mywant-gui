@@ -5,6 +5,7 @@ import { ApiError } from '@/types/api';
 import { ARCHIVE_LABEL } from '@/utils/wantUtils';
 import { apiClient } from '@/api/client';
 import { send } from '@/api/outbox';
+import { useReflectingStore } from '@/stores/reflectingStore';
 import { smartPollWants, registerWantCacheActions, getWantETag, setWantETag, seedWantETags, suspendWantPolling, invalidateCollectionETag } from '@/stores/wantHashCache';
 
 interface DraggingTemplate {
@@ -258,6 +259,7 @@ export const useWantStore = create<WantStore>()(
       }
 
       try {
+        const startedAt = Date.now();
         const wants = await apiClient.listWants();
         // Sort by orderKey for consistent ordering that respects reordering
         const sortedWants = [...wants].sort((a, b) => {
@@ -311,6 +313,7 @@ export const useWantStore = create<WantStore>()(
             set({ loading: false, isInitialLoad: false });
           }
         }
+        useReflectingStore.getState().synced('wants', startedAt);
       } catch (error) {
         set({
           error: error instanceof Error ? error.message : 'Failed to fetch wants',
