@@ -519,6 +519,8 @@ export const WantListPage: React.FC<{
             onDelete={handleDirectDeleteWant}
             onSuspend={handleSuspendWant}
             onResume={handleResumeWant}
+            onArchive={handleArchiveWant}
+            onUnarchive={handleUnarchiveWant}
             onShowReactionConfirmation={handleShowReactionConfirmation}
             index={0}
             stackCount={0}
