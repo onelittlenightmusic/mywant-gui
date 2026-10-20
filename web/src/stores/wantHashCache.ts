@@ -4,6 +4,11 @@
  * Maintains:
  *   collectionETag  — the collection-level hash from GET /api/v1/wants/hashes
  *   wantETags       — per-want hash, used as If-None-Match on GET /api/v1/wants/{id}
+ *                     as the board asks for it (answers only, ?history=results)
+ *   detailETags     — the same hash for the whole want the details panel holds.
+ *                     One hash names both bodies, so each keeps its own: a 304
+ *                     against the board's copy would leave the panel without
+ *                     the histories it opened for.
  *
  * smartPollWants() executes the 3-phase polling strategy:
  *   1. GET /api/v1/wants/hashes  (If-None-Match: collectionETag)
@@ -43,6 +48,7 @@ export function registerWantCacheActions(
 // Module-level ETag state
 let collectionETag: string | undefined = undefined;
 const wantETags = new Map<string, string>(); // id → hash
+const detailETags = new Map<string, string>(); // id → hash of the whole want held
 
 /**
  * Seed the ETag cache from the initial full fetchWants() response.
@@ -63,6 +69,15 @@ export function getWantETag(id: string): string | undefined {
 /** Update the cached ETag for a single want after a successful detail fetch. */
 export function setWantETag(id: string, hash: string) {
   wantETags.set(id, hash);
+}
+
+/** The ETag of the whole want the details panel holds (see detailETags). */
+export function getDetailETag(id: string): string | undefined {
+  return detailETags.get(id);
+}
+
+export function setDetailETag(id: string, hash: string) {
+  detailETags.set(id, hash);
 }
 
 /**
@@ -153,7 +168,7 @@ export async function smartPollWants(): Promise<void> {
     await Promise.all(
       changedEntries.map(async ({ id, hash }) => {
         try {
-          const result = await apiClient.getWantConditional(id, wantETags.get(id));
+          const result = await apiClient.getWantConditional(id, wantETags.get(id), true);
           if (result.data !== null) {
             const hasPending = !!(result.data as any).state?.current?.pending_device_action;
             if (hasPending) console.log(`[TIMING] smartPollWants: pending_device_action found on ${id}`);

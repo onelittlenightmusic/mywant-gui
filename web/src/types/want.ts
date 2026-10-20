@@ -39,6 +39,9 @@ export interface Want {
   hidden_state?: Record<string, unknown>; // Internal framework fields
   stats?: WantStats;
   history?: WantHistory;
+  // "results" when history carries the want's answers alone — what a list and
+  // the board's poll get. The details panel fetches the want whole.
+  history_scope?: 'results';
   results?: Record<string, unknown>;
   builder?: unknown; // ChainBuilder reference (not serialized)
   current_agent?: string; // Name of the agent currently executing for this want

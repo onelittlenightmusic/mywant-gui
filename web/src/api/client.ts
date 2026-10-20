@@ -426,8 +426,10 @@ class MyWantApiClient {
   }
 
   /** Fetch a single want with ETag-based conditional GET. Returns null data on 304. */
-  async getWantConditional(id: string, ifNoneMatch?: string): Promise<{ data: Want | null; etag: string | undefined }> {
-    return this.conditionalGet<Want>(`/api/v1/wants/${id}`, ifNoneMatch);
+  // answersOnly asks for the want's answers without its other histories
+  // (?history=results) — what the board reads; the details panel asks whole.
+  async getWantConditional(id: string, ifNoneMatch?: string, answersOnly = false): Promise<{ data: Want | null; etag: string | undefined }> {
+    return this.conditionalGet<Want>(`/api/v1/wants/${id}${answersOnly ? '?history=results' : ''}`, ifNoneMatch);
   }
 
   async getWant(id: string): Promise<WantDetails> {

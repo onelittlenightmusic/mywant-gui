@@ -6,7 +6,7 @@ import { ARCHIVE_LABEL } from '@/utils/wantUtils';
 import { apiClient } from '@/api/client';
 import { send } from '@/api/outbox';
 import { useReflectingStore } from '@/stores/reflectingStore';
-import { smartPollWants, registerWantCacheActions, getWantETag, setWantETag, seedWantETags, suspendWantPolling, invalidateCollectionETag } from '@/stores/wantHashCache';
+import { smartPollWants, registerWantCacheActions, getWantETag, setWantETag, getDetailETag, setDetailETag, seedWantETags, suspendWantPolling, invalidateCollectionETag } from '@/stores/wantHashCache';
 
 interface DraggingTemplate {
   id: string;
@@ -79,6 +79,16 @@ interface WantStore {
   removeWantById: (id: string) => void;
 }
 
+// The panel's want with a newer copy laid over it. A copy from the board
+// carries its answers only (history_scope "results"), so the panel keeps the
+// state, log and agent histories it fetched — and fetches them again itself
+// when the want changes (see fetchWantDetails).
+function overDetails(details: WantDetails | null, updated: Want | undefined): WantDetails | null {
+  if (!updated) return details;
+  if (updated.history_scope !== 'results' || !details?.history) return updated as WantDetails;
+  return { ...updated, history_scope: undefined, history: { ...details.history, resultHistory: updated.history?.resultHistory ?? [] } } as WantDetails;
+}
+
 export const useWantStore = create<WantStore>()(
   subscribeWithSelector((set, get) => ({
     // Initial state
@@ -138,7 +148,9 @@ export const useWantStore = create<WantStore>()(
       return {
         wants: newWants,
         selectedWant: state.selectedWant?.metadata?.id === updatedId ? updated : state.selectedWant,
-        selectedWantDetails: state.selectedWantDetails?.metadata?.id === updatedId ? updated : state.selectedWantDetails,
+        selectedWantDetails: state.selectedWantDetails?.metadata?.id === updatedId
+          ? overDetails(state.selectedWantDetails, updated)
+          : state.selectedWantDetails,
       };
     }),
 
@@ -171,7 +183,7 @@ export const useWantStore = create<WantStore>()(
           ? updatedById.get(state.selectedWant.metadata.id) ?? state.selectedWant
           : state.selectedWant,
         selectedWantDetails: state.selectedWantDetails?.metadata?.id
-          ? updatedById.get(state.selectedWantDetails.metadata.id) ?? state.selectedWantDetails
+          ? overDetails(state.selectedWantDetails, updatedById.get(state.selectedWantDetails.metadata.id))
           : state.selectedWantDetails,
       };
     }),
@@ -456,12 +468,15 @@ export const useWantStore = create<WantStore>()(
       try {
         // Only send ETag on re-fetches (polling). On initial load the detail data
         // is not in memory yet, so a 304 would leave selectedWantDetails null.
-        const result = await apiClient.getWantConditional(id, isInitialLoad ? undefined : getWantETag(id));
+        const result = await apiClient.getWantConditional(id, isInitialLoad ? undefined : getDetailETag(id));
         if (result.data === null) {
           // 304: cached detail is still valid — no state change needed
           return { updated: false };
         }
-        if (result.etag) setWantETag(id, result.etag);
+        if (result.etag) {
+          setDetailETag(id, result.etag);
+          setWantETag(id, result.etag);
+        }
         // Also patch the wants list so the card status updates immediately.
         // Without this, smartPollWants may skip the want because fetchWantDetails
         // already advanced wantETags to the new hash, causing the card to show stale status.
@@ -516,12 +531,15 @@ export const useWantStore = create<WantStore>()(
     refreshWant: async (id: string) => {
       try {
         const [wantResult, status] = await Promise.all([
-          apiClient.getWantConditional(id, getWantETag(id)),
+          apiClient.getWantConditional(id, getDetailETag(id)),
           apiClient.getWantStatus(id)
         ]);
 
         if (wantResult.data !== null) {
-          if (wantResult.etag) setWantETag(id, wantResult.etag);
+          if (wantResult.etag) {
+            setDetailETag(id, wantResult.etag);
+            setWantETag(id, wantResult.etag);
+          }
           set(state => ({
             wants: state.wants.map(w => w.id === id ? { ...w, status: status.status } : w),
             selectedWant: state.selectedWant?.id === id ? { ...state.selectedWant, status: status.status } : state.selectedWant,
