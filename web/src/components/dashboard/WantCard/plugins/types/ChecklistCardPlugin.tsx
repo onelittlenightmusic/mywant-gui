@@ -69,7 +69,7 @@ const ChecklistContentSection: React.FC<WantCardPluginProps> = ({
   };
   const add = () => {
     const it: Item = { id: uid(), text: '', done: false };
-    write([...items, it]);
+    write([it, ...items]);
     setDraft({ id: it.id, text: '' });
   };
 
@@ -156,6 +156,16 @@ const ChecklistContentSection: React.FC<WantCardPluginProps> = ({
           {doneCount} / {items.length}
         </div>
 
+        <button
+          data-inner-focus
+          type="button"
+          onClick={(e) => { e.stopPropagation(); add(); }}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="flex items-center justify-center gap-1 flex-shrink-0 py-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-400 hover:border-emerald-400 hover:text-emerald-500 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" /> 追加
+        </button>
+
         <div
           ref={gridRef}
           className="relative flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-0.5"
@@ -170,7 +180,7 @@ const ChecklistContentSection: React.FC<WantCardPluginProps> = ({
           )}
 
           {items.length === 0 && (
-            <p className="text-xs italic text-gray-400 px-1 py-2">まだ項目がありません。下の「追加」から。</p>
+            <p className="text-xs italic text-gray-400 px-1 py-2">まだ項目がありません。上の「追加」から。</p>
           )}
 
           {items.map((it, i) => {
@@ -235,16 +245,6 @@ const ChecklistContentSection: React.FC<WantCardPluginProps> = ({
             />
           )}
         </div>
-
-        <button
-          data-inner-focus
-          type="button"
-          onClick={(e) => { e.stopPropagation(); add(); }}
-          onMouseDown={(e) => e.stopPropagation()}
-          className="flex items-center justify-center gap-1 flex-shrink-0 py-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-400 hover:border-emerald-400 hover:text-emerald-500 transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" /> 追加
-        </button>
       </div>
     } />
   );
