@@ -88,6 +88,13 @@ export interface ExtensionSlots {
    */
   wantCardActions: ComponentType<{ actions: CardAction[]; ownPage: boolean }>;
   /**
+   * What a want card in the list says, over its top edge — drawn the way the
+   * extension has a want say it elsewhere (the canvas: its bubble over the
+   * tile). `standing` is the one being looked at (the keyboard's, the
+   * character's). The public edition draws nothing.
+   */
+  wantCardSpeech: ComponentType<{ want: Want; standing: boolean }>;
+  /**
    * Before the name in a detail panel's identity row — what the panel is
    * about, drawn the way the extension draws it elsewhere (the canvas: the
    * want's tile, the thing's ball), so a want's panel and a thing's tell

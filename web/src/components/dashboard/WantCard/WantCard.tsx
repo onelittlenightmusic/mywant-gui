@@ -43,6 +43,7 @@ import { buildPlanApproveConfig } from './parts/PlanApproveOverlay';
 import { buildOpenUrlConfig } from './parts/OpenUrlOverlay';
 import { WantCardOverlay } from './parts/WantCardOverlay';
 import { CardCursorMan } from '../CardCursorMan';
+import { Slot } from '@/extensions/Slot';
 import { useCardInnerFocusStore, InnerFocusScope } from '@/stores/cardInnerFocusStore';
 import { playSound } from '@/utils/sounds';
 import { useLongPress } from './hooks/useLongPress';
@@ -1075,6 +1076,9 @@ export const WantCard: React.FC<WantCardProps> = ({
     <CardEmbeddedContext.Provider value={embedded}>
     <div className="relative h-full" style={{ isolation: 'isolate' }}>
       <CardCursorMan visible={showCursorMan} />
+      {/* What it says, over its top edge — a card in the list only, not one
+          standing in for a tile (canvasMode) or put inside something else. */}
+      {!canvasMode && !embedded && <Slot name="wantCardSpeech" want={want} standing={isNavFocused} />}
       <StackLayers stackCount={stackCount} />
       <div
         ref={(node) => { cardRef.current = node; touchReorder.ref.current = node; }}

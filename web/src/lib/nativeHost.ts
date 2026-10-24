@@ -544,10 +544,10 @@ export function useHostPanel(
 // ── Overlay bubbles' frames, drawn by the app ───────────────────────────────
 //
 // A bubble on the board (OverlayBubble — the character's actions, a Y
-// connection's choices, a name prompt…) keeps its contents here; framed by an
-// app, its frame — the outline, the tail, the shadow, the arrival — is the
-// app's: a native control of kind 'frame' around the box the bubble occupies,
-// followed every frame. The app's frame takes no touches, so the buttons
+// connection's choices, a name prompt, a want's line…) keeps its contents,
+// its fill and its shadow here; framed by an app, its tail and its arrival
+// are the app's: a native control of kind 'frame' at the box the bubble
+// occupies, followed every frame. No outline on either side. The app's frame takes no touches, so the buttons
 // inside are pressed as ever.
 
 const hostBubbles = new Map<string, { el: HTMLElement; tail: boolean }>();

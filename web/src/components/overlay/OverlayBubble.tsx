@@ -8,8 +8,9 @@ export interface OverlayBubbleProps {
   /** Where it is, in viewport px: the point the tail touches when `anchor` is 'above'. */
   left: number;
   top: number;
-  width: number;
-  height: number;
+  /** Its size; left out, it is as large as what is in it (a line being said). */
+  width?: number;
+  height?: number;
   /**
    * 'above' — centred on (left, top) and lifted clear of it, with a tail
    * pointing down at it: a question about something on the board, asked
@@ -56,9 +57,9 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
 }, ref) => {
   const design = useOverlayDesign();
   const above = anchor === 'above';
-  // Framed by an app, the frame is the app's (useHostBubble): the box keeps
-  // its fill and its contents, and the outline, the tail and the shadow are
-  // drawn natively around it.
+  // Framed by an app, the tail is the app's (useHostBubble): the box keeps
+  // its fill, its contents and its shadow — no outline, as the app's corner
+  // cards have none — and the tail and the arrival are drawn natively.
   const [frameEl, setFrameEl] = React.useState<HTMLDivElement | null>(null);
   useHostBubble(frameEl, above);
   const box = (
@@ -73,7 +74,7 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
       onMouseDown={contain ? (e) => e.stopPropagation() : undefined}
     >
       <div ref={setFrameEl}
-        className={classNames('relative h-full w-full', nativeHost ? 'rounded-2xl overflow-hidden bg-slate-900/85' : design.frame)}>
+        className={classNames('relative h-full w-full', nativeHost ? 'rounded-2xl overflow-hidden bg-slate-900/85 shadow-2xl' : design.frame)}>
         {children}
       </div>
       {above && !nativeHost && (
