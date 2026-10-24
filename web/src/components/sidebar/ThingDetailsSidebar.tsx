@@ -19,7 +19,9 @@ import { type Mark } from '@/components/common/MarkButton';
 import { LogCard } from '@/components/common/LogCard';
 import { useThingNames } from '@/hooks/useThingNames';
 import { ThemeOrderSection } from './ThemeOrderSection';
-import { ThingArtSection } from './ThingArtSection';
+import { ArtMaker } from './ArtMaker';
+import { artOf } from '@/lib/art';
+import { kindBackgroundSrc } from '@/utils/thingBackground';
 import { LabelsSection } from '@/components/forms/sections/LabelsSection';
 import { apiClient } from '@/api/client';
 
@@ -326,7 +328,21 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
               <InfoRow label="Catalog" value={<span className="font-mono">{record.catalogKey}</span>} />
               <InfoRow label="Firings" value={events ? events.length : '…'} />
             </div>
-            <ThingArtSection record={record} />
+            {/* Its picture on the board's floor, under its ball (lib/art): drawn,
+                or one it already wears — its own photo, its kind's picture. */}
+            <ArtMaker
+              className="mt-4"
+              kind="thing"
+              id={record.id}
+              value={record.value}
+              about={record.typeName}
+              current={artOf(ownLabels)}
+              choices={[
+                record.background?.startsWith('@') ? ownLabels[record.background.slice(1)] : undefined,
+                kindBackgroundSrc(record.background),
+              ].filter((u): u is string => !!u)}
+              onChanged={() => useThingStore.getState().fetchThings()}
+            />
           </>
         )}
 

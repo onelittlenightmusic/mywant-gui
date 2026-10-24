@@ -1,4 +1,5 @@
-import { thingBackgroundSrc, THING_ART_LABEL } from '@/utils/thingBackground';
+import { thingBackgroundSrc } from '@/utils/thingBackground';
+import { artOf } from '@/lib/art';
 import { thingDisplayName } from '@/utils/thingFace';
 import { CANVAS_LABEL_SIZE, tileSizeOf, type TileSize } from '@/utils/canvasSize';
 import { create } from 'zustand';
@@ -15,8 +16,6 @@ import { useConstellationStore } from './constellationStore';
 /** The picture this thing carries of its own — see ThingTile.picture. */
 const ownPicture = (background: string | undefined, labels: Record<string, string>) =>
   background?.startsWith('@') ? thingBackgroundSrc(background, labels) : undefined;
-/** The art drawn for it — see ThingTile.art. */
-const artOf = (labels: Record<string, string>) => labels[THING_ART_LABEL]?.trim() || undefined;
 
 /** Canvas coordinates for a thing ride on the value's own labels. */
 export const THING_CANVAS_LABEL_X = 'mywant.io/canvas-x';
@@ -73,9 +72,8 @@ export interface ThingTile {
    */
   picture?: string;
   /**
-   * A picture drawn for it (Image Playground, from its sidebar — the
-   * engine's thing_art.go): laid on the board's floor under its ball
-   * (guiex ThingArtFloorLayer), not worn by the ball.
+   * Its art (lib/art): a picture laid on the board's floor under its ball
+   * (guiex FloorArtLayer), not worn by the ball.
    */
   art?: string;
   /** Its place in the order things were added — the newest is the largest. */

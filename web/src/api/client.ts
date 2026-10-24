@@ -1636,41 +1636,26 @@ class MyWantApiClient {
     await this.client.post(`/api/v1/things/labels/remove`, { value_id: valueId, key });
   }
 
-  /** Keeps a picture drawn for a thing as its art (the engine's thing_art.go); its URL. */
-  async uploadThingArt(id: string, png: Blob): Promise<string> {
+  /**
+   * A thing's, a want's or a constellation's art (the engine's art.go): a PNG
+   * made here (drawn, or a file), kept there; or a picture already somewhere,
+   * kept as its URL. The kept URL.
+   */
+  async putArt(kind: import('@/lib/art').ArtKind, id: string, art: { png: Blob } | { url: string }): Promise<string> {
+    const at = `/api/v1/art/${kind}/${encodeURIComponent(id)}`;
+    if ('url' in art) return (await this.client.post<{ url: string }>(at, { url: art.url })).data.url;
     const form = new FormData();
-    form.append('image', png, 'art.png');
-    const response = await this.client.post<{ url: string }>(`/api/v1/things/art/${encodeURIComponent(id)}`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data.url;
+    form.append('image', art.png, 'art.png');
+    return (await this.client.post<{ url: string }>(at, form, { headers: { 'Content-Type': 'multipart/form-data' } })).data.url;
   }
 
-  async deleteThingArt(id: string): Promise<void> {
-    await this.client.delete(`/api/v1/things/art/${encodeURIComponent(id)}`);
+  /** How large its art lies on the floor (lib/art's ART_SCALES); the kept URL. */
+  async setArtScale(kind: import('@/lib/art').ArtKind, id: string, scale: number): Promise<string> {
+    return (await this.client.post<{ url: string }>(`/api/v1/art/${kind}/${encodeURIComponent(id)}/scale`, { scale })).data.url;
   }
 
-  /** Makes a picture already somewhere the thing's art, rather than one drawn. */
-  async setThingArtUrl(id: string, url: string): Promise<void> {
-    await this.client.post(`/api/v1/things/art/${encodeURIComponent(id)}`, { url });
-  }
-
-  /** A constellation's art, as a thing's (the engine's constellation_art.go). */
-  async uploadConstellationArt(name: string, png: Blob): Promise<string> {
-    const form = new FormData();
-    form.append('image', png, 'art.png');
-    const response = await this.client.post<{ url: string }>(`/api/v1/constellations/${encodeURIComponent(name)}/art`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data.url;
-  }
-
-  async setConstellationArtUrl(name: string, url: string): Promise<void> {
-    await this.client.post(`/api/v1/constellations/${encodeURIComponent(name)}/art`, { url });
-  }
-
-  async deleteConstellationArt(name: string): Promise<void> {
-    await this.client.delete(`/api/v1/constellations/${encodeURIComponent(name)}/art`);
+  async deleteArt(kind: import('@/lib/art').ArtKind, id: string): Promise<void> {
+    await this.client.delete(`/api/v1/art/${kind}/${encodeURIComponent(id)}`);
   }
 
   /**

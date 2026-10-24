@@ -30,6 +30,8 @@ import {
 } from '../DetailsSidebar';
 import { useCardGridNavigation } from '@/hooks/useCardGridNavigation';
 import { FormTab, FormTabBar, SETTINGS_FORM_TABS } from '@/components/forms/FormTabBar';
+import { ArtMaker } from '@/components/sidebar/ArtMaker';
+import { artOf } from '@/lib/art';
 
 import { SECTION_CONTAINER_CLASS } from './shared';
 
@@ -414,6 +416,18 @@ export const SettingsTab: React.FC<{
                 </div>
               </div>
             </div>
+
+            {/* Its picture on the board's floor, under its tile (lib/art). */}
+            {want.metadata?.id && (
+              <ArtMaker
+                kind="want"
+                id={want.metadata.id}
+                value={want.metadata.name || want.metadata.type || ''}
+                about={want.metadata.type || 'want'}
+                current={artOf(want.metadata.labels)}
+                onChanged={() => onWantUpdate?.()}
+              />
+            )}
 
             {/* Timeline */}
             {want.stats && (

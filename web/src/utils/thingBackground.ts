@@ -1,3 +1,5 @@
+import { artOf } from '@/lib/art';
+
 /**
  * Where a thing's picture comes from.
  *
@@ -28,12 +30,6 @@ export function thingBackgroundSrc(
 }
 
 /**
- * The label a thing's art rides on: a picture drawn for it on the phone
- * (Image Playground, mywant-ios ThingArt), its URL — the engine's thing_art.go.
- */
-export const THING_ART_LABEL = 'mywant.io/art';
-
-/**
  * The picture that is THIS thing's, not its kind's: its own ("@label"), or,
  * with none, the art drawn for it. What its card wears; on the board the art
  * is laid on the floor instead (ThingTile.art).
@@ -46,7 +42,7 @@ export function thingOwnPicture(
     const url = labels?.[background.slice(1)]?.trim();
     if (url) return url;
   }
-  return labels?.[THING_ART_LABEL]?.trim() || undefined;
+  return artOf(labels);
 }
 
 /**
