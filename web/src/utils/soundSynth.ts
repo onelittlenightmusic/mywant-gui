@@ -218,17 +218,35 @@ function glide(c: AudioContext, out: AudioNode, t: number, from: number, to: num
 }
 
 /**
- * A hit landing: a small fire bursting — a low thump falling away under a
- * puff of noise that darkens as it spreads, with the crack of the contact on
- * top. The one impact with weight.
+ * A hit landing: a small fire bursting — a sharp crack of the contact, a puff
+ * of fire that darkens as it spreads, and a thump under them. Pitched where a
+ * laptop's speakers can say it: a thump alone sat below what they play and was
+ * heard as nothing, so the body of the hit is in the crack and the puff, and
+ * the thump starts high and falls. Past the floor's cut, unlike every tap, and
+ * the loudest of the impacts: a hit has to be heard over the rest of a battle.
  */
 export function impactAttack(c: AudioContext): void {
-  const out = buses(c).floor;
+  const out = c.destination;
   const t = c.currentTime;
-  const a = jitter(0.2);
-  glide(c, out, t, 140 * jitter(0.08), 48, 0.2, 0.32 * a);
-  puff(c, out, t, { dur: 0.26, amp: 0.2 * a, type: 'lowpass', from: 2200, to: 260 });
-  pebble(c, { freq: PITCH.bump, amp: 0.18 });
+  const a = jitter(0.15);
+  // The crack: bright, short.
+  puff(c, out, t, { dur: 0.05, amp: 0.34 * a, type: 'bandpass', from: 3200, to: 1500, q: 1.4 });
+  // The fire: a wide puff falling from bright to dark.
+  puff(c, out, t + 0.01, { dur: 0.3, amp: 0.3 * a, type: 'lowpass', from: 4200, to: 380, q: 0.9 });
+  // The thump, falling from where it is heard into where it is felt.
+  glide(c, out, t, 260 * jitter(0.08), 70, 0.22, 0.36 * a);
+}
+
+/**
+ * A value handed on, landing: a light "received" — two quick taps rising,
+ * a bright glide under them, like a ticket gate letting you through.
+ */
+export function impactFeed(c: AudioContext): void {
+  const out = buses(c).bright;
+  const t = c.currentTime;
+  pebble(c, { freq: PITCH.connect * 1.5, amp: 0.16, bright: true });
+  pebble(c, { freq: PITCH.connect * 2, at: 0.07, amp: 0.16, bright: true });
+  glide(c, out, t + 0.03, 1300 * jitter(0.03), 1950, 0.16, 0.06);
 }
 
 /**

@@ -1,5 +1,5 @@
 import {
-  gridMove, wantPlaced, whoosh, impactAttack, impactMend, impactFreeze, hapticClick, buttonPress, handoverIn, handoverOut, confirmIn, sparkle, chime, ring, pillExpand, pillShrink,
+  gridMove, wantPlaced, whoosh, impactAttack, impactMend, impactFreeze, impactFeed, hapticClick, buttonPress, handoverIn, handoverOut, confirmIn, sparkle, chime, ring, pillExpand, pillShrink,
 } from './soundSynth';
 
 /**
@@ -46,7 +46,7 @@ export const SOUND_CATALOG = {
 
   // ── What lands on a want (components/impact) ───────────────────────────
   impactAttack: {
-    what: 'A small burst of fire: a thump under a darkening puff.',
+    what: 'A small burst of fire: a crack, a darkening puff, a falling thump.',
     when: "An attack's hit lands on a want (its `impact` is an attack).",
     play: impactAttack,
   },
@@ -59,6 +59,11 @@ export const SOUND_CATALOG = {
     what: 'A clock stopping: tick, tick, and the hand catching.',
     when: 'A freeze holds a want where it is (its `impact` is a freeze).',
     play: impactFreeze,
+  },
+  impactFeed: {
+    what: 'A light "received": two rising taps and a bright glide.',
+    when: 'A value handed on by a connection lands on a want (its `impact` is a feed).',
+    play: impactFeed,
   },
 
   // ── Putting things on the board ──────────────────────────────────────────

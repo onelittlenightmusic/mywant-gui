@@ -3,7 +3,7 @@ import type { Want } from '@/types/want';
 
 /**
  * What a want's connections just did to the wants they reach — an attack
- * landing, a mend, a freeze — as moments, for whatever draws those wants to
+ * landing, a mend, a freeze, a value handed on (feed) — as moments, for whatever draws those wants to
  * show it landing (components/impact).
  *
  * The acting want says so on itself: its `impact` field ({kind, to, n}, the
@@ -14,19 +14,23 @@ import type { Want } from '@/types/want';
  * a want, an `impact` is history and is not told.
  */
 
-export type ImpactKind = 'attack' | 'mend' | 'freeze';
+export type ImpactKind = 'attack' | 'mend' | 'freeze' | 'feed';
 
 export interface ImpactMoment {
   kind: ImpactKind;
   /** The want that acted, by name. */
   from: string;
+  /** The want it landed on, by name. */
+  on: string;
   /** One per moment, page-wide: what a drawing claims its sound by. */
   id: number;
+  /** What was handed on (feed), shortened — said over the want as it lands. */
+  value?: string;
 }
 
-interface ImpactField { kind?: unknown; to?: unknown; n?: unknown }
+interface ImpactField { kind?: unknown; to?: unknown; n?: unknown; value?: unknown }
 
-const KINDS = new Set<ImpactKind>(['attack', 'mend', 'freeze']);
+const KINDS = new Set<ImpactKind>(['attack', 'mend', 'freeze', 'feed']);
 
 /**
  * How soon the same kind may land on the same want again and be shown again.
@@ -34,29 +38,38 @@ const KINDS = new Set<ImpactKind>(['attack', 'mend', 'freeze']);
  * want down, a heal mending it, four times a second — and a burst every
  * quarter second is a flicker, not a hit.
  */
-const SHOW_GAP_MS: Record<ImpactKind, number> = { attack: 380, mend: 1100, freeze: 0 };
+const SHOW_GAP_MS: Record<ImpactKind, number> = { attack: 380, mend: 1100, freeze: 0, feed: 300 };
 
 /**
- * How soon the same kind may be heard again, anywhere. A battle has many
- * hits at once; heard each time they are a rattle, so the board says each kind
- * no faster than this.
+ * How soon the same kind landing on the same want may be heard again. Kept
+ * per want, not per kind: a battle has enemies wearing the keep down four
+ * times a second, and heard as one stream they drowned a turret's hit on an
+ * enemy — another want, a hit worth hearing — whenever it fell just after.
  */
-const HEAR_GAP_MS: Record<ImpactKind, number> = { attack: 120, mend: 500, freeze: 80 };
+const HEAR_GAP_MS: Record<ImpactKind, number> = { attack: 650, mend: 900, freeze: 300, feed: 250 };
+
+/** And how soon any two of the same kind, anywhere: closer is one flam. */
+const FLAM_MS = 45;
 
 type Listener = (m: ImpactMoment) => void;
 const listeners = new Map<string, Set<Listener>>();
 const lastN = new Map<string, number>();          // acting want id → last n told
 const lastShown = new Map<string, number>();      // `${kind}\0${name}` → when
-const lastHeard = new Map<ImpactKind, number>();  // kind → when
+const lastHeard = new Map<string, number>();       // `${kind}\0${name}`, or the kind alone → when
 const claimed = new Map<number, { by: object; heard: boolean }>(); // moment id → who makes its sound
 let nextId = 1;
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
-function impactOf(w: Want): { kind: ImpactKind; to: string[]; n: number } | null {
+function impactOf(w: Want): { kind: ImpactKind; to: string[]; n: number; value?: string } | null {
   const f = w.state?.current?.impact as ImpactField | null | undefined;
   if (!f || typeof f !== 'object' || !KINDS.has(f.kind as ImpactKind) || !Array.isArray(f.to)) return null;
-  return { kind: f.kind as ImpactKind, to: f.to.filter((x): x is string => typeof x === 'string'), n: Number(f.n) || 0 };
+  return {
+    kind: f.kind as ImpactKind,
+    to: f.to.filter((x): x is string => typeof x === 'string'),
+    n: Number(f.n) || 0,
+    value: typeof f.value === 'string' ? f.value : undefined,
+  };
 }
 
 function look(wants: Want[]): void {
@@ -69,16 +82,27 @@ function look(wants: Want[]): void {
     lastN.set(id, imp.n);
     if (seen === undefined || seen === imp.n) continue;
     const from = w.metadata?.name ?? id;
-    for (const name of imp.to) {
-      const key = `${imp.kind}\u0000${name}`;
-      if (t - (lastShown.get(key) ?? -Infinity) < SHOW_GAP_MS[imp.kind]) continue;
-      lastShown.set(key, t);
-      const subs = listeners.get(name);
-      if (!subs || subs.size === 0) continue;
-      const m: ImpactMoment = { kind: imp.kind, from, id: nextId++ };
-      for (const l of subs) l(m);
-    }
+    for (const name of imp.to) tell(name, imp.kind, from, imp.value, t);
   }
+}
+
+function tell(name: string, kind: ImpactKind, from: string, value: string | undefined, t: number): void {
+  const key = `${kind}\u0000${name}`;
+  if (t - (lastShown.get(key) ?? -Infinity) < SHOW_GAP_MS[kind]) return;
+  lastShown.set(key, t);
+  const subs = listeners.get(name);
+  if (!subs || subs.size === 0) return;
+  const m: ImpactMoment = { kind, from, on: name, id: nextId++, value };
+  for (const l of subs) l(m);
+}
+
+/**
+ * A moment this page saw happen itself, with no want to say so: a thing's
+ * value put into a want's parameter by connecting the two. A thing is not a
+ * want and keeps no fields, so nothing on the server could carry it.
+ */
+export function showImpact(wantName: string, kind: ImpactKind, from: string, value?: string): void {
+  tell(wantName, kind, from, value, now());
 }
 
 let watching = false;
@@ -113,8 +137,10 @@ export function claimImpactSound(m: ImpactMoment, drawing: object): boolean {
   const have = claimed.get(m.id);
   if (have) return have.by === drawing && have.heard;
   const t = now();
-  const heard = t - (lastHeard.get(m.kind) ?? -Infinity) >= HEAR_GAP_MS[m.kind];
-  if (heard) lastHeard.set(m.kind, t);
+  const key = `${m.kind}\u0000${m.on}`;
+  const heard = t - (lastHeard.get(key) ?? -Infinity) >= HEAR_GAP_MS[m.kind]
+    && t - (lastHeard.get(m.kind) ?? -Infinity) >= FLAM_MS;
+  if (heard) { lastHeard.set(key, t); lastHeard.set(m.kind, t); }
   if (claimed.size > 256) claimed.clear();
   claimed.set(m.id, { by: drawing, heard });
   return heard;
