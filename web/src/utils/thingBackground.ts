@@ -21,12 +21,32 @@ export function thingBackgroundSrc(
   background: string | undefined,
   labels?: Record<string, string>,
 ): string | undefined {
-  if (!background) return undefined;
-  if (background.startsWith('@')) {
+  // Its own picture, then its art, then its kind's: a drawing of 新宿 says
+  // more than the picture every station shares.
+  return thingOwnPicture(background, labels)
+    ?? (background && !background.startsWith('@') ? `/resources/${background}.png` : undefined);
+}
+
+/**
+ * The label a thing's art rides on: a picture drawn for it on the phone
+ * (Image Playground, mywant-ios ThingArt), its URL — the engine's thing_art.go.
+ */
+export const THING_ART_LABEL = 'mywant.io/art';
+
+/**
+ * The picture that is THIS thing's, not its kind's: its own ("@label"), or,
+ * with none, the art drawn for it. What its card wears; on the board the art
+ * is laid on the floor instead (ThingTile.art).
+ */
+export function thingOwnPicture(
+  background: string | undefined,
+  labels?: Record<string, string>,
+): string | undefined {
+  if (background?.startsWith('@')) {
     const url = labels?.[background.slice(1)]?.trim();
-    return url || undefined;
+    if (url) return url;
   }
-  return `/resources/${background}.png`;
+  return labels?.[THING_ART_LABEL]?.trim() || undefined;
 }
 
 /**

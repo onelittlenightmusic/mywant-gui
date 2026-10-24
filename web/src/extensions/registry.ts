@@ -69,7 +69,11 @@ export interface ExtensionSlots {
   interactProviderSelect: ComponentType<{ open: boolean }>;
   /** A section of the Settings modal. */
   settingsSection: ComponentType;
-  /** Below a constellation's details — kata, the group's own card. */
+  /**
+   * A constellation's whole panel — its card, its kata, its members — for its
+   * panel's own page (`?__panel=group:<name>`, the page an app opens as a
+   * sheet, as a thing's). The public edition has none.
+   */
   groupDetails: ComponentType<{ groupName: string }>;
   /** Marks in a theme's header, after its count — what the theme turned out to be. */
   themeMarks: ComponentType<{ themeName: string; color?: string }>;
@@ -106,7 +110,8 @@ export interface ExtensionSlots {
 /** What a detail panel is about — see PanelIdentityRow. */
 export type PanelSubject =
   | { kind: 'want'; want: Want }
-  | { kind: 'thing'; record: ThingRecord };
+  | { kind: 'thing'; record: ThingRecord }
+  | { kind: 'group'; name: string; color?: string };
 
 /** What the header's bubble does with what is typed into it. */
 export interface InteractApi {

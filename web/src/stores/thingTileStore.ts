@@ -1,4 +1,4 @@
-import { thingBackgroundSrc } from '@/utils/thingBackground';
+import { thingBackgroundSrc, THING_ART_LABEL } from '@/utils/thingBackground';
 import { thingDisplayName } from '@/utils/thingFace';
 import { CANVAS_LABEL_SIZE, tileSizeOf, type TileSize } from '@/utils/canvasSize';
 import { create } from 'zustand';
@@ -15,6 +15,8 @@ import { useConstellationStore } from './constellationStore';
 /** The picture this thing carries of its own — see ThingTile.picture. */
 const ownPicture = (background: string | undefined, labels: Record<string, string>) =>
   background?.startsWith('@') ? thingBackgroundSrc(background, labels) : undefined;
+/** The art drawn for it — see ThingTile.art. */
+const artOf = (labels: Record<string, string>) => labels[THING_ART_LABEL]?.trim() || undefined;
 
 /** Canvas coordinates for a thing ride on the value's own labels. */
 export const THING_CANVAS_LABEL_X = 'mywant.io/canvas-x';
@@ -70,6 +72,12 @@ export interface ThingTile {
    * would wear the same one.
    */
   picture?: string;
+  /**
+   * A picture drawn for it (Image Playground, from its sidebar — the
+   * engine's thing_art.go): laid on the board's floor under its ball
+   * (guiex ThingArtFloorLayer), not worn by the ball.
+   */
+  art?: string;
   /** Its place in the order things were added — the newest is the largest. */
   addedOrder?: number;
   /** When it was added, RFC 3339 — a thing just shared is placed where the character is. */
@@ -406,6 +414,7 @@ export const useThingTileStore = create<ThingTileStore>()(
               id: t.id, value: t.value, subtype: t.subtype, icon: t.icon, color: t.color,
               wantIDs: t.wantIDs ?? [], listWantIDs: t.listWantIDs ?? [], x, y, archived: true,
               picture: ownPicture(t.background, labels),
+              art: artOf(labels),
               size: tileSizeOf(labels),
             });
             continue;
@@ -428,6 +437,7 @@ export const useThingTileStore = create<ThingTileStore>()(
             x,
             y,
             picture: ownPicture(t.background, labels),
+            art: artOf(labels),
             size: tileSizeOf(labels),
             addedOrder: t.addedOrder,
             createdAt: t.createdAt,

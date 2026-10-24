@@ -1636,6 +1636,43 @@ class MyWantApiClient {
     await this.client.post(`/api/v1/things/labels/remove`, { value_id: valueId, key });
   }
 
+  /** Keeps a picture drawn for a thing as its art (the engine's thing_art.go); its URL. */
+  async uploadThingArt(id: string, png: Blob): Promise<string> {
+    const form = new FormData();
+    form.append('image', png, 'art.png');
+    const response = await this.client.post<{ url: string }>(`/api/v1/things/art/${encodeURIComponent(id)}`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.url;
+  }
+
+  async deleteThingArt(id: string): Promise<void> {
+    await this.client.delete(`/api/v1/things/art/${encodeURIComponent(id)}`);
+  }
+
+  /** Makes a picture already somewhere the thing's art, rather than one drawn. */
+  async setThingArtUrl(id: string, url: string): Promise<void> {
+    await this.client.post(`/api/v1/things/art/${encodeURIComponent(id)}`, { url });
+  }
+
+  /** A constellation's art, as a thing's (the engine's constellation_art.go). */
+  async uploadConstellationArt(name: string, png: Blob): Promise<string> {
+    const form = new FormData();
+    form.append('image', png, 'art.png');
+    const response = await this.client.post<{ url: string }>(`/api/v1/constellations/${encodeURIComponent(name)}/art`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.url;
+  }
+
+  async setConstellationArtUrl(name: string, url: string): Promise<void> {
+    await this.client.post(`/api/v1/constellations/${encodeURIComponent(name)}/art`, { url });
+  }
+
+  async deleteConstellationArt(name: string): Promise<void> {
+    await this.client.delete(`/api/v1/constellations/${encodeURIComponent(name)}/art`);
+  }
+
   /**
    * A thing's neighbours — constellation co-members and the wants naming it —
    * in the same shape as a want's metadata.correlation. Feeds the Y jump

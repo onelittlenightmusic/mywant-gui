@@ -120,14 +120,42 @@ export function sphereBackground(color: string, isLight: boolean, picture?: stri
 /**
  * The proportions a thing's marks take on its ball, as fractions of the ball.
  *
- * The glyph is a decal: a want icon's size, off-centre toward the lower right
- * where the surface turns away from the light. 0.30/0.155 puts its furthest
- * corner at ~0.93 of the radius, so a square-ish glyph still lands on the ball.
- * One pair, so a ball drawn at any size — a tile, a member of a folded
- * constellation — carries its marking in the same place.
+ * The glyph is the ball's whole face: centred and nearly as wide as the ball,
+ * so the kind of value is what a ball says first, at any size. The name is
+ * written over it, quieter (THING_NAME_OPACITY), with its halo to carry it.
+ * 0.62 keeps a square-ish glyph's corners (0.62·√2/2 ≈ 0.88 of the radius)
+ * on the ball. One pair, so a ball drawn at any size — a tile, a member of a
+ * folded constellation — carries its marking in the same place.
  */
-export const THING_GLYPH_SIZE = 0.3;
-export const THING_GLYPH_OFFSET = 0.155;
+export const THING_GLYPH_SIZE = 0.62;
+export const THING_GLYPH_OFFSET = 0;
+
+/**
+ * The glyph on a ball: white, in both themes — the one mark on it that is the
+ * same on every ball, so the kind of value reads before its colour or name.
+ * Its emboss (thingGlyphShade) is what keeps white legible on a pale ball.
+ */
+export const THING_GLYPH_INK = '#ffffff';
+
+/** The emboss under that glyph: the thing's colour taken right down, as the name's halo is. */
+export function thingGlyphShade(color: string, isLight: boolean): string {
+  if (!isLight) return 'rgba(0,0,0,0.8)';
+  const deep = shade(color, 0.32);
+  return /^#[0-9a-f]{6}$/i.test(deep) ? `${deep}cc` : deep;
+}
+
+/**
+ * How far the name on a ball steps back behind its glyph. Still solid letters
+ * with their halo (STYLE.md) — only quieter, so the glyph is read first and
+ * the name second.
+ */
+export const THING_NAME_OPACITY = 0.72;
+
+/**
+ * How far below the ball's middle its name sits, as a fraction of the ball:
+ * the glyph has the middle, and the name is written over its lower half.
+ */
+export const THING_NAME_DROP = 0.2;
 
 /** How much bigger the first character is than the rest of the name. */
 export const DROP_CAP_SCALE = 3;

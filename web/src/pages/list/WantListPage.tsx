@@ -14,6 +14,8 @@ import { WantCard } from '@/components/dashboard/WantCard/WantCard';
 import { ThingCard } from '@/components/dashboard/ThingCard';
 import { useMarkJumpStore } from '@/stores/markJumpStore';
 import { hasExtensionRoute } from '@/extensions/registry';
+import { Slot } from '@/extensions/Slot';
+import { useConstellationStore } from '@/stores/constellationStore';
 import { classNames } from '@/utils/helpers';
 
 
@@ -60,6 +62,9 @@ export const WantListPage: React.FC<{
   const panelId = hostPanelId();
   const panel = !!panelId;
   const panelThingId = panelId?.startsWith('thing:') ? panelId.slice(6) : null;
+  // A constellation's panel on its own page: the extension's (groupDetails).
+  const panelGroupName = panelId?.startsWith('group:') ? panelId.slice(6) : null;
+  const panelGroupColor = useConstellationStore(s => s.constellations.find(c => c.name === panelGroupName)?.color);
   // A panel opened on its own page is told where the character stands (x, y):
   // a thing is pinned there, or lined up from there.
   if (panel && board.cursorManPosRef.current === null) {
@@ -280,12 +285,17 @@ export const WantListPage: React.FC<{
     sidebar,
     selectedWant,
     cursorThingRecord,
-    cursorGroup: null,
+    cursorGroup: panelGroupName ? {
+      name: panelGroupName,
+      color: panelGroupColor,
+      panel: <Slot name="groupDetails" groupName={panelGroupName} />,
+    } : null,
     addingThing,
     setAddingThing,
     editingThing,
     consumeThingEdit,
-    detailPanelOpen,
+    // A group's panel page is that group's panel, open until it is closed.
+    detailPanelOpen: detailPanelOpen || (!!panelGroupName && !detailsDismissed),
     isMobileCanvas,
     isDarkMode,
     expandedChain,
@@ -436,6 +446,7 @@ export const WantListPage: React.FC<{
         return;
       }
       case 'thing': setDetailsRequestedFor(arg); return;
+      case 'group': return;
       case 'want': {
         const w = wantById(arg);
         if (!w) return false;

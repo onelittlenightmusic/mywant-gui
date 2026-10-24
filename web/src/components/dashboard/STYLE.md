@@ -38,8 +38,9 @@ Thing も want も、盤面に**置かれた立体**として描く。盤面に�
 
 ## 4. アイコンは物体に刻まれた印
 
-- Thing のアイコンは球の上の**デカール**：大きさ `THING_GLYPH_SIZE`、右下に `THING_GLYPH_OFFSET` ずらす（光から遠ざかる側）。中央は名前の場所。
-- 色は `thingInk`、影は `iconEmbossFilter(isLight)`。
+- Thing のアイコンは球の**面いっぱい**：大きさ `THING_GLYPH_SIZE`（球の 0.62）、中央（`THING_GLYPH_OFFSET` 0）。名前はその上に控えめに重ねる。
+- 盤面の球の上では白（`THING_GLYPH_INK`）、少し太く。影は同系色を濃くした `thingGlyphShade`。値の種類が色や名前より先に読めるように。
+- 球の上の名前はアイコンより一歩控える（`THING_NAME_OPACITY`、semibold）。中央より少し下（球の `THING_NAME_DROP` 分）に置く。縁取りはそのまま。
 - want の型アイコンは `wantTypeIconStyle` で色と浮き彫りを決める。同じ型がどこでも同じ色になるように。
 - 線の太さは `strokeWidth={1.75}` を基本にする。
 

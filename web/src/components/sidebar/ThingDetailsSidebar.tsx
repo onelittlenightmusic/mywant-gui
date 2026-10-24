@@ -19,6 +19,7 @@ import { type Mark } from '@/components/common/MarkButton';
 import { LogCard } from '@/components/common/LogCard';
 import { useThingNames } from '@/hooks/useThingNames';
 import { ThemeOrderSection } from './ThemeOrderSection';
+import { ThingArtSection } from './ThingArtSection';
 import { LabelsSection } from '@/components/forms/sections/LabelsSection';
 import { apiClient } from '@/api/client';
 
@@ -325,6 +326,7 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
               <InfoRow label="Catalog" value={<span className="font-mono">{record.catalogKey}</span>} />
               <InfoRow label="Firings" value={events ? events.length : '…'} />
             </div>
+            <ThingArtSection record={record} />
           </>
         )}
 

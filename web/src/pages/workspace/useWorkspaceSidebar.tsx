@@ -49,7 +49,7 @@ export interface WorkspaceSidebarApi {
   /** The group the character is standing at, and the panel the board draws
    *  for it (its forms, its card) — shown
    *  ahead of the thing and the want (see useDetailTarget's cursorGroupShown). */
-  cursorGroup: { name: string; panel: React.ReactNode } | null;
+  cursorGroup: { name: string; color?: string; panel: React.ReactNode } | null;
   addingThing: boolean;
   /** The constellation filter is open (the want list's Filter button). */
   filterOpen?: boolean;
@@ -211,15 +211,16 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
     // (Enter, or a second tap), exactly as it does on the board.
     open: detailPanelOpen || !!api.filterOpen,
     // Every panel stands on a page of its own, for an app to open as a sheet
-    // of its own (lib/nativeHost) — all but a group's, whose panel is the
-    // board's. What a panel reads off the board (where the character stands,
-    // for a thing pinned underfoot or lined up from there) goes with it.
+    // of its own (lib/nativeHost) — a group's too, drawn there by the
+    // extension that has one (the groupDetails slot). What a panel reads off
+    // the board (where the character stands, for a thing pinned underfoot or
+    // lined up from there) goes with it.
     // On the want list's page (no board to load behind it); see WantListPage.
     hostRoute: api.filterOpen ? hostPanelRoute('/dashboard', 'filter')
       : sidebar.showGlobal ? hostPanelRoute('/dashboard', 'global')
       : addingThing ? hostPanelRoute('/dashboard', 'add-thing', here())
       : editingThing ? hostPanelRoute('/dashboard', `edit-thing:${editingThing.id}`)
-      : cursorGroup ? undefined
+      : cursorGroup ? hostPanelRoute('/dashboard', `group:${cursorGroup.name}`)
       : selectedWant ? hostPanelRoute('/dashboard', `want:${selectedWant.metadata?.id || selectedWant.id || ''}`)
       : cursorThingRecord ? hostPanelRoute('/dashboard', `thing:${cursorThingRecord.id}`, here())
       : undefined,
@@ -239,9 +240,9 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
       : (cursorThingRecord ? thingDisplayName(cursorThingRecord.value) : ''),
     // The thing under the character, when its panel is the one showing — the
     // identity row's mark (see PanelIdentityRow). The want panel names its own.
-    subject: !api.filterOpen && !sidebar.showGlobal && !addingThing && !editingThing
-      && !cursorGroup && !selectedWant && cursorThingRecord
-      ? { kind: 'thing', record: cursorThingRecord }
+    subject: api.filterOpen || sidebar.showGlobal || addingThing || editingThing ? undefined
+      : cursorGroup ? { kind: 'group', name: cursorGroup.name, color: cursorGroup.color }
+      : !selectedWant && cursorThingRecord ? { kind: 'thing', record: cursorThingRecord }
       : undefined,
     titleIcon: api.filterOpen ? Waypoints : sidebar.showGlobal ? Globe : (selectedWant && !cursorGroup ? sidebarTitleIcon : undefined),
     titleIconClassName: sidebar.showGlobal ? 'text-green-500' : undefined,

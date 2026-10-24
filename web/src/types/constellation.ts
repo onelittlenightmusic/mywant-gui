@@ -15,6 +15,12 @@ export interface Constellation {
    * means the default blue starlight.
    */
   color?: string;
+  /**
+   * A picture laid on the board's floor under it — drawn for it or chosen
+   * (the engine's constellation_art.go), carried by its members as the
+   * colour is. Its URL.
+   */
+  art?: string;
   /** thing id ("catalogKey::value") or want id. */
   members: string[];
   /** Which kind each member is, keyed by the same ids as `members`. */
