@@ -42,6 +42,9 @@ export interface CCResponse {
   /** The wants the reply is about (the robot's tools went to them), shown
    *  under it as small cards — see ChatWantCard and the engine's fmTurnCards. */
   cards?: ChatCardRef[];
+  /** The reply asks something, answered with these (はい / いいえ) — offered
+   *  beside the input until something is said (replyChoices, ReplyChoices). */
+  choices?: string[];
 }
 
 /** Which picture answer a reply is, so it can be marked right or wrong. */
@@ -161,6 +164,20 @@ export function readChat(want: Want) {
     sessionState: current?.current_session_state as string | undefined,
     sessionResets: (current?.cc_session_resets as string[] | undefined) ?? [],
   };
+}
+
+/**
+ * The replies the last answer asks for — none once anything has been said
+ * after it, or while the agent is working.
+ */
+export function replyChoices(want: Want): string[] {
+  const { messages, responses } = readChat(want);
+  const last = responses[responses.length - 1];
+  if (!last?.choices?.length || isChatBusy(want)) return [];
+  const said = messages[messages.length - 1];
+  const at = (v?: string) => (v ? Date.parse(v) : NaN);
+  if (messages.length > responses.length || at(said?.timestamp) > at(last.timestamp)) return [];
+  return last.choices;
 }
 
 /** Whether a reply is being composed right now. */

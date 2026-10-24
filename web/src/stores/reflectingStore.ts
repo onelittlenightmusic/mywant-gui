@@ -89,7 +89,9 @@ export function boardPartsWritten(method: string | undefined, url: string | unde
   if (m === 'get' || m === 'head' || m === 'options' || !url) return [];
   const path = pathOf(url);
   // A message to a want, or a chat marked read: nothing on the board moves.
-  if (/^\/api\/v1\/wants\/[^/]+\/(notify|notifications)(\/|$)/.test(path)) return [];
+  // Nor a battle's connection (attack): its line is drawn by the page that
+  // made it, at once (mywant-guiex's AttackLinksLayer), with nothing to wait for.
+  if (/^\/api\/v1\/wants\/[^/]+\/(notify|notifications|attack)(\/|$)/.test(path)) return [];
   if (/^\/api\/v1\/(wants|states|riff\/deploy)(\/|$)/.test(path)) return ['wants'];
   if (/^\/api\/v1\/things(\/|$)/.test(path)) return ['things'];
   if (/^\/api\/v1\/capture(\/|$)/.test(path)) return ['wants', 'things'];

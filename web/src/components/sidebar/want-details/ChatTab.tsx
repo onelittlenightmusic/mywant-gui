@@ -13,6 +13,7 @@ import {
   buildChatItems,
 } from '@/components/common/ChatThread';
 import { sayToWant } from '@/utils/robotAsk';
+import { ReplyChoices } from '@/components/common/ReplyChoices';
 
 export const ChatTab: React.FC<{ want: Want }> = ({ want }) => {
   const [inputText, setInputText] = useState('');
@@ -46,12 +47,13 @@ export const ChatTab: React.FC<{ want: Want }> = ({ want }) => {
   const busy = isChatBusy(want);
   const hasThread = buildChatItems(want, false).length > 0;
 
-  const handleSend = async () => {
-    if (!inputText.trim() || !wantName || sending) return;
+  // What is typed, or a reply pill's choice (ReplyChoices).
+  const handleSend = async (said: string = inputText) => {
+    if (!said.trim() || !wantName || sending) return;
     setSending(true);
     setSendError(null);
     try {
-      await sayToWant(wantName, inputText.trim());
+      await sayToWant(wantName, said.trim());
       setInputText('');
     } catch (err: unknown) {
       setSendError(err instanceof Error ? err.message : 'Failed to send message');
@@ -192,6 +194,7 @@ export const ChatTab: React.FC<{ want: Want }> = ({ want }) => {
       <div className="flex-shrink-0 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
         {sendError && <p className="text-xs text-red-500 mb-2">{sendError}</p>}
         <div className="flex gap-2 items-end">
+          <ReplyChoices want={want} typed={inputText} disabled={sending} onChoose={handleSend} />
           <textarea
             value={inputText}
             onChange={e => setInputText(e.target.value)}
@@ -228,7 +231,7 @@ export const ChatTab: React.FC<{ want: Want }> = ({ want }) => {
             </button>
           ) : (
             <button
-              onClick={handleSend}
+              onClick={() => handleSend()}
               disabled={!inputText.trim() || sending || !wantName}
               className="flex-shrink-0 p-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white disabled:text-gray-400 dark:disabled:text-gray-500 transition-colors"
               title="Send (Enter)"

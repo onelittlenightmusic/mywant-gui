@@ -11,6 +11,7 @@ import { apiClient } from '@/api/client';
 // cards the shape is most of what you are reading. See ChatThread.
 import { ChatThread, readChat, isChatBusy, type CCMessage } from '@/components/common/ChatThread';
 import { sayToWant } from '@/utils/robotAsk';
+import { ReplyChoices } from '@/components/common/ReplyChoices';
 
 export const CodingContentSection: React.FC<WantCardPluginProps> = ({
   want, isChild, isControl, isFocused,
@@ -71,8 +72,9 @@ export const CodingContentSection: React.FC<WantCardPluginProps> = ({
   const latest = want.state?.current?.cc_latest_message as CCMessage | undefined;
   const spoken = isMonologue ? (latest?.text ?? lastMessage?.text) : undefined;
 
-  const handleSend = async () => {
-    const text = inputText.trim();
+  // What is typed, or a reply pill's choice (ReplyChoices).
+  const handleSend = async (said: string = inputText) => {
+    const text = said.trim();
     if (!text || !wantName || sending) return;
     setSending(true);
     setSendError(null);
@@ -134,6 +136,7 @@ export const CodingContentSection: React.FC<WantCardPluginProps> = ({
         >
           {sendError && <p className="text-red-500 px-0.5">{sendError}</p>}
           <div className="flex gap-1.5 items-end">
+            <ReplyChoices want={want} typed={inputText} disabled={sending} onChoose={handleSend} />
             {/* The card's inner focus lands here — writing to the agent is
                 what operating this want means. Tab steps on to the mic and
                 send buttons; see useInnerFocusRing. */}

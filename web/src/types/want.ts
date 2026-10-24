@@ -127,6 +127,9 @@ export interface WantSpec {
   exposes?: ExposeEntry[];
   /** Maps global state key → internal state key. Imported fields are read-only and always reflect the current global state value. */
   imports?: Record<string, string>;
+  /** Other wants whose fields this one reads, by name — in a battle, what it
+   *  attacks or mends (a subscription to that want's hp). */
+  stateSubscriptions?: Array<{ wantName: string; stateKeys?: string[] }>;
   /** State field whose value is mirrored into final_result (the want's headline
    *  output). May use dot-notation (e.g. "msg.text"). Naming a want names this
    *  source field, not the final_result blob. */

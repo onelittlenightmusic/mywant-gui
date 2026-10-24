@@ -539,6 +539,17 @@ class MyWantApiClient {
     return response.data;
   }
 
+  /**
+   * This want attacks (or, a heal, mends) that one — a battle's connection;
+   * "" to stop. `add`: one more connection beside the ones it has, or that one
+   * taken off when it is already connected (a heal mends several).
+   */
+  async setWantAttack(id: string, target: string, add = false): Promise<{ attacking?: string; connected?: string[]; removed?: boolean }> {
+    const response = await this.client.post<{ attacking?: string; connected?: string[]; removed?: boolean }>(
+      `/api/v1/wants/${id}/attack`, { target, add });
+    return response.data;
+  }
+
   async resumeWant(id: string): Promise<SuspendResumeResponse> {
     const response = await this.client.post<SuspendResumeResponse>(`/api/v1/wants/${id}/resume`);
     return response.data;
