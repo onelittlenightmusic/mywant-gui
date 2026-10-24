@@ -57,6 +57,7 @@ import { WantCardLayout } from './WantCardLayout';
 import { RecipeSlideDeck, type RecipeSlideDeckHandle } from './parts/RecipeSlideDeck';
 import { writeWantState } from '@/api/wantState';
 import { hostInsets } from '@/lib/nativeHost';
+import { WantImpact } from '@/components/impact/WantImpact';
 
 // Persists iframe URLs across component remounts (canvas/list view switches)
 const _iframeUrlMap = new Map<string, string>();
@@ -1079,6 +1080,10 @@ export const WantCard: React.FC<WantCardProps> = ({
       {/* What it says, over its top edge — a card in the list only, not one
           standing in for a tile (canvasMode) or put inside something else. */}
       {!canvasMode && !embedded && <Slot name="wantCardSpeech" want={want} standing={isNavFocused} />}
+      {/* Something landing on it — a hit, a mend, a freeze — over the whole
+          card, its contents' own layers (z-10…z-30) included. Not on a card
+          standing in for a tile: the board draws it on the tile. */}
+      {!canvasMode && <WantImpact wantName={want.metadata?.name} style={{ zIndex: 40 }} />}
       <StackLayers stackCount={stackCount} />
       <div
         ref={(node) => { cardRef.current = node; touchReorder.ref.current = node; }}

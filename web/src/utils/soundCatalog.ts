@@ -1,5 +1,5 @@
 import {
-  gridMove, wantPlaced, whoosh, hapticClick, buttonPress, handoverIn, handoverOut, confirmIn, sparkle, chime, ring, pillExpand, pillShrink,
+  gridMove, wantPlaced, whoosh, impactAttack, impactMend, impactFreeze, hapticClick, buttonPress, handoverIn, handoverOut, confirmIn, sparkle, chime, ring, pillExpand, pillShrink,
 } from './soundSynth';
 
 /**
@@ -42,6 +42,23 @@ export const SOUND_CATALOG = {
     what: 'One pebble (press).',
     when: 'A footstep presses a button-form want (direction/going/gear) down into its socket.',
     play: buttonPress,
+  },
+
+  // ── What lands on a want (components/impact) ───────────────────────────
+  impactAttack: {
+    what: 'A small burst of fire: a thump under a darkening puff.',
+    when: "An attack's hit lands on a want (its `impact` is an attack).",
+    play: impactAttack,
+  },
+  impactMend: {
+    what: 'A soft rising breath, two glides a fifth apart.',
+    when: 'A mend reaches a want (its `impact` is a mend).',
+    play: impactMend,
+  },
+  impactFreeze: {
+    what: 'A clock stopping: tick, tick, and the hand catching.',
+    when: 'A freeze holds a want where it is (its `impact` is a freeze).',
+    play: impactFreeze,
   },
 
   // ── Putting things on the board ──────────────────────────────────────────

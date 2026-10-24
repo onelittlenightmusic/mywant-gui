@@ -171,3 +171,88 @@ export function ring(c: AudioContext): void {
   pebble(c, { freq: PITCH.done, at: 0.13, amp: 0.28 });
   pebble(c, { freq: PITCH.done, at: 0.34, amp: 0.32 });
 }
+
+// ── What lands on a want ─────────────────────────────────────────────────────
+//
+// The other exception: a connection's effect landing on a want — a hit, a
+// mend, a freeze (the battle's impacts, components/impact). Each has to be
+// told from the other two without looking, and from every tap above, so they
+// keep a body a pebble does not: a puff, a glide, a tick that stops. Still
+// faint, still through the floor, and each over in well under half a second.
+
+/** A noise burst shaped by a filter: the body of a puff. */
+function puff(c: AudioContext, out: AudioNode, t: number, o: {
+  dur: number; amp: number; type: BiquadFilterType; from: number; to: number; q?: number;
+}): void {
+  const frames = Math.max(1, Math.floor(c.sampleRate * o.dur));
+  const buf = c.createBuffer(1, frames, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < frames; i++) d[i] = Math.random() * 2 - 1;
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const f = c.createBiquadFilter();
+  f.type = o.type;
+  f.Q.value = o.q ?? 0.8;
+  f.frequency.setValueAtTime(o.from, t);
+  f.frequency.exponentialRampToValueAtTime(o.to, t + o.dur);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(o.amp, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
+  src.connect(f); f.connect(g); g.connect(out);
+  src.start(t); src.stop(t + o.dur + 0.01);
+}
+
+/** One sine, gliding from one pitch to another as it fades. */
+function glide(c: AudioContext, out: AudioNode, t: number, from: number, to: number, dur: number, amp: number): void {
+  const osc = c.createOscillator();
+  const g = c.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(from, t);
+  osc.frequency.exponentialRampToValueAtTime(to, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(amp, t + Math.min(0.02, dur / 4));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.connect(g); g.connect(out);
+  osc.start(t); osc.stop(t + dur + 0.01);
+}
+
+/**
+ * A hit landing: a small fire bursting — a low thump falling away under a
+ * puff of noise that darkens as it spreads, with the crack of the contact on
+ * top. The one impact with weight.
+ */
+export function impactAttack(c: AudioContext): void {
+  const out = buses(c).floor;
+  const t = c.currentTime;
+  const a = jitter(0.2);
+  glide(c, out, t, 140 * jitter(0.08), 48, 0.2, 0.32 * a);
+  puff(c, out, t, { dur: 0.26, amp: 0.2 * a, type: 'lowpass', from: 2200, to: 260 });
+  pebble(c, { freq: PITCH.bump, amp: 0.18 });
+}
+
+/**
+ * A mend: a soft breath rising — a sine gliding up, a fifth above it a moment
+ * later, under a faint airy hush. Nothing struck: it is something given.
+ */
+export function impactMend(c: AudioContext): void {
+  const out = buses(c).floor;
+  const t = c.currentTime;
+  const base = 520 * jitter(0.04);
+  glide(c, out, t, base, base * 1.5, 0.32, 0.09);
+  glide(c, out, t + 0.07, base * 1.5, base * 2, 0.3, 0.06);
+  puff(c, out, t, { dur: 0.34, amp: 0.035, type: 'bandpass', from: 1400, to: 2300, q: 1.2 });
+}
+
+/**
+ * A freeze: a clock that stops — two quick ticks, the second higher, then a
+ * small dull clunk of the hand catching, and nothing after it.
+ */
+export function impactFreeze(c: AudioContext): void {
+  const out = buses(c).floor;
+  const t = c.currentTime;
+  pebble(c, { freq: PITCH.tick * 1.6, amp: 0.13 });
+  pebble(c, { freq: PITCH.tick * 1.8, at: 0.09, amp: 0.13 });
+  glide(c, out, t + 0.2, 300, 220, 0.09, 0.16);
+  puff(c, out, t + 0.2, { dur: 0.05, amp: 0.08, type: 'lowpass', from: 1200, to: 400 });
+}
