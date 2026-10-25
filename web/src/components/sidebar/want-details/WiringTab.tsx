@@ -1,6 +1,6 @@
 /** The Wiring tab — how this want is joined to the others. */
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { LucideIcon, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
+import { LucideIcon, ArrowUpFromLine, ArrowDownToLine, Radio } from 'lucide-react';
 import { Want } from '@/types/want';
 import { classNames } from '@/utils/helpers';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
@@ -9,6 +9,8 @@ import { useWiringMarks } from '@/hooks/useWiringMarks';
 import { StateDef } from '@/types/wantType';
 import { ExposeSection, ExposeEntry } from '@/components/forms/sections/ExposeSection';
 import { ImportSection } from '@/components/forms/sections/ImportSection';
+import { SubscriptionSection, type SubscriptionEntry } from '@/components/forms/sections/SubscriptionSection';
+import { useWantStore } from '@/stores/wantStore';
 import { apiClient } from '@/api/client';
 import {
   DetailsSidebar,
@@ -45,13 +47,15 @@ const WiringHeading: React.FC<{ icon: LucideIcon; label: string; count: number; 
  * They are the two ends of one sentence: values arrive from other wants, this
  * want does something, values leave for other wants. Imports are drawn first
  * because that is the end the value comes from — the same order the field
- * cards' badges read in (see useWiringMarks).
+ * cards' badges read in (see useWiringMarks). The other wants it reads by
+ * name (spec.stateSubscriptions — how a battle joins its wants) come in too,
+ * so they are drawn next, before Expose.
  *
  * One want-type fetch serves both halves, which is also what the two tabs used
  * to do twice.
  *
- * The arrow keys walk the two grids as one: only the half the focus is in
- * captures them, and down off the end of Import lands on Expose (see
+ * The arrow keys walk the grids as one: only the one the focus is in
+ * captures them, and down off the end of one lands on the next (see
  * useCardGridNavigation's onExitBottom).
  */
 export const WiringTab: React.FC<{
@@ -76,6 +80,14 @@ export const WiringTab: React.FC<{
 
   useEffect(() => { setImports(want.spec?.imports ?? {}); }, [want.spec?.imports]);
   useEffect(() => { setExposes(want.spec?.exposes ?? []); }, [want.spec?.exposes]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionEntry[]>(want.spec?.stateSubscriptions ?? []);
+  useEffect(() => { setSubscriptions(want.spec?.stateSubscriptions ?? []); }, [want.spec?.stateSubscriptions]);
+  // The other wants, by name — what a subscription can name.
+  const allWants = useWantStore(st => st.wants);
+  const wantNames = React.useMemo(
+    () => allWants.map(w => w.metadata?.name).filter((n): n is string => !!n && n !== want.metadata?.name).sort(),
+    [allWants, want.metadata?.name],
+  );
   useEffect(() => {
     const typeName = want.metadata?.type;
     if (!typeName) return;
@@ -92,6 +104,17 @@ export const WiringTab: React.FC<{
       onWantUpdate?.();
     } catch { setImports(old); }
   }, [want, imports, updateWant, onWantUpdate]);
+
+  const handleSubscriptionsChange = useCallback(async (next: SubscriptionEntry[]) => {
+    const id = want.metadata?.id;
+    if (!id) return;
+    const old = subscriptions;
+    setSubscriptions(next);
+    try {
+      await updateWant(id, { metadata: want.metadata, spec: { ...want.spec, stateSubscriptions: next } });
+      onWantUpdate?.();
+    } catch { setSubscriptions(old); }
+  }, [want, subscriptions, updateWant, onWantUpdate]);
 
   const handleExposesChange = useCallback(async (newExposes: ExposeEntry[]) => {
     const id = want.metadata?.id;
@@ -125,8 +148,9 @@ export const WiringTab: React.FC<{
    * the sidebar makes when a tab is switched into, so arriving by arrow and
    * arriving by tab land the same way.
    */
-  const [half, setHalf] = useState<'import' | 'expose'>('import');
+  const [half, setHalf] = useState<'import' | 'subscribe' | 'expose'>('import');
   const [importArrival, setImportArrival] = useState(0);
+  const [subscribeArrival, setSubscribeArrival] = useState(0);
   const [exposeArrival, setExposeArrival] = useState(0);
   const base = focusRequest ?? 0;
   // A key asked for from a field card decides which half opens: that is the
@@ -148,6 +172,19 @@ export const WiringTab: React.FC<{
           onInitialKeyConsumed={onImportKeyConsumed}
           isActive={sidebarDetailFocused && half === 'import'}
           focusRequest={base + importArrival}
+          onExitBottom={() => { setHalf('subscribe'); setSubscribeArrival(t => t + 1); }}
+        />
+      </div>
+      <div>
+        <WiringHeading icon={Radio} label="Subscribe" count={subscriptions.length}
+          className="text-cyan-500 dark:text-cyan-400" />
+        <SubscriptionSection
+          subscriptions={subscriptions}
+          onSubscriptionsChange={handleSubscriptionsChange}
+          wantNames={wantNames}
+          isActive={sidebarDetailFocused && half === 'subscribe'}
+          focusRequest={base + subscribeArrival}
+          onExitTop={() => { setHalf('import'); setImportArrival(t => t + 1); }}
           onExitBottom={() => { setHalf('expose'); setExposeArrival(t => t + 1); }}
         />
       </div>
@@ -163,7 +200,7 @@ export const WiringTab: React.FC<{
           onInitialKeyConsumed={onExposeKeyConsumed}
           isActive={sidebarDetailFocused && half === 'expose'}
           focusRequest={base + exposeArrival}
-          onExitTop={() => { setHalf('import'); setImportArrival(t => t + 1); }}
+          onExitTop={() => { setHalf('subscribe'); setSubscribeArrival(t => t + 1); }}
         />
       </div>
     </div>

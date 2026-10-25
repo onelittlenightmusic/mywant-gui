@@ -58,6 +58,8 @@ import { RecipeSlideDeck, type RecipeSlideDeckHandle } from './parts/RecipeSlide
 import { writeWantState } from '@/api/wantState';
 import { hostInsets } from '@/lib/nativeHost';
 import { WantImpact } from '@/components/impact/WantImpact';
+import { artOf } from '@/lib/art';
+import { THING_BACKGROUND_SCRIM } from '@/utils/thingBackground';
 
 // Persists iframe URLs across component remounts (canvas/list view switches)
 const _iframeUrlMap = new Map<string, string>();
@@ -1052,6 +1054,11 @@ export const WantCard: React.FC<WantCardProps> = ({
   // background texture instead (low opacity, gradient stays put), so it only
   // gets the strong treatment when there's no replay screenshot to preserve.
   const isWebWantScreenshot = !replayScreenshotUrl && !!webWantScreenshotUrl;
+  // Its background icon (lib/art — drawn or chosen in its sidebar), the
+  // card's picture as a thing's photo is a thing card's: over the type's
+  // colour, under a scrim that keeps the name and the icon readable. A web
+  // want's own screenshot is its face and comes first.
+  const artUrl = isWebWantScreenshot ? undefined : artOf(want.metadata?.labels)?.split('#')[0];
   const version = want.metadata?.version ?? 1;
 
   const isIdle = (want.status as string) === 'idle';
@@ -1201,6 +1208,21 @@ export const WantCard: React.FC<WantCardProps> = ({
             transition: 'background 0.22s ease-in-out, background-image 0.22s ease-in-out',
           }}
         />
+
+        {artUrl && (
+          <>
+            <div
+              className="absolute inset-0 z-0 pointer-events-none rounded-[inherit]"
+              style={{
+                backgroundImage: `url(${JSON.stringify(artUrl)})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                opacity: (isDragOverWant || isDragOver) ? 0 : 1,
+              }}
+            />
+            <div className={classNames(THING_BACKGROUND_SCRIM, 'z-0 rounded-[inherit]')} />
+          </>
+        )}
 
         <CorrelationOverlay rate={correlationRate} />
 
