@@ -544,10 +544,13 @@ class MyWantApiClient {
    * "" to stop. `add`: one more connection beside the ones it has, or that one
    * taken off when it is already connected (a heal mends several).
    */
-  async setWantAttack(id: string, target: string, add = false): Promise<{ attacking?: string; connected?: string[]; removed?: boolean }> {
-    const response = await this.client.post<{ attacking?: string; connected?: string[]; removed?: boolean }>(
-      `/api/v1/wants/${id}/attack`, { target, add });
-    return response.data;
+  /**
+   * Aim a battle's want (a fighter, a turret, an enemy) at another, by name —
+   * its `target` param, and `target_id` so it can look that one up by itself
+   * (the battle plugin). '' takes the aim away.
+   */
+  async aimWant(id: string, targetName: string, targetId = ''): Promise<Want> {
+    return this.patchWant(id, { params: { target: targetName || null, target_id: targetId || null } });
   }
 
   async resumeWant(id: string): Promise<SuspendResumeResponse> {
