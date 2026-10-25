@@ -657,6 +657,11 @@ export interface HostControlItem {
   more?: boolean;
   /** A picture (a data: URL) the app draws in place of the label's emoji. */
   image?: string;
+  /** A ring's chip standing on what it names, in the page's px, rather than in
+   *  the ring round the centre (攻撃's targets); a press is its id. */
+  at?: { x: number; y: number };
+  /** Which way such a chip's arrow points. */
+  dir?: 'up' | 'down' | 'left' | 'right';
 }
 
 export interface HostControl {

@@ -12,7 +12,7 @@ const NoteContentSection: React.FC<WantCardPluginProps> = ({
   want, isFocused, isExpanded, isInnerFocused, onEnterInnerFocus, onExitInnerFocus,
 }) => {
   const id = want.metadata?.id;
-  const serverContent = (want.state?.current?.content as string) ?? (want.spec?.params?.content as string) ?? '';
+  const serverContent = (want.state?.current?.content as string) ?? '';
   const isAchieved = want.status === 'achieved' || want.status === 'achieved_with_warning';
 
   const [text, setText] = useState(serverContent);

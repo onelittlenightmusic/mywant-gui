@@ -67,6 +67,8 @@ export const ArtMaker: React.FC<{
   /** What it is a picture of, and what sort of thing that is, in words — for the drawing. */
   value: string;
   about: string;
+  /** A little of what it holds (a note's text, say), for the words too (artContextOf). */
+  context?: string;
   /** The art it has now, if any. */
   current?: string;
   /** Pictures already there to choose from (URLs). */
@@ -74,7 +76,7 @@ export const ArtMaker: React.FC<{
   /** Its art changed — reload what shows it. */
   onChanged: () => Promise<unknown> | void;
   className?: string;
-}> = ({ kind, id, value, about, current, choices = [], onChanged, className }) => {
+}> = ({ kind, id, value, about, context, current, choices = [], onChanged, className }) => {
   const [step, setStep] = useState<Step>({ at: 'idle' });
   const [problem, setProblem] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -90,7 +92,7 @@ export const ArtMaker: React.FC<{
     setProblem(null);
     setStep({ at: 'describing', instead });
     try {
-      setStep({ at: 'prompt', text: await describeArt(value, about, instead) });
+      setStep({ at: 'prompt', text: await describeArt(value, about, instead, context) });
     } catch (e) {
       failed(e);
       setStep(instead ? { at: 'prompt', text: instead } : { at: 'idle' });

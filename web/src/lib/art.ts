@@ -74,10 +74,10 @@ type Reply = Partial<DrawnArt> & { error?: string; cancelled?: boolean } | null;
  * description in English, by the phone's own model. `instead`: one already
  * offered, for another.
  */
-export async function describeArt(value: string, kind: string, instead?: string): Promise<string> {
+export async function describeArt(value: string, kind: string, instead?: string, context?: string): Promise<string> {
   const h = handler();
   if (!h) throw new Error('この画面では描けません');
-  const reply = await h.postMessage({ op: 'describe', value, subtype: kind, instead }) as Reply;
+  const reply = await h.postMessage({ op: 'describe', value, subtype: kind, instead, context: context || undefined }) as Reply;
   if (!reply || reply.error || !reply.prompt) throw new Error(reply?.error || 'プロンプトを作れませんでした');
   return reply.prompt;
 }
@@ -94,4 +94,38 @@ export async function drawArt(prompt: string): Promise<DrawnArt | null> {
   if (reply?.cancelled) return null;
   if (!reply || reply.error || !reply.image) throw new Error(reply?.error || '描けませんでした');
   return { image: reply.image, prompt: reply.prompt ?? prompt };
+}
+
+/**
+ * Fields the board keeps about a want rather than what it says — never worth
+ * drawing.
+ */
+const ART_SKIP_FIELDS = new Set([
+  'achieved', 'achieving_percentage', 'action_by_agent', 'completed', 'final_result',
+  'characters', 'say', 'status', 'error', 'hp', 'max_hp',
+]);
+
+/** How much of a want's fields its prompt is given, in characters. */
+const ART_CONTEXT_MAX = 400;
+
+/**
+ * A little of what a want holds, for the words its picture is drawn from: its
+ * text fields as they are now (a note's `content`, a want's answer), each
+ * cut short, the whole no longer than ART_CONTEXT_MAX. "" when it holds no
+ * words of its own.
+ */
+export function artContextOf(current: Record<string, unknown> | undefined): string {
+  if (!current) return '';
+  const parts: string[] = [];
+  let left = ART_CONTEXT_MAX;
+  for (const [k, v] of Object.entries(current)) {
+    if (ART_SKIP_FIELDS.has(k) || typeof v !== 'string') continue;
+    const text = v.trim().replace(/\s+/g, ' ');
+    if (!text || /^https?:\/\//.test(text) || text.startsWith('data:')) continue;
+    const part = `${k}: ${text.slice(0, 160)}`;
+    if (part.length > left) break;
+    parts.push(part);
+    left -= part.length + 2;
+  }
+  return parts.join('; ');
 }

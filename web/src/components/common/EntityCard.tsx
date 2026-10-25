@@ -78,6 +78,12 @@ export interface EntityCardProps {
   navId: string;
   /** Name shown under the icon and in the bottom bar. */
   title: string;
+  /**
+   * The face's name in px, in place of the system font size's — for a card
+   * drawn as a picture of itself somewhere larger than the list (a thing's
+   * card on the board, zoomed in), where the list's size reads as small.
+   */
+  faceNamePx?: number;
   selected: boolean;
   /**
    * Keep DOM focus where it is when this card becomes selected.
@@ -194,6 +200,7 @@ export interface EntityCardProps {
 export const EntityCard: React.FC<EntityCardProps> = ({
   navId,
   title,
+  faceNamePx,
   selected,
   keepFocus = false,
   noCursorMan = false,
@@ -554,8 +561,9 @@ export const EntityCard: React.FC<EntityCardProps> = ({
               </div>
             )}
             <span
-              className={classNames('font-semibold text-center leading-tight text-gray-800 dark:text-gray-100', faceNameSize)}
+              className={classNames('font-semibold text-center leading-tight text-gray-800 dark:text-gray-100', !faceNamePx && faceNameSize)}
               style={{
+                fontSize: faceNamePx,
                 overflow: 'hidden',
                 display: '-webkit-box',
                 WebkitLineClamp: 2,

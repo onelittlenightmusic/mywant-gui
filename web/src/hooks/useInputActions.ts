@@ -176,15 +176,6 @@ export interface UseInputActionsOptions {
    */
   onRecommend?: () => void;
   /**
-   * Called on Gamepad Y + D-pad left/right — one step along the canvas skill slot, back
-   * (-1) or forward (+1).
-   *
-   * Gamepad only, and deliberately: the keyboard equips a skill by its digit
-   * through `shortcuts`, which is direct where a walk is not, and a pad has no
-   * digits to offer. See pages/canvas/useCanvasSkillSlot.
-   */
-  onSkillCycle?: (delta: 1 | -1) => void;
-  /**
    * Called when the "pick this up and carry it" gesture starts: Shift going
    * down on the keyboard, or A held past CONFIRM_LONG_MS on a gamepad or the
    * software pad.
@@ -368,7 +359,6 @@ type GamepadActionType =
   | 'cancel-long'
   | 'cancel-long-release'
   | 'recommend'
-  | 'skill-next' | 'skill-prev'
   | 'swipe-left' | 'swipe-right';
 
 type GamepadActionListener = (action: GamepadActionType) => void;
@@ -1420,25 +1410,9 @@ function _processGamepad(gi: number, gp: Gamepad): void {
       // the release must still be the release of what was actually emitted.
       const onBumper = action === 'tab-backward' || action === 'tab-forward';
       const chord = _cancelHeld && onBumper;
-      // Y + the D-pad's left / right walks the canvas skill slot: the slot's
-      // own button held, and the ladder stepped sideways. The D-pad rather
-      // than the stick, because with Y held the stick is aiming (the throw,
-      // the kata ring); and rather than the bumpers, which it used to be —
-      // left and right is how a row of choices is walked everywhere else.
-      // Not repeated when held (skill-* is not a NAV_ACTION): one press, one
-      // step.
-      //
-      // Read off the pad itself rather than through a held flag. Y's press is
-      // dispatched from this same sweep, so the physical state in THIS frame is
-      // the one the chord is about, and there is no second copy of it to fall
-      // out of step (which per-instance Y-held tracking has form for).
-      const onSideways = action === 'left' || action === 'right';
-      const skillChord = !chord && onSideways && (gp.buttons[3]?.pressed ?? false);
       const resolved: GamepadActionType = chord
         ? (action === 'tab-forward' ? 'sub-tab-forward' : 'sub-tab-backward')
-        : skillChord
-          ? (action === 'right' ? 'skill-next' : 'skill-prev')
-          : action;
+        : action;
       if (chord) _markCancelChord();
       state.action = resolved;
       _emit(resolved);
@@ -1773,7 +1747,6 @@ export function useInputActions({
   onSubTabForwardRelease,
   onSubTabBackwardRelease,
   onRecommend,
-  onSkillCycle,
   onPickUp,
   onPickUpRelease,
   onSwipeNavigate,
@@ -1840,7 +1813,6 @@ export function useInputActions({
   const onSubTabForwardReleaseRef  = useRef(onSubTabForwardRelease);
   const onSubTabBackwardReleaseRef = useRef(onSubTabBackwardRelease);
   const onRecommendRef       = useRef(onRecommend);
-  const onSkillCycleRef      = useRef(onSkillCycle);
   const onPickUpRef          = useRef(onPickUp);
   const onPickUpReleaseRef   = useRef(onPickUpRelease);
   const onSwipeNavigateRef   = useRef(onSwipeNavigate);
@@ -1935,7 +1907,6 @@ export function useInputActions({
   onSubTabForwardReleaseRef.current  = onSubTabForwardRelease;
   onSubTabBackwardReleaseRef.current = onSubTabBackwardRelease;
   onRecommendRef.current      = onRecommend;
-  onSkillCycleRef.current     = onSkillCycle;
   onPickUpRef.current         = onPickUp;
   onPickUpReleaseRef.current  = onPickUpRelease;
   onSwipeNavigateRef.current  = onSwipeNavigate;
@@ -2484,8 +2455,6 @@ export function useInputActions({
         case 'confirm-long-release': onConfirmLongReleaseRef.current?.(); break;
         case 'confirm-released': onConfirmReleasedRef.current?.(); break;
         case 'recommend':    onRecommendRef.current?.();   break;
-        case 'skill-next':   onSkillCycleRef.current?.(1);  break;
-        case 'skill-prev':   onSkillCycleRef.current?.(-1); break;
         case 'cancel':        onCancelRef.current?.({ pressedOn: _cancelPressTarget }); break;
         case 'cancel-long':        onCancelLongRef.current?.();        break;
         case 'cancel-long-release': onCancelLongReleaseRef.current?.(); break;

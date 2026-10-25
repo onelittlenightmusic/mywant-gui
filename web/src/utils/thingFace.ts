@@ -1,5 +1,6 @@
 import { vividIconColor } from '@/components/dashboard/WantCardFace';
 import { shade } from '@/components/dashboard/WantTypeVisuals';
+import { CUBIC_DEPTH } from '@/shared/cubicBlock';
 
 /*
  * The board's style rules — solidity, light, the drop cap — are written down in
@@ -156,6 +157,31 @@ export const THING_NAME_OPACITY = 0.72;
  * the glyph has the middle, and the name is written over its lower half.
  */
 export const THING_NAME_DROP = 0.2;
+
+/**
+ * A thing is a pin stuck in the board: the ball is its head, and its needle
+ * shows behind it, toward the lower right. It shows exactly as far as a want
+ * block's side does — CUBIC_DEPTH past the ball's edge, the same dx and dy —
+ * so a pin and a block stand on the board at the same height, lit by the one
+ * light. The value is pinned where it matters; the floor art under it is
+ * where it is pinned.
+ *
+ * It is stuck in, not lying on the board: the board is cork, and the needle
+ * is cut by it in an ellipse where it goes in — what is in the board is not
+ * seen — with its
+ * shadow meeting it there.
+ */
+const PIN_REACH = Math.hypot(CUBIC_DEPTH.dx, CUBIC_DEPTH.dy);
+export const THING_PIN_DIR = { x: CUBIC_DEPTH.dx / PIN_REACH, y: CUBIC_DEPTH.dy / PIN_REACH };
+/** How far past the ball's edge the needle shows, in board px: CUBIC_DEPTH's length. */
+export const THING_PIN_REACH = PIN_REACH;
+/** How wide the needle is where it goes in under the head, as a fraction of the ball. */
+export const THING_PIN_WIDTH = 0.15;
+
+/** The needle's steel, across its width: edge, the light down its middle, edge. */
+export function thingPinSteel(isLight: boolean): [string, string, string] {
+  return isLight ? ['#56606b', '#c4cbd2', '#3f4852'] : ['#5a636e', '#b9c1c9', '#3a414a'];
+}
 
 /** How much bigger the first character is than the rest of the name. */
 export const DROP_CAP_SCALE = 3;

@@ -31,7 +31,7 @@ import {
 import { useCardGridNavigation } from '@/hooks/useCardGridNavigation';
 import { FormTab, FormTabBar, SETTINGS_FORM_TABS } from '@/components/forms/FormTabBar';
 import { ArtMaker } from '@/components/sidebar/ArtMaker';
-import { artOf } from '@/lib/art';
+import { artOf, artContextOf } from '@/lib/art';
 
 import { SECTION_CONTAINER_CLASS } from './shared';
 
@@ -424,6 +424,7 @@ export const SettingsTab: React.FC<{
                 id={want.metadata.id}
                 value={want.metadata.name || want.metadata.type || ''}
                 about={want.metadata.type || 'want'}
+                context={artContextOf(want.state?.current as Record<string, unknown> | undefined)}
                 current={artOf(want.metadata.labels)}
                 onChanged={() => onWantUpdate?.()}
               />

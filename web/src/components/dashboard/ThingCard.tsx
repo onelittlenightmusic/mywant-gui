@@ -58,6 +58,9 @@ interface MemoCardProps {
 }
 
 /** Turn a hex like "#06b6d4" into an rgba tint. */
+/** The name's size on the card drawn on the board, in its layout px. */
+const DISPLAY_NAME_PX = 30;
+
 export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, keepFocus, corner = false, selectMode = false, checked = false, constellations = [], onEditConstellation, onView, onDelete, onAddWant, className, display = false }) => {
   const Icon = resolveLucideIcon(record.icon) ?? Type;
   const wantTypes = useWantTypeStore((s) => s.wantTypes);
@@ -210,6 +213,9 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
       navId={display ? `${entityCardId('thing', record.id)}:display` : entityCardId('thing', record.id)}
       className={className}
       title={thingDisplayName(record.value)}
+      // On the board (display) the card is a picture of itself, scaled into
+      // its cell: the name is what is read there, so it is written large.
+      faceNamePx={display ? DISPLAY_NAME_PX : undefined}
       selected={display ? false : selected}
       keepFocus={display || keepFocus}
       noCursorMan={corner}
