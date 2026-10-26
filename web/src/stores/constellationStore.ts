@@ -10,7 +10,8 @@ interface ConstellationStore {
 
   /** Omit the kind for the whole sky — mixed constellations only appear there. */
   fetchConstellations: (kind?: ConstellationKind) => Promise<void>;
-  createConstellation: (name: string, kind: ConstellationKind, members: string[], color?: string) => Promise<Constellation | null>;
+  /** `capture`: the tile it is a capture into (one of `members`); none, an order. */
+  createConstellation: (name: string, kind: ConstellationKind, members: string[], color?: string, capture?: string) => Promise<Constellation | null>;
   // Constellation id == name; kind selects the thing/want label namespace.
   updateConstellation: (name: string, kind: ConstellationKind, updates: { name?: string; members?: string[]; color?: string }) => Promise<void>;
   /** Recolour a constellation (color:null clears it, back to the default starlight). */
@@ -54,9 +55,9 @@ export const useConstellationStore = create<ConstellationStore>((set, get) => ({
     }
   },
 
-  createConstellation: async (name, kind, members, color) => {
+  createConstellation: async (name, kind, members, color, capture) => {
     try {
-      const created = await apiClient.createConstellation({ name, kind, members, color });
+      const created = await apiClient.createConstellation({ name, kind, members, color, capture });
       // Membership is server-derived from labels — refetch to get the merged view
       // (adding to an existing group name folds in, no duplicate row).
       await get().fetchConstellations(kind);

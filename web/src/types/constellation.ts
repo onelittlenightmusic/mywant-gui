@@ -21,6 +21,13 @@ export interface Constellation {
    * colour is. Its URL.
    */
   art?: string;
+  /**
+   * A capture's: the tile it was caught into (one of its members), and what
+   * its line is drawn from out to each of the others. Absent, it is an order —
+   * tied one after another, drawn as a chain (the engine's
+   * constellation_capture.go).
+   */
+  capture?: string;
   /** thing id ("catalogKey::value") or want id. */
   members: string[];
   /** Which kind each member is, keyed by the same ids as `members`. */

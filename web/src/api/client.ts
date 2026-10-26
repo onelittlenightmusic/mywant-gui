@@ -1564,7 +1564,7 @@ class MyWantApiClient {
     return response.data.groups ?? [];
   }
 
-  async createConstellation(data: { name: string; kind: ConstellationKind; members: string[]; color?: string }): Promise<Constellation> {
+  async createConstellation(data: { name: string; kind: ConstellationKind; members: string[]; color?: string; capture?: string }): Promise<Constellation> {
     const response = await this.client.post<Constellation>(`/api/v1/constellations`, data);
     return response.data;
   }
