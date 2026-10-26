@@ -940,6 +940,8 @@ function _applyCancelHeld(): void {
  * second tab hop drops you into the rotation guide.
  */
 let _cancelChordUsed = false;
+/** B is held with L2 / R2 — the Mac's app switcher, not this page's. */
+let _macChord = false;
 function _markCancelChord(): void {
   _cancelChordUsed = true;
   if (_cancelLongTimer !== null) {
@@ -1378,6 +1380,18 @@ export function getOptionArrowVector(): { x: number; y: number } {
 // API) or a synthetic one built from a WebHID frame — both expose
 // buttons[i].pressed + axes[i], which is all this reads.
 function _processGamepad(gi: number, gp: Gamepad): void {
+  // B held with L2 or R2 is the Mac's: MyWantPad (mywant-input's helper)
+  // switches apps with it (⌘Tab). From then until B is let go the triggers
+  // are nobody's here — no Z mode, no aim — and B is a chord's, not a cancel,
+  // as with B+R1.
+  const bDown = gp.buttons[1]?.pressed ?? false;
+  if (bDown && (gp.buttons[6]?.pressed || gp.buttons[7]?.pressed)) _macChord = true;
+  if (!bDown) _macChord = false;
+  if (_macChord) {
+    _markCancelChord();
+    const up = { pressed: false, touched: false, value: 0 } as GamepadButton;
+    gp = { ...gp, axes: gp.axes, buttons: gp.buttons.map((b, i) => (i === 6 || i === 7 ? up : b)) } as Gamepad;
+  }
   // Deferred-confirm for A/Cross (button 0) — see simulateConfirmButton.
   // Writes the PHYSICAL half only: this runs every frame, so writing the
   // shared flag here would overwrite a software button's hold ~16ms after it
