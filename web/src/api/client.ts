@@ -1609,7 +1609,7 @@ class MyWantApiClient {
 
   // Constellation id == its name; kind must accompany update/delete to pick the thing or
   // want label namespace. The name may be non-ASCII, so encode the path segment.
-  async updateConstellation(name: string, updates: { name?: string; members?: string[]; color?: string; kind: ConstellationKind }): Promise<{ name: string }> {
+  async updateConstellation(name: string, updates: { name?: string; members?: string[]; color?: string; capture?: string; captureAt?: string; kind: ConstellationKind }): Promise<{ name: string }> {
     const response = await this.client.put<{ name: string }>(`/api/v1/constellations/${encodeURIComponent(name)}`, updates);
     return response.data;
   }

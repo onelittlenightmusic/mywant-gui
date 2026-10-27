@@ -13,7 +13,7 @@ interface ConstellationStore {
   /** `capture`: the tile it is a capture into (one of `members`); none, an order. */
   createConstellation: (name: string, kind: ConstellationKind, members: string[], color?: string, capture?: string) => Promise<Constellation | null>;
   // Constellation id == name; kind selects the thing/want label namespace.
-  updateConstellation: (name: string, kind: ConstellationKind, updates: { name?: string; members?: string[]; color?: string }) => Promise<void>;
+  updateConstellation: (name: string, kind: ConstellationKind, updates: { name?: string; members?: string[]; color?: string; capture?: string; captureAt?: string }) => Promise<void>;
   /** Recolour a constellation (color:null clears it, back to the default starlight). */
   setConstellationColor: (name: string, kind: ConstellationKind, color: string | null) => Promise<void>;
   deleteConstellation: (name: string, kind: ConstellationKind) => Promise<void>;
@@ -59,8 +59,10 @@ export const useConstellationStore = create<ConstellationStore>((set, get) => ({
     try {
       const created = await apiClient.createConstellation({ name, kind, members, color, capture });
       // Membership is server-derived from labels — refetch to get the merged view
-      // (adding to an existing group name folds in, no duplicate row).
-      await get().fetchConstellations(kind);
+      // (adding to an existing group name folds in, no duplicate row). A mixed
+      // write can land on a group cached under one kind, so it refetches the
+      // whole sky, or the stale row would stay beside the new one.
+      await get().fetchConstellations(kind === 'mixed' ? undefined : kind);
       return created;
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to create group' });
@@ -71,7 +73,7 @@ export const useConstellationStore = create<ConstellationStore>((set, get) => ({
   updateConstellation: async (name, kind, updates) => {
     try {
       await apiClient.updateConstellation(name, { ...updates, kind });
-      await get().fetchConstellations(kind);
+      await get().fetchConstellations(kind === 'mixed' ? undefined : kind);
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to update group' });
     }

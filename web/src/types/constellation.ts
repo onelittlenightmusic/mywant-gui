@@ -28,6 +28,11 @@ export interface Constellation {
    * constellation_capture.go).
    */
   capture?: string;
+  /**
+   * Where a capture's hub was last seen, "x,y" in board cells: its ring — and
+   * the lines to it — stay there once the hub itself is gone (an enemy fallen).
+   */
+  captureAt?: string;
   /** thing id ("catalogKey::value") or want id. */
   members: string[];
   /** Which kind each member is, keyed by the same ids as `members`. */
