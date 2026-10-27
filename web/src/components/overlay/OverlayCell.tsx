@@ -77,7 +77,8 @@ export const OverlayCell: React.FC<OverlayCellProps> = ({
   const style: React.CSSProperties = {
     animation: design.cellEnterAnimation,
     animationDelay: `${delay}ms`,
-    ...(color && !disabled ? { background: color } : undefined),
+    // A colour fill is the grid's kind of cell in any design: white on it.
+    ...(color && !disabled ? { background: color, color: '#fff' } : undefined),
   };
   const body = (
     <>

@@ -6,7 +6,7 @@
  *   OverlayBubble      the box a free-standing overlay sits in, with its tail
  *   OverlayTextStage   a stage that asks for a few words, with back / submit cells
  *   tones              what an action means, and the sizes every design lays out on
- *   design             how overlays look — `grid` built in, more from extensions
+ *   design             how overlays look — `sheet` (default) and `grid` built in, more from extensions
  *
  * An overlay says what its actions mean (a tone) and never how they are
  * painted; scripts/check-overlays.mjs keeps it that way.
@@ -20,7 +20,7 @@ export {
   OVERLAY_CELL_PX, OVERLAY_MAX_ROW, OVERLAY_HEIGHT_PX, OVERLAY_STAGGER_MS,
 } from './tones';
 export {
-  type OverlayDesign, type OverlayPortableStyle, GRID_OVERLAY_DESIGN,
+  type OverlayDesign, type OverlayPortableStyle, GRID_OVERLAY_DESIGN, SHEET_OVERLAY_DESIGN, DEFAULT_OVERLAY_DESIGN,
   registerOverlayDesign, listOverlayDesigns, onOverlayDesignRegistered,
   overlayDesignOf, withOverlayDesign, portableOverlayStyleOf, overlayDesign, useOverlayDesign,
   currentOverlayDesignId, setLocalOverlayDesign,

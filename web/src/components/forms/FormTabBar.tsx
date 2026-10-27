@@ -3,6 +3,7 @@ import { SlidersHorizontal, Clock, Tag, Link2, BadgeInfo, ArrowUpFromLine, Arrow
 import { classNames } from '@/utils/helpers';
 import { CountBadge } from '@/components/common/CountBadge';
 import { CONTROL_TAB, CONTROL_ICON_CLASS } from '@/design/controls';
+import { tabTrayClass, tabClass, tabIconClass, TAB_LABEL } from '@/design/tabs';
 
 export type FormTab = 'name' | 'params' | 'labels' | 'schedule' | 'deps' | 'expose' | 'import' | 'yaml';
 export const FORM_TABS: FormTab[] = ['params', 'labels', 'schedule', 'deps', 'expose', 'import', 'name'];
@@ -40,10 +41,7 @@ export function FormTabBar({
   tabs?: FormTab[];
 }) {
   return (
-    <div className={classNames(
-      'flex flex-shrink-0 border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50',
-      isBottom ? 'border-t' : 'border-b'
-    )}>
+    <div className={tabTrayClass(!!isBottom)}>
       {tabs.map(tab => {
         const { label, icon: Icon } = FORM_TAB_META[tab];
         const badge = badges[tab];
@@ -62,14 +60,11 @@ export function FormTabBar({
               // — the wrong way round, since the phone is the one being
               // touched. See design/controls.ts.
               CONTROL_TAB,
-              'flex-1 flex flex-col items-center justify-center gap-0.5 px-0.5 transition-all relative min-w-0',
-              isActive
-                ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-800/30'
+              tabClass(isActive)
             )}
           >
             <div className="relative">
-              <Icon className={classNames(CONTROL_ICON_CLASS.md, 'flex-shrink-0')} />
+              <Icon className={classNames(CONTROL_ICON_CLASS.md, 'flex-shrink-0', tabIconClass(isActive))} />
               {badge !== null && (
                 <CountBadge
                   // "required, and not filled in" is exactly what the alert
@@ -82,15 +77,9 @@ export function FormTabBar({
                 </CountBadge>
               )}
             </div>
-            <span className="hidden sm:block text-[10px] font-bold uppercase tracking-tighter truncate w-full text-center sm:mt-0.5">
+            <span className={TAB_LABEL}>
               {label}
             </span>
-            {isActive && (
-              <div className={classNames(
-                'absolute h-0.5 bg-blue-600 dark:bg-blue-400 left-0 right-0',
-                isBottom ? 'top-0' : 'bottom-0'
-              )} />
-            )}
           </button>
         );
       })}

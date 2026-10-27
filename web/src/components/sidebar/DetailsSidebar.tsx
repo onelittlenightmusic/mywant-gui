@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { LucideIcon } from 'lucide-react';
 import { classNames } from '@/utils/helpers';
+import { FIELD_CARD_SURFACE, FIELD_CARD_LABEL } from '@/design/cards';
 import { useConfigStore } from '@/stores/configStore';
 import { SidebarTabBar } from '@/components/common/SidebarTabBar';
 import { useSidebarTabNav } from '@/hooks/useSidebarTabNav';
@@ -161,8 +162,10 @@ export const InfoRow: React.FC<{
   label: string;
   value: React.ReactNode;
 }> = ({ label, value }) => (
-  <div className="flex justify-between items-center text-xs sm:text-sm">
-    <dt className="text-gray-600 dark:text-gray-400">{label}:</dt>
-    <dd className="font-medium text-gray-900 dark:text-gray-200">{value}</dd>
+  // A card of its own, as every value in a panel is (design/cards.ts): its
+  // name small above, the value under it.
+  <div className={classNames('flex flex-col gap-1 rounded-lg sm:rounded-xl px-2 py-1.5 min-w-0', FIELD_CARD_SURFACE)}>
+    <dt className={FIELD_CARD_LABEL}>{label}</dt>
+    <dd className="text-sm font-medium text-slate-900 dark:text-slate-100 break-words min-w-0">{value}</dd>
   </div>
 );

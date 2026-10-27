@@ -1097,7 +1097,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                         const bigFont = shownText.length <= 8;
                         return (
                           <span className={classNames(
-                            'italic text-right leading-none',
+                            'text-right leading-none',
                             bigFont ? 'text-2xl font-medium text-purple-500 dark:text-purple-400' : 'text-xs text-purple-500 dark:text-purple-400 truncate',
                           )}>
                             {shownText}
@@ -1151,7 +1151,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                       })();
                       return (
                         <span className={classNames(
-                          'italic text-right leading-none',
+                          'text-right leading-none',
                           bigFont ? 'text-2xl font-medium' : 'text-xs truncate',
                           paramValueColor,
                         )}>
@@ -1237,7 +1237,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                 return (
                   <div className="h-full flex items-end justify-end overflow-hidden">
                     <span className={classNames(
-                      'italic text-right leading-none',
+                      'text-right leading-none',
                       bigFont ? 'text-2xl font-medium' : 'text-xs truncate',
                       extraValue ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600',
                     )}>

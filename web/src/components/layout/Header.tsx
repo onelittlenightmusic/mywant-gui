@@ -4,6 +4,7 @@ import { useHeaderAtBottom, useDisplaySettings } from '@/hooks/useDisplaySetting
 import { Plus, Heart, ListChecks, Map, Bot, Globe, Menu, X, Zap, BookOpen, Activity, Settings, Trophy, HelpCircle, Smartphone, Circle, Layers, Upload, Gamepad2, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { HEADER_TRAY, HEADER_CELL, HEADER_CELL_UNLIT, HEADER_LABEL } from '@/design/header';
 import { classNames } from '@/utils/helpers';
 import { InteractBubble } from '@/components/interact/InteractBubble';
 import { useConfigStore } from '@/stores/configStore';
@@ -877,7 +878,7 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       >
         {myCharacter ? <CursorManIcon size={22} /> : <Bot className="h-5 w-5 sm:h-6 sm:w-6" />}
-        <span className="text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">Ask</span>
+        <span className={HEADER_LABEL}>Ask</span>
         {hasUnreadReply && (
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse" />
         )}
@@ -904,14 +905,16 @@ export const Header: React.FC<HeaderProps> = ({
             (below), clipping at its far end. */}
         <div className="flex items-center space-x-2 flex-shrink-0 self-stretch" ref={menuRef}>
           {/* Hamburger menu button — opens on hover */}
-          <div className="relative self-stretch -my-2 sm:-my-4" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
+          <div className="relative self-stretch -my-1 sm:-my-2" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
+            {/* A card on its own, as the right-hand buttons are in their tray;
+                pressed in while its menu is out. */}
             <button
               onClick={() => menuOpen ? closeMenu() : openMenu()}
               className={classNames(
-                "relative flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-3 h-full transition-all duration-150 focus:outline-none min-w-[56px] sm:min-w-[64px]",
+                HEADER_CELL, "relative !rounded-2xl border border-slate-200 dark:border-slate-700 min-w-[56px] sm:min-w-[64px]",
                 menuOpen
-                  ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800",
+                  ? "!shadow-[inset_1px_2px_4px_rgba(15,23,42,0.14)] bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white"
+                  : classNames("text-slate-600 dark:text-slate-300", HEADER_CELL_UNLIT),
                 onHamburgerSlot && 'ring-2 ring-inset ring-sky-400'
               )}
               aria-label="Toggle menu"
@@ -925,7 +928,7 @@ export const Header: React.FC<HeaderProps> = ({
               ) : (
                 <Menu className="h-6 w-6 sm:h-8 sm:w-8" />
               )}
-              <span className="text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">
+              <span className={HEADER_LABEL}>
                 {menuOpen ? 'Close' : 'Menu'}
               </span>
               {/* Something inside the menu wants attention. Hidden while the
@@ -968,7 +971,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="absolute inset-x-0 h-2 bg-transparent" style={isBottom ? { bottom: 0 } : { top: 0 }} />
 
                 <div
-                  className="bg-slate-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg overflow-y-auto overscroll-contain"
+                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-[6px_8px_20px_rgba(15,23,42,0.22)] overflow-y-auto overscroll-contain"
                   style={{
                     // Use dynamic viewport height (mobile Safari's URL bar shrinks
                     // the real area vs 100vh) minus the header row and both safe
@@ -1006,10 +1009,10 @@ export const Header: React.FC<HeaderProps> = ({
 
                   {/* Advanced items */}
                   <div
-                    className="border-t border-gray-200 dark:border-gray-800 p-2"
+                    className="border-t border-slate-200 dark:border-slate-700 p-2"
                     style={{ '--fit-min': navFit.min, '--fit-max': navFit.max } as React.CSSProperties}
                   >
-                    <p className="px-1 pb-1.5 text-xs font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wider">Advanced</p>
+                    <p className="px-1 pb-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">Advanced</p>
                     <div className="grid gap-1.5" style={navGridStyle}>
                       {navEntries().filter(e => !MAIN_IDS.has(e.id)).map((entry) => {
                         const globalIdx = navEntries().findIndex(e => e.id === entry.id);
@@ -1085,8 +1088,8 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
 
-        {/* Right: full-height flush button grid */}
-        <div className="flex items-stretch self-stretch -my-2 sm:-my-4 min-w-0 overflow-hidden">
+        {/* Right: the buttons as cards in a tray, as the control pill's are */}
+        <div className={HEADER_TRAY}>
 
           {/* Minimap - mobile only */}
           {onMinimapToggle && (
@@ -1097,11 +1100,11 @@ export const Header: React.FC<HeaderProps> = ({
                   'lg:hidden flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-3 h-full transition-all duration-150 focus:outline-none',
                   showMinimap
                     ? 'bg-blue-500/90 text-white hover:brightness-110'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    : classNames('text-slate-600 dark:text-slate-300', HEADER_CELL_UNLIT)
                 )}
               >
                 <Map className="h-6 w-6 sm:h-8 sm:w-8" />
-                <span className="text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">Map</span>
+                <span className={HEADER_LABEL}>Map</span>
               </button>
             </Tooltip>
           )}
@@ -1114,15 +1117,15 @@ export const Header: React.FC<HeaderProps> = ({
                 data-header-btn-id="global"
                 onPointerDown={cellTick}
                 className={classNames(
-                  'flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-3 h-full transition-all duration-150 focus:outline-none',
+                  HEADER_CELL,
                   showGlobalState
                     ? 'bg-green-600/90 text-white hover:brightness-110'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800',
+                    : classNames('text-slate-600 dark:text-slate-300', HEADER_CELL_UNLIT),
                   isHeaderFocused && hBtns[headerFocusIdx]?.id === 'global' && 'ring-2 ring-inset ring-sky-400'
                 )}
               >
                 <Globe className="h-6 w-6 sm:h-8 sm:w-8" />
-                <span className="text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">Global</span>
+                <span className={HEADER_LABEL}>Global</span>
               </button>
             </Tooltip>
           )}
@@ -1136,13 +1139,13 @@ export const Header: React.FC<HeaderProps> = ({
                 data-header-btn-id="import"
                 onPointerDown={cellTick}
                 className={classNames(
-                  'flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-3 h-full transition-all duration-150 focus:outline-none',
-                  'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50',
+                  HEADER_CELL,
+                  classNames('text-slate-600 dark:text-slate-300 disabled:opacity-50', HEADER_CELL_UNLIT),
                   isHeaderFocused && hBtns[headerFocusIdx]?.id === 'import' && 'ring-2 ring-inset ring-sky-400'
                 )}
               >
                 <Upload className="h-6 w-6 sm:h-8 sm:w-8" />
-                <span className="text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">
+                <span className={HEADER_LABEL}>
                   {isImporting ? 'Importing' : 'Import'}
                 </span>
               </button>
@@ -1157,15 +1160,15 @@ export const Header: React.FC<HeaderProps> = ({
                 data-header-btn-id="select"
                 onPointerDown={cellTick}
                 className={classNames(
-                  'flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-3 h-full transition-all duration-150 focus:outline-none',
+                  HEADER_CELL,
                   showSelectMode
                     ? 'bg-blue-600/90 text-white hover:brightness-110'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800',
+                    : classNames('text-slate-600 dark:text-slate-300', HEADER_CELL_UNLIT),
                   isHeaderFocused && hBtns[headerFocusIdx]?.id === 'select' && 'ring-2 ring-inset ring-sky-400'
                 )}
               >
                 <ListChecks className="h-6 w-6 sm:h-8 sm:w-8" />
-                <span className="text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">Select</span>
+                <span className={HEADER_LABEL}>Select</span>
               </button>
             </Tooltip>
           )}
@@ -1179,15 +1182,15 @@ export const Header: React.FC<HeaderProps> = ({
                 data-header-btn-id="page"
                 onPointerDown={cellTick}
                 className={classNames(
-                  'flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-3 h-full transition-all duration-150 focus:outline-none',
+                  HEADER_CELL,
                   pageAction.active
                     ? 'bg-blue-600/90 text-white hover:brightness-110'
-                    : (pageAction.toneClass ?? 'text-gray-600 dark:text-gray-400') + ' hover:bg-gray-100 dark:hover:bg-gray-800',
+                    : classNames(pageAction.toneClass ?? 'text-slate-600 dark:text-slate-300', HEADER_CELL_UNLIT),
                   isHeaderFocused && hBtns[headerFocusIdx]?.id === 'page' && 'ring-2 ring-inset ring-sky-400'
                 )}
               >
                 <pageAction.icon className="h-6 w-6 sm:h-8 sm:w-8" />
-                <span className="text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">{pageAction.label}</span>
+                <span className={HEADER_LABEL}>{pageAction.label}</span>
               </button>
             </Tooltip>
           )}
@@ -1196,11 +1199,11 @@ export const Header: React.FC<HeaderProps> = ({
               by side and a note is not a third kind of thing — it is a want of
               type `note`, so Add Want makes one like it makes any other. What
               came off is the shortcut, not the capability. */}
-          {/* Add Want and Add Thing, framed as one segmented control: one
-              choice with two answers, and only one lit at a time (see
-              createWant / createThing). Want first, as in the walk order. */}
+          {/* Add Want and Add Thing: one choice with two answers, and only one
+              lit at a time (see createWant / createThing). Want first, as in
+              the walk order. */}
           {!compact && !hideCreateButton && (
-          <div className="flex h-full items-stretch rounded-xl overflow-hidden ring-1 ring-inset ring-gray-300 dark:ring-gray-700 mx-1">
+          <>
           {/* Create — separated by a thin line. Labelled "Add Want" unless the
               page creates something else (createButtonLabel/createButtonIcon). */}
           {!compact && !hideCreateButton && (
@@ -1212,7 +1215,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onPointerDown={cellTick}
                   data-robot-target="add_want_btn"
                   className={classNames(
-                    "flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-3 h-full transition-all duration-150 focus:outline-none",
+                    HEADER_CELL,
                     // Adding a want is in the app's own pink — the heart of the
                     // tab icon (public/favicon.svg) — lit and unlit, the way Add
                     // Thing is in the thing's orange. Pages that reuse this
@@ -1220,10 +1223,10 @@ export const Header: React.FC<HeaderProps> = ({
                     createsWant
                       ? (isAddWantActive
                         ? "bg-pink-500 text-white hover:brightness-110 active:opacity-80"
-                        : "text-pink-500 hover:bg-pink-50 dark:hover:bg-pink-900/20")
+                        : classNames("text-pink-500", HEADER_CELL_UNLIT))
                       : isAddWantActive
                         ? "bg-primary-600 text-white hover:brightness-110 active:opacity-80"
-                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800",
+                        : classNames('text-slate-600 dark:text-slate-300', HEADER_CELL_UNLIT),
                     isHeaderFocused && hBtns[headerFocusIdx]?.id === 'want' && 'ring-2 ring-inset ring-sky-400'
                   )}
                 >
@@ -1231,7 +1234,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <CreateIcon className="h-6 w-6 sm:h-8 sm:w-8" />
                     <Plus className="h-4 w-4 sm:h-5 sm:w-5 absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2" style={{ strokeWidth: 3 }} />
                   </span>
-                  <span className="text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">{createButtonLabel.replace(/^(Add|New)\s+/i, '')}</span>
+                  <span className={HEADER_LABEL}>{createButtonLabel.replace(/^(Add|New)\s+/i, '')}</span>
                 </button>
               </Tooltip>
             </>
@@ -1248,7 +1251,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onPointerDown={cellTick}
                   data-robot-target="add_thing_btn"
                   className={classNames(
-                    "flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-3 h-full transition-all duration-150 focus:outline-none",
+                    HEADER_CELL,
                     // Lit while its panel is open, the way Add Want is. The two
                     // buttons do the same kind of thing — open a panel that the
                     // same press closes again — and a button that shows that
@@ -1258,7 +1261,7 @@ export const Header: React.FC<HeaderProps> = ({
                     // change what it is about by being pressed.
                     isAddThingActive
                       ? "bg-orange-500 text-white hover:brightness-110 active:opacity-80"
-                      : "text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20",
+                      : classNames("text-orange-500 dark:text-orange-400", HEADER_CELL_UNLIT),
                     isHeaderFocused && hBtns[headerFocusIdx]?.id === 'thing' && 'ring-2 ring-inset ring-sky-400'
                   )}
                 >
@@ -1266,12 +1269,12 @@ export const Header: React.FC<HeaderProps> = ({
                     <Circle className="h-6 w-6 sm:h-8 sm:w-8" />
                     <Plus className="h-4 w-4 sm:h-5 sm:w-5 absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2" style={{ strokeWidth: 3 }} />
                   </span>
-                  <span className="text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">Thing</span>
+                  <span className={HEADER_LABEL}>Thing</span>
                 </button>
               </Tooltip>
             </>
           )}
-          </div>
+          </>
           )}
           {/* One cell for both ways of making something, where the row has no
               space for two.
@@ -1293,10 +1296,10 @@ export const Header: React.FC<HeaderProps> = ({
                   aria-label="New"
                   aria-expanded={createMenuOpen}
                   className={classNames(
-                    "flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-3 h-full transition-all duration-150 focus:outline-none",
+                    HEADER_CELL,
                     createMenuOpen
                       ? "bg-primary-600 text-white hover:brightness-110"
-                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800",
+                      : classNames('text-slate-600 dark:text-slate-300', HEADER_CELL_UNLIT),
                     isHeaderFocused && hBtns[headerFocusIdx]?.id === 'create' && 'ring-2 ring-inset ring-sky-400'
                   )}
                 >
@@ -1305,7 +1308,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {createReveal.mounted && createAt && createPortal(
                   <div
                     ref={createMenuRef}
-                    className="fixed z-[9100] min-w-[168px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl overflow-hidden"
+                    className="fixed z-[9100] min-w-[168px] rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 shadow-[6px_8px_20px_rgba(15,23,42,0.22)] overflow-hidden"
                     // Opens away from the edge the header is docked to, so it
                     // unfolds over the board rather than off the screen — and
                     // travels out of the ＋ on the way, so what opened it is
@@ -1350,15 +1353,15 @@ export const Header: React.FC<HeaderProps> = ({
                   data-robot-target="pad_btn"
                   aria-pressed={showPad}
                   className={classNames(
-                    "flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-3 h-full transition-all duration-150 focus:outline-none",
+                    HEADER_CELL,
                     showPad
                       ? "bg-primary-600 text-white hover:brightness-110 active:opacity-80"
-                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800",
+                      : classNames('text-slate-600 dark:text-slate-300', HEADER_CELL_UNLIT),
                     isHeaderFocused && hBtns[headerFocusIdx]?.id === 'pad' && 'ring-2 ring-inset ring-sky-400'
                   )}
                 >
                   <Gamepad2 className="h-6 w-6 sm:h-8 sm:w-8" />
-                  <span className="text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">Pad</span>
+                  <span className={HEADER_LABEL}>Pad</span>
                 </button>
               </Tooltip>
             </>

@@ -1,6 +1,8 @@
 /** The Settings tab — the want's own YAML, edited as a form or as text. */
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
+import { classNames } from '@/utils/helpers';
+import { FIELD_CARD_SURFACE, FIELD_CARD_LABEL } from '@/design/cards';
 import { Settings, AlertTriangle, Save, Edit, Check } from 'lucide-react';
 import { Want, WhenSpec } from '@/types/want';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -361,59 +363,53 @@ export const SettingsTab: React.FC<{
             {/* NAME / METADATA tab: metadata + timeline */}
             {activeSettingsTab === 'name' && (
           <div className="space-y-3 pt-1">
-            {/* Metadata Section */}
-            <div className={SECTION_CONTAINER_CLASS}>
-              <h4 className="text-sm sm:text-base font-medium text-gray-900 dark:text-white mb-2 sm:mb-4">Metadata</h4>
-              <div className="space-y-2 sm:space-y-3">
-                <div className="flex justify-between items-center gap-2">
-                  <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm flex-shrink-0">Name:</span>
-                  {isEditingName ? (
-                    <input
-                      ref={nameInputRef}
-                      type="text"
-                      value={editedName}
-                      onChange={(e) => setEditedName(e.target.value)}
-                      onBlur={async () => {
-                        const trimmed = editedName.trim();
-                        if (trimmed && trimmed !== want.metadata?.name && want.metadata?.id) {
-                          try {
-                            await updateWant(want.metadata.id, {
-                              metadata: { ...want.metadata, name: trimmed },
-                              spec: want.spec
-                            });
-                            onWantUpdate?.();
-                            showSaved();
-                          } catch {
-                            setEditedName(want.metadata?.name || '');
+            {/* Metadata: each value a card of its own, as the fields are
+                (design/cards.ts) — no box around them. */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className={classNames('flex flex-col gap-1 rounded-lg sm:rounded-xl px-2 py-1.5 min-w-0', FIELD_CARD_SURFACE)}>
+                <span className={FIELD_CARD_LABEL}>Name</span>
+                    {isEditingName ? (
+                      <input
+                        ref={nameInputRef}
+                        type="text"
+                        value={editedName}
+                        onChange={(e) => setEditedName(e.target.value)}
+                        onBlur={async () => {
+                          const trimmed = editedName.trim();
+                          if (trimmed && trimmed !== want.metadata?.name && want.metadata?.id) {
+                            try {
+                              await updateWant(want.metadata.id, {
+                                metadata: { ...want.metadata, name: trimmed },
+                                spec: want.spec
+                              });
+                              onWantUpdate?.();
+                              showSaved();
+                            } catch {
+                              setEditedName(want.metadata?.name || '');
+                            }
                           }
-                        }
-                        setIsEditingName(false);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') nameInputRef.current?.blur();
-                        if (e.key === 'Escape') { setEditedName(want.metadata?.name || ''); setIsEditingName(false); }
-                      }}
-                      autoFocus
-                      className="font-medium text-xs sm:text-sm bg-white dark:bg-gray-800 border border-blue-400 dark:border-blue-500 rounded px-1.5 py-0.5 text-right min-w-0 flex-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <span
-                      onClick={() => { setEditedName(want.metadata?.name || ''); setIsEditingName(true); }}
-                      className="font-medium text-xs sm:text-sm cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 rounded px-1.5 py-0.5 -mr-1.5 transition-colors truncate"
-                      title="Click to edit"
-                    >
-                      {want.metadata?.name || 'N/A'}
-                    </span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">Type:</span>
-                  <span className="font-medium text-xs sm:text-sm">{want.metadata?.type || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">ID:</span>
-                  <span className="font-mono text-[10px] sm:text-xs break-all ml-4 text-right">{want.metadata?.id || want.id || 'N/A'}</span>
-                </div>
+                          setIsEditingName(false);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') nameInputRef.current?.blur();
+                          if (e.key === 'Escape') { setEditedName(want.metadata?.name || ''); setIsEditingName(false); }
+                        }}
+                        autoFocus
+                        className="text-sm font-medium bg-white dark:bg-slate-800 border border-blue-400 dark:border-blue-500 rounded px-1.5 py-0.5 min-w-0 w-full focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <span
+                        onClick={() => { setEditedName(want.metadata?.name || ''); setIsEditingName(true); }}
+                        className="text-sm font-medium text-slate-900 dark:text-slate-100 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 rounded px-1.5 py-0.5 -mx-1.5 -my-0.5 transition-colors truncate"
+                        title="Click to edit"
+                      >
+                        {want.metadata?.name || 'N/A'}
+                      </span>
+                    )}
+              </div>
+              <InfoRow label="Type" value={want.metadata?.type || 'N/A'} />
+              <div className="col-span-2">
+                <InfoRow label="ID" value={<span className="font-mono text-xs break-all">{want.metadata?.id || want.id || 'N/A'}</span>} />
               </div>
             </div>
 

@@ -10,8 +10,9 @@ import type { OverlayTone } from './tones';
  * Every overlay is the same thing (see tones.ts), laid out the same way; what a
  * design decides is only how it is painted: the colour each tone gets, the
  * cell's shape and hover, the ring, the words, the box and its tail, how it
- * comes in. The built-in design is `grid` — full-bleed coloured tiles on a dark
- * box. An extension can add another (registerOverlayDesign, or `overlayDesigns`
+ * comes in. Two are built in: `sheet`, the default — each cell a white card,
+ * its meaning in its icon's colour — and `grid`, full-bleed coloured tiles on
+ * a dark box. An extension can add another (registerOverlayDesign, or `overlayDesigns`
  * on a GuiExtension), and a person picks one for themselves: the choice is a
  * display setting of their character (ext.overlay.design), like the canvas's
  * design.
@@ -49,6 +50,8 @@ export interface OverlayDesign {
   surface: string;
   /** The box a free-standing overlay sits in (shape + surface). */
   frame: string;
+  /** The grid the cells are laid out in: the space between and around them. */
+  grid?: string;
   /** The tail's colour: a CSS colour, matching the frame's outline. */
   tailColor: string;
   /** What is laid over a card behind an overlay drawn on it. */
@@ -91,6 +94,14 @@ export interface OverlayPortableStyle {
   labelSize: number;
   /** What is laid over a page behind a dialog. */
   backdrop: string;
+  /**
+   * Solid colours for a state that has to be seen at once (the control pill's
+   * paused sign and play button), where `tones` are too faint to carry white
+   * words. Without them the pill fills with `tones`.
+   */
+  signals?: Partial<Record<'confirm' | 'caution' | 'info', string>>;
+  /** Cells are raised cards on a sunken tray, as the sheet's tabs are. */
+  cards?: boolean;
 }
 
 /** The built-in design: full-bleed coloured tiles on a dark box. */
@@ -152,9 +163,94 @@ export const GRID_OVERLAY_DESIGN: OverlayDesign = {
   },
 };
 
+/**
+ * The quiet sheet — the default: every cell a card of its own on a pale box,
+ * as the board's tiles are things of their own. A cell is white (slate in the
+ * dark), set down with its shadow to the lower right (the board's one light,
+ * from the upper left); what an action means is in its icon's colour, not its
+ * fill — a wide coloured face draws the eye from everything on it, so colour
+ * goes where it is small. Only danger also wears a stripe down its left edge,
+ * to be told apart before it is read.
+ *
+ * Icons handed in white (most callers drew them for the grid's coloured tiles)
+ * take the cell's colour instead (`[&_svg]`), so no overlay has to change.
+ */
+export const SHEET_OVERLAY_DESIGN: OverlayDesign = {
+  id: 'sheet',
+  name: 'Sheet',
+  tones: {
+    confirm: 'text-emerald-600 dark:text-emerald-400',
+    cancel:  'text-slate-500 dark:text-slate-400',
+    danger:  'text-rose-600 dark:text-rose-400 border-l-4 border-l-rose-500 dark:border-l-rose-500',
+    primary: 'text-blue-600 dark:text-blue-400',
+    caution: 'text-amber-600 dark:text-amber-400',
+    info:    'text-sky-600 dark:text-sky-400',
+    accent:  'text-indigo-600 dark:text-indigo-400',
+    special: 'text-violet-600 dark:text-violet-400',
+    muted:   'text-slate-600 dark:text-slate-300',
+  },
+  disabled: 'bg-slate-100 dark:bg-slate-800/40 text-slate-300 dark:text-slate-600 shadow-none cursor-not-allowed',
+  cell:
+    'rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 ' +
+    'shadow-[2px_3px_6px_rgba(15,23,42,0.12)] [&_svg]:!text-inherit',
+  cellInteractive:
+    'hover:-translate-x-px hover:-translate-y-px hover:shadow-[3px_4px_10px_rgba(15,23,42,0.16)] ' +
+    'active:translate-x-px active:translate-y-px active:shadow-none',
+  cellOff: 'opacity-50',
+  focus: 'ring-2 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-900',
+  label: 'text-slate-600 dark:text-slate-300 text-[10px] font-medium leading-none',
+  header: 'flex items-center gap-1.5 text-slate-600 dark:text-slate-300 text-xs font-semibold',
+  surface: 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700',
+  frame:
+    'rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 ' +
+    'shadow-[6px_8px_20px_rgba(15,23,42,0.22)]',
+  grid: 'gap-1.5 p-1.5',
+  // The outline's colour, which reads against the board in either mode.
+  tailColor: 'rgb(203 213 225)',
+  backdrop: 'bg-slate-50/85 dark:bg-slate-900/85 backdrop-blur-[2px]',
+  input:
+    'w-full rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 px-2.5 py-1 text-sm ' +
+    'text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-sky-500',
+  enterAnimation: 'quickActionsIn 150ms ease-out forwards',
+  cellEnterAnimation: 'quickActionBtnIn 150ms ease-out both',
+  // Portable values paint a cell's fill per tone and one ink for every word,
+  // so the colour moves to a faint tint of the fill.
+  portable: {
+    tones: {
+      confirm: '#ecfdf5',
+      cancel:  '#f1f5f9',
+      danger:  '#fff1f2',
+      primary: '#eff6ff',
+      caution: '#fffbeb',
+      info:    '#f0f9ff',
+      accent:  '#eef2ff',
+      special: '#f5f3ff',
+      muted:   '#ffffff',
+    },
+    surface: '#f8fafc',
+    outline: '#cbd5e1',
+    ink: '#334155',
+    radius: 16,
+    cellRadius: 12,
+    cellGap: 6,
+    labelTransform: 'none',
+    labelWeight: 500,
+    labelSize: 10,
+    backdrop: 'rgba(248,250,252,.85)',
+    signals: { confirm: '#059669', caution: '#d97706', info: '#0284c7' },
+    cards: true,
+  },
+};
+
+/** The design drawn when nobody chose one. */
+export const DEFAULT_OVERLAY_DESIGN = SHEET_OVERLAY_DESIGN;
+
 // ── Registry ─────────────────────────────────────────────────────────────────
 
-const designs = new Map<string, OverlayDesign>([[GRID_OVERLAY_DESIGN.id, GRID_OVERLAY_DESIGN]]);
+const designs = new Map<string, OverlayDesign>([
+  [SHEET_OVERLAY_DESIGN.id, SHEET_OVERLAY_DESIGN],
+  [GRID_OVERLAY_DESIGN.id, GRID_OVERLAY_DESIGN],
+]);
 const listeners = new Set<() => void>();
 
 /**
@@ -166,7 +262,7 @@ export function registerOverlayDesign(design: OverlayDesign): void {
   listeners.forEach(fn => fn());
 }
 
-/** Every design, the built-in one first. */
+/** Every design, the built-in ones first (the default before the grid). */
 export function listOverlayDesigns(): OverlayDesign[] {
   return [...designs.values()];
 }
@@ -179,11 +275,11 @@ export function onOverlayDesignRegistered(fn: () => void): () => void {
 
 // ── The choice ───────────────────────────────────────────────────────────────
 
-/** The design a display names, as an id — `grid` when it names none. */
+/** The design a display names, as an id — the default (`sheet`) when it names none. */
 export function overlayDesignOf(display: Pick<CharacterDisplay, 'ext'> | null | undefined): string {
   const ext = display?.ext as { overlay?: { design?: unknown } } | undefined;
   const id = ext?.overlay?.design;
-  return typeof id === 'string' && id ? id : GRID_OVERLAY_DESIGN.id;
+  return typeof id === 'string' && id ? id : DEFAULT_OVERLAY_DESIGN.id;
 }
 
 /**
@@ -205,7 +301,7 @@ export function portableOverlayStyleOf(display: Pick<CharacterDisplay, 'ext'> | 
   return p && typeof p === 'object' ? p as OverlayPortableStyle : null;
 }
 
-const resolve = (id: string): OverlayDesign => designs.get(id) ?? GRID_OVERLAY_DESIGN;
+const resolve = (id: string): OverlayDesign => designs.get(id) ?? DEFAULT_OVERLAY_DESIGN;
 
 // ── Without a character ──────────────────────────────────────────────────────
 //
@@ -219,7 +315,7 @@ const resolve = (id: string): OverlayDesign => designs.get(id) ?? GRID_OVERLAY_D
 const LOCAL_KEY = 'mywant.overlayDesign';
 
 function localOverlayDesignId(): string {
-  try { return localStorage.getItem(LOCAL_KEY) || GRID_OVERLAY_DESIGN.id; } catch { return GRID_OVERLAY_DESIGN.id; }
+  try { return localStorage.getItem(LOCAL_KEY) || DEFAULT_OVERLAY_DESIGN.id; } catch { return DEFAULT_OVERLAY_DESIGN.id; }
 }
 
 /** Keep the choice in this browser — for when there is no character to keep it on. */
@@ -247,7 +343,7 @@ export function currentOverlayDesignId(display: Pick<CharacterDisplay, 'ext'> | 
 /**
  * The design in use, as a subscription: re-renders when the choice changes or
  * the chosen design arrives late (an extension loaded after the first paint).
- * A choice naming a design that is not installed falls back to `grid`.
+ * A choice naming a design that is not installed falls back to the default.
  */
 export function useOverlayDesign(): OverlayDesign {
   const display = useDisplaySettings();

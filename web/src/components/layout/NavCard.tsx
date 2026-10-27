@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { classNames } from '@/utils/helpers';
+import { FIELD_CARD_SURFACE, FIELD_CARD_HOVER } from '@/design/cards';
 
 /**
  * One hamburger-menu destination, as a card.
@@ -52,11 +53,14 @@ export const NavCard: React.FC<NavCardProps> = ({
   icon: Icon, label, color, to, onClick, active, focused, badge, onMouseEnter, menuIdx,
 }) => {
   const className = classNames(
-    'nav-card relative flex items-center gap-1.5 px-2 py-2 rounded-lg font-medium transition-colors text-left',
+    'nav-card relative flex items-center gap-1.5 px-2 py-2 rounded-xl font-medium transition-[color,box-shadow] text-left',
+    // A field card, as the panels' are; where you are is said by the words
+    // and a blue edge, not by a tinted ground.
+    FIELD_CARD_SURFACE, FIELD_CARD_HOVER,
     active
-      ? 'bg-primary-100 text-primary-900 dark:bg-primary-900/30 dark:text-primary-300'
-      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200',
-    focused && !active && 'ring-2 ring-inset ring-sky-400 dark:ring-sky-400 bg-sky-50 dark:bg-sky-900/20',
+      ? 'text-primary-700 dark:text-primary-300 !border-primary-400 dark:!border-primary-500'
+      : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100',
+    focused && !active && 'ring-2 ring-inset ring-sky-400 dark:ring-sky-400',
   );
 
   // The one number the CSS needs: how many characters must survive on a line.
@@ -71,7 +75,7 @@ export const NavCard: React.FC<NavCardProps> = ({
       {badge && (
         <span
           aria-hidden
-          className="absolute top-1 right-1 block w-2 h-2 rounded-full ring-2 ring-slate-100 dark:ring-gray-900"
+          className="absolute top-1 right-1 block w-2 h-2 rounded-full ring-2 ring-white dark:ring-slate-800"
           style={{ background: color ?? '#ef4444' }}
         />
       )}

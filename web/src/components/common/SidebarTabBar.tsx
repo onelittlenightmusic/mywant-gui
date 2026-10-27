@@ -4,6 +4,7 @@ import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { characterBadgeColor } from '@/design/characterColor';
 import { CONTROL_TAB, CONTROL_ICON_CLASS } from '@/design/controls';
+import { tabTrayClass, tabClass, tabIconClass, TAB_LABEL } from '@/design/tabs';
 
 /**
  * A single tab definition for SidebarTabBar.
@@ -30,12 +31,9 @@ interface SidebarTabBarProps {
 /**
  * Unified tab bar for all detail sidebars (WantDetails, WantTypeDetails, RecipeDetails).
  *
- * Design spec (matches WantDetailsSidebar):
- * - Full-width flex row; each tab takes equal space (flex-1)
- * - Icon (3.5×3.5 → 4×4 on sm) stacked above label text
- * - Active: white/gray-800 bg, blue text, thin indicator bar at bottom/top
- * - Inactive: muted text, subtle hover bg
- * - Font: 9px–10px, bold, uppercase, tight tracking
+ * Each tab takes equal space, its icon over its word; the look — a tray with
+ * the tab you are on set down in it as a card — is design/tabs.ts, shared with
+ * SubTabBar and FormTabBar.
  */
 export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
   tabs,
@@ -45,10 +43,7 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
 }) => {
   const dotColor = characterBadgeColor(useMyCursorColor(), useDarkMode());
   return (
-    <div className={classNames(
-      'flex flex-shrink-0 border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50',
-      isBottom ? 'border-t' : 'border-b',
-    )}>
+    <div className={tabTrayClass(!!isBottom)}>
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -65,14 +60,11 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
               // wrong way round, and being the panel's own top-level tabs it was
               // the one people met first. See design/controls.ts.
               CONTROL_TAB,
-              'flex-1 flex flex-col items-center justify-center gap-0.5 px-1 sm:px-2 transition-all relative min-w-0',
-              isActive
-                ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-800/30',
+              tabClass(isActive),
             )}
           >
             <div className="relative">
-              <Icon className={classNames(CONTROL_ICON_CLASS.md, 'flex-shrink-0')} />
+              <Icon className={classNames(CONTROL_ICON_CLASS.md, 'flex-shrink-0', tabIconClass(isActive))} />
               {/* Just a dot — "this tab has something", not how many — in the
                   viewer's character colour, the same "for you" mark the board's
                   alert badge and the menu's attention dot wear. It was a blue
@@ -86,15 +78,9 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
                 />
               )}
             </div>
-            <span className="hidden sm:block text-[10px] font-bold uppercase tracking-tighter truncate w-full text-center">
+            <span className={TAB_LABEL}>
               {tab.label}
             </span>
-            {isActive && (
-              <div className={classNames(
-                'absolute h-0.5 bg-blue-600 dark:bg-blue-400 left-0 right-0',
-                isBottom ? 'top-0' : 'bottom-0',
-              )} />
-            )}
           </button>
         );
       })}

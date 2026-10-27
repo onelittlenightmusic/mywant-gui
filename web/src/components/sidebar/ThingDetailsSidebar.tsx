@@ -13,6 +13,7 @@ import { useCardGridNavigation } from '@/hooks/useCardGridNavigation';
 import { handBackToGrid } from '@/stores/focusOwner';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { classNames } from '@/utils/helpers';
+import { FIELD_CARD_SURFACE, FIELD_CARD_LABEL } from '@/design/cards';
 import { CardStatusRow, CardStatusItem } from './CardStatusRow';
 import { useConstellationStore, membersById } from '@/stores/constellationStore';
 import { type Mark } from '@/components/common/MarkButton';
@@ -74,9 +75,9 @@ const ThingNameField: React.FC<{ record: ThingRecord }> = ({ record }) => {
   };
 
   return (
-    <div className="text-xs sm:text-sm">
-      <div className="flex items-center justify-between gap-3">
-        <label htmlFor={`thing-name-${record.id}`} className="flex-shrink-0 text-gray-600 dark:text-gray-400">Name:</label>
+    <div className={classNames('flex flex-col gap-1 rounded-lg sm:rounded-xl px-2 py-1.5 min-w-0', FIELD_CARD_SURFACE)}>
+      <div className="flex flex-col gap-1">
+        <label htmlFor={`thing-name-${record.id}`} className={FIELD_CARD_LABEL}>Name</label>
         <input
           id={`thing-name-${record.id}`}
           type="text"
@@ -98,13 +99,13 @@ const ThingNameField: React.FC<{ record: ThingRecord }> = ({ record }) => {
             }
           }}
           className={classNames(
-            'min-w-0 flex-1 text-right font-medium px-2 py-1 rounded-md border bg-transparent',
-            'text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:text-left',
+            'min-w-0 w-full text-sm font-medium px-1.5 py-0.5 -mx-1.5 -my-0.5 rounded-md border bg-transparent',
+            'text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400',
             problem ? 'border-red-400' : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-gray-300 dark:focus:border-gray-600',
           )}
         />
       </div>
-      {problem && <p className="mt-1 text-right text-[11px] text-red-500">{problem}</p>}
+      {problem && <p className="text-[11px] text-red-500">{problem}</p>}
     </div>
   );
 };
@@ -322,7 +323,7 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
             {pillItems.length > 0 && <CardStatusRow items={pillItems} />}
             {/* No "Details" box: three rows under a heading in a tab already
                 named Settings is a compartment around nothing. */}
-            <div className="space-y-2 sm:space-y-3">
+            <div className="grid grid-cols-2 gap-2">
               <ThingNameField record={record} />
               <InfoRow label="Type" value={record.typeName} />
               <InfoRow label="Catalog" value={<span className="font-mono">{record.catalogKey}</span>} />

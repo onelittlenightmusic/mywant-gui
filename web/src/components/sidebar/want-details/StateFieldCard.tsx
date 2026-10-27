@@ -6,6 +6,7 @@ import { useCharacterStore } from '@/stores/characterStore';
 import { useFieldNamingStore } from '@/stores/fieldNamingStore';
 import { useCardOverlaySound } from '@/stores/cardOverlaySounds';
 import { classNames } from '@/utils/helpers';
+import { FIELD_CARD_LABEL } from '@/design/cards';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
 import { getTypeStyle } from '@/components/forms/sections/ParameterGridSection';
 import { DisplayCard } from '@/components/forms/CardPrimitives';
@@ -207,10 +208,8 @@ export const StateFieldCard: React.FC<{
         if (n >= 80) return 'text-red-600 dark:text-red-400';
         if (n >= 70) return 'text-orange-500 dark:text-orange-400';
       }
-    } else if (type === 'bool') {
-      if (displayVal === 'true') return 'text-green-600 dark:text-green-400';
-      if (displayVal === 'false') return 'text-red-600 dark:text-red-400';
     }
+    // A bool is a value like any other: false is not a warning.
     return null;
   })();
 
@@ -316,7 +315,7 @@ export const StateFieldCard: React.FC<{
         bgIconStyle={subTypeColor ? { color: subTypeColor } : undefined}
         showBgIcon={true}
         headerLeft={
-          <span className="text-[11px] font-semibold card-ink truncate leading-none">{name}</span>
+          <span className={classNames(FIELD_CARD_LABEL, 'truncate')}>{name}</span>
         }
       >
         {(() => {
@@ -332,7 +331,7 @@ export const StateFieldCard: React.FC<{
                 // animation only applies once a real update has occurred.
                 key={bounceKey}
                 className={classNames(
-                  'italic text-right leading-none font-mono origin-bottom-right max-w-full min-w-0',
+                  'text-right leading-none font-mono origin-bottom-right max-w-full min-w-0',
                   bigFont ? 'text-2xl font-medium' : 'text-[11px] truncate',
                   valueColorClass ?? (bigFont ? 'text-gray-700 dark:text-gray-300' : 'text-gray-600 dark:text-gray-400'),
                   bounceKey > 0 ? 'animate-value-bounce' : '',

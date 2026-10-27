@@ -75,6 +75,8 @@ export interface ControlPillDesignValues {
   cellGap?: number;
   labelTransform?: string;
   labelWeight?: number;
+  signals?: Partial<Record<'confirm' | 'caution' | 'info', string>>;
+  cards?: boolean;
 }
 
 /**
@@ -89,8 +91,9 @@ export function controlPillVars(d: ControlPillDesignValues | null | undefined): 
   const v: Record<string, string> = {};
   if (!d) return v;
   const tones = d.tones ?? {};
+  const signals: Record<string, string | undefined> = d.signals ?? {};
   for (const t of ['confirm', 'caution', 'info']) {
-    const c = tones[t];
+    const c = signals[t] ?? tones[t];
     if (typeof c === 'string' && c) v[`--mwp-${t}`] = cssValue(c);
   }
   const gap = typeof d.cellGap === 'number' ? d.cellGap : 0;
@@ -100,6 +103,15 @@ export function controlPillVars(d: ControlPillDesignValues | null | undefined): 
     v['--mwp-divider-width'] = '0px';
     v['--mwp-cell-fill'] = 'rgba(148,163,184,.16)';
     v['--mwp-end-radius'] = '9999px';
+  }
+  // Raised cards on a sunken tray: the colours are the stylesheet's, which
+  // knows light from dark, so these only point at them.
+  if (d.cards) {
+    v['--mwp-pill-fill'] = 'var(--mwp-tray)';
+    v['--mwp-pill-shadow'] = 'inset 1px 2px 4px rgba(15,23,42,.14)';
+    v['--mwp-cell-fill'] = 'var(--mwp-card)';
+    v['--mwp-cell-shadow'] = '1px 2px 4px rgba(15,23,42,.16)';
+    v['--mwp-hover'] = 'var(--mwp-card-hover)';
   }
   if (typeof d.labelTransform === 'string' && d.labelTransform) v['--mwp-label-transform'] = cssValue(d.labelTransform);
   if (typeof d.labelWeight === 'number') v['--mwp-label-weight'] = String(d.labelWeight);
@@ -126,16 +138,16 @@ export function controlPillCss(): string {
     // viewer's colour mode on another page) turns it.
     // .mwp-theme carries the same colours for a host's own pieces beside the
     // pill (a field that opens next to it, an answer shown under it).
-    '.mwp-pill, .mwp-theme { --mwp-surface:#ffffff; --mwp-outline:#d1d5db; --mwp-ink:#374151; --mwp-muted:#9ca3af; --mwp-hover:#f3f4f6; --mwp-divider:#e5e7eb; --mwp-running:#059669; }',
-    '.mwp-pill.mwp-dark, .mwp-theme.mwp-dark { --mwp-surface:#1f2937; --mwp-outline:#374151; --mwp-ink:#e5e7eb; --mwp-muted:#6b7280; --mwp-hover:#374151; --mwp-divider:#374151; --mwp-running:#34d399; }',
-    '.mwp-pill { box-sizing:border-box; border-radius:9999px; overflow:hidden; background:var(--mwp-surface); color:var(--mwp-ink); ' +
-      'border:1px solid var(--mwp-outline); box-shadow:0 1px 2px rgba(0,0,0,.08); font:12px system-ui,-apple-system,sans-serif; }',
+    '.mwp-pill, .mwp-theme { --mwp-surface:#ffffff; --mwp-outline:#d1d5db; --mwp-ink:#374151; --mwp-muted:#9ca3af; --mwp-hover:#f3f4f6; --mwp-divider:#e5e7eb; --mwp-running:#059669; --mwp-tray:#f1f5f9; --mwp-card:#ffffff; --mwp-card-hover:#f8fafc; }',
+    '.mwp-pill.mwp-dark, .mwp-theme.mwp-dark { --mwp-surface:#1f2937; --mwp-outline:#374151; --mwp-ink:#e5e7eb; --mwp-muted:#6b7280; --mwp-hover:#374151; --mwp-divider:#374151; --mwp-running:#34d399; --mwp-tray:#0f172a; --mwp-card:#1e293b; --mwp-card-hover:#273449; }',
+    '.mwp-pill { box-sizing:border-box; border-radius:9999px; overflow:hidden; background:var(--mwp-pill-fill, var(--mwp-surface)); color:var(--mwp-ink); ' +
+      'border:1px solid var(--mwp-outline); box-shadow:var(--mwp-pill-shadow, 0 1px 2px rgba(0,0,0,.08)); font:12px system-ui,-apple-system,sans-serif; }',
     '.mwp-pill.mwp-paused { border-color:var(--mwp-caution, #f59e0b); }',
     '.mwp-row, .mwp-group { display:flex; align-items:stretch; height:100%; gap:var(--mwp-gap, 0px); }',
     '.mwp-row { width:max-content; box-sizing:border-box; padding:var(--mwp-gap, 0px); }',
     '.mwp-cell { position:relative; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; ' +
       'min-width:52px; height:100%; padding:0 8px; margin:0; border:none; border-radius:var(--mwp-cell-radius, 0px); ' +
-      'background:var(--mwp-cell-fill, transparent); color:inherit; font:inherit; cursor:pointer; transition:background-color .15s ease, filter .15s ease; }',
+      'background:var(--mwp-cell-fill, transparent); box-shadow:var(--mwp-cell-shadow, none); color:inherit; font:inherit; cursor:pointer; transition:background-color .15s ease, filter .15s ease; }',
     '.mwp-divided { border-left:var(--mwp-divider-width, 1px) solid var(--mwp-divider); }',
     'button.mwp-cell:hover:not(:disabled) { background:var(--mwp-hover); }',
     'button.mwp-cell:disabled { opacity:.5; cursor:default; }',
@@ -173,7 +185,7 @@ export function controlPillCss(): string {
     '.mwp-save.is-invite .mwp-icon svg { border-radius:6px; animation:mwp-blink 1.6s ease-in-out infinite; }',
     '.mwp-save.is-on { box-shadow:inset 0 2px 6px rgba(0,0,0,.35); filter:brightness(.85); }',
     // The talking cell: whatever the host puts in it, on the cell's ground.
-    '.mwp-talk { display:flex; align-items:center; gap:6px; padding:0 8px; border-radius:var(--mwp-cell-radius, 0px); background:var(--mwp-cell-fill, transparent); }',
+    '.mwp-talk { display:flex; align-items:center; gap:6px; padding:0 8px; border-radius:var(--mwp-cell-radius, 0px); background:var(--mwp-cell-fill, transparent); box-shadow:var(--mwp-cell-shadow, none); }',
     // Where the keys or the controller's cursor are.
     '.mwp-focus { box-shadow:inset 0 0 0 3px #38bdf8 !important; }',
     '@keyframes mwp-pulse { 50% { opacity:.5; } }',

@@ -176,7 +176,7 @@ export const OverlayActionGrid: React.FC<OverlayActionGridProps> = ({
 
       {/* Action button grid */}
       <div
-        className="absolute inset-0 grid pointer-events-none"
+        className={`absolute inset-0 grid pointer-events-none ${design.grid ?? ''}`}
         style={{
           gridTemplateColumns: `repeat(${cols}, 1fr)`,
           gridTemplateRows: `repeat(${rows}, 1fr)`,

@@ -9,10 +9,12 @@ import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { cardInkVars } from '@/components/dashboard/WantCardFace';
 import { CARD_HOVER_RING, hoverRingVars } from '@/components/dashboard/WantCard/hooks/cardStyles';
+import { FIELD_CARD_SURFACE, FIELD_CARD_HOVER } from '@/design/cards';
 
 // ── Color scheme ──────────────────────────────────────────────────────────────
 
 export interface CardScheme {
+  /** The card's face — the same white card for every kind (design/cards.ts); the kind's colour is in its icon. */
   cardBg: string;
   cardHover: string;
   bgIconColor: string;
@@ -27,8 +29,8 @@ export interface CardScheme {
 }
 
 export const BLUE_SCHEME: CardScheme = {
-  cardBg:      'bg-blue-100/70 dark:bg-blue-900/25',
-  cardHover:   'hover:shadow hover:bg-blue-100/90 dark:hover:bg-blue-900/40',
+  cardBg:      FIELD_CARD_SURFACE,
+  cardHover:   FIELD_CARD_HOVER,
   bgIconColor: 'text-blue-400 dark:text-blue-300',
   color:       '#60a5fa',
   iconColor:   'text-blue-500 dark:text-blue-400',
@@ -40,8 +42,8 @@ export const BLUE_SCHEME: CardScheme = {
 };
 
 export const GREEN_SCHEME: CardScheme = {
-  cardBg:      'bg-green-100/70 dark:bg-green-900/25',
-  cardHover:   'hover:shadow hover:bg-green-100/90 dark:hover:bg-green-900/40',
+  cardBg:      FIELD_CARD_SURFACE,
+  cardHover:   FIELD_CARD_HOVER,
   bgIconColor: 'text-green-400 dark:text-green-300',
   color:       '#4ade80',
   iconColor:   'text-green-500 dark:text-green-400',
@@ -53,8 +55,8 @@ export const GREEN_SCHEME: CardScheme = {
 };
 
 export const TEAL_SCHEME: CardScheme = {
-  cardBg:      'bg-teal-100/70 dark:bg-teal-900/25',
-  cardHover:   'hover:shadow hover:bg-teal-100/90 dark:hover:bg-teal-900/40',
+  cardBg:      FIELD_CARD_SURFACE,
+  cardHover:   FIELD_CARD_HOVER,
   bgIconColor: 'text-teal-400 dark:text-teal-300',
   color:       '#2dd4bf',
   iconColor:   'text-teal-500 dark:text-teal-400',
@@ -66,8 +68,8 @@ export const TEAL_SCHEME: CardScheme = {
 };
 
 export const PURPLE_SCHEME: CardScheme = {
-  cardBg:      'bg-purple-100/70 dark:bg-purple-900/25',
-  cardHover:   'hover:shadow hover:bg-purple-100/90 dark:hover:bg-purple-900/40',
+  cardBg:      FIELD_CARD_SURFACE,
+  cardHover:   FIELD_CARD_HOVER,
   bgIconColor: 'text-purple-400 dark:text-purple-300',
   color:       '#c084fc',
   iconColor:   'text-purple-500 dark:text-purple-400',
@@ -79,8 +81,8 @@ export const PURPLE_SCHEME: CardScheme = {
 };
 
 export const AMBER_SCHEME: CardScheme = {
-  cardBg:      'bg-amber-100/70 dark:bg-amber-900/25',
-  cardHover:   'hover:shadow hover:bg-amber-100/90 dark:hover:bg-amber-900/40',
+  cardBg:      FIELD_CARD_SURFACE,
+  cardHover:   FIELD_CARD_HOVER,
   bgIconColor: 'text-amber-400 dark:text-amber-300',
   color:       '#fbbf24',
   iconColor:   'text-amber-500 dark:text-amber-400',
@@ -92,8 +94,8 @@ export const AMBER_SCHEME: CardScheme = {
 };
 
 export const CYAN_SCHEME: CardScheme = {
-  cardBg:      'bg-cyan-50/70 dark:bg-cyan-900/15',
-  cardHover:   'hover:shadow hover:bg-cyan-100/70 dark:hover:bg-cyan-900/25',
+  cardBg:      FIELD_CARD_SURFACE,
+  cardHover:   FIELD_CARD_HOVER,
   bgIconColor: 'text-cyan-400 dark:text-cyan-600',
   color:       '#22d3ee',
   iconColor:   'text-cyan-500 dark:text-cyan-400',
@@ -105,8 +107,8 @@ export const CYAN_SCHEME: CardScheme = {
 };
 
 export const INDIGO_SCHEME: CardScheme = {
-  cardBg:      'bg-indigo-50/70 dark:bg-indigo-900/15',
-  cardHover:   'hover:shadow hover:bg-indigo-100/70 dark:hover:bg-indigo-900/25',
+  cardBg:      FIELD_CARD_SURFACE,
+  cardHover:   FIELD_CARD_HOVER,
   bgIconColor: 'text-indigo-400 dark:text-indigo-600',
   color:       '#818cf8',
   iconColor:   'text-indigo-500 dark:text-indigo-400',
@@ -118,8 +120,8 @@ export const INDIGO_SCHEME: CardScheme = {
 };
 
 export const ORANGE_SCHEME: CardScheme = {
-  cardBg:      'bg-orange-50/70 dark:bg-orange-900/15',
-  cardHover:   'hover:shadow hover:bg-orange-100/70 dark:hover:bg-orange-900/25',
+  cardBg:      FIELD_CARD_SURFACE,
+  cardHover:   FIELD_CARD_HOVER,
   bgIconColor: 'text-orange-400 dark:text-orange-600',
   color:       '#fb923c',
   iconColor:   'text-orange-500 dark:text-orange-400',
@@ -235,11 +237,12 @@ export const DisplayCard: React.FC<DisplayCardProps> = ({
   >
     {BgIcon && showBgIcon && (
       <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
-        {/* One presentation only: the card's background glyph. A value with a
-            data subtype swaps the glyph for the subtype's icon and repaints it
-            in the subtype's colour — it is never boxed into a badge. */}
+        {/* One presentation only: the card's small kind icon, in the kind's
+            colour — the one colour on the card. A value with a data subtype
+            swaps it for the subtype's icon and repaints it in the subtype's
+            colour; it is never boxed into a badge. */}
         <BgIcon
-          className={classNames('absolute bottom-1 left-1.5 w-7 h-7 sm:w-10 sm:h-10 opacity-[0.22] dark:opacity-[0.18]', bgIconColor)}
+          className={classNames('absolute bottom-1.5 left-1.5 w-4 h-4 opacity-80', bgIconColor)}
           style={bgIconStyle}
         />
       </div>
