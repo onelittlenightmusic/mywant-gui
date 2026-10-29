@@ -48,7 +48,11 @@ export interface OverlayDesign {
   header: string;
   /** The overlay's surface — its fill and outline — whatever its shape. */
   surface: string;
-  /** The box a free-standing overlay sits in (shape + surface). */
+  /**
+   * The box a free-standing overlay sits in (shape + surface), and the colour
+   * of the words said in it — a character's line is written in the frame's ink,
+   * so it reads on whichever fill the design gives the box.
+   */
   frame: string;
   /** The grid the cells are laid out in: the space between and around them. */
   grid?: string;
@@ -129,7 +133,7 @@ export const GRID_OVERLAY_DESIGN: OverlayDesign = {
   label: 'text-white text-[9px] font-bold leading-none uppercase tracking-tighter',
   header: 'flex items-center gap-1.5 text-white text-xs font-bold uppercase tracking-widest opacity-80',
   surface: 'bg-slate-900 border border-slate-600',
-  frame: 'rounded-2xl overflow-hidden bg-slate-900 border border-slate-600 shadow-2xl',
+  frame: 'rounded-2xl overflow-hidden bg-slate-900 border border-slate-600 text-slate-200 shadow-2xl',
   tailColor: 'rgb(71 85 105)',
   backdrop: 'bg-black/60',
   input:
@@ -203,7 +207,7 @@ export const SHEET_OVERLAY_DESIGN: OverlayDesign = {
   surface: 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700',
   frame:
     'rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 ' +
-    'shadow-[6px_8px_20px_rgba(15,23,42,0.22)]',
+    'text-slate-800 dark:text-slate-100 shadow-[6px_8px_20px_rgba(15,23,42,0.22)]',
   grid: 'gap-1.5 p-1.5',
   // The outline's colour, which reads against the board in either mode.
   tailColor: 'rgb(203 213 225)',

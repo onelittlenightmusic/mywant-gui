@@ -74,7 +74,7 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
       onMouseDown={contain ? (e) => e.stopPropagation() : undefined}
     >
       <div ref={setFrameEl}
-        className={classNames('relative h-full w-full', nativeHost ? 'rounded-2xl overflow-hidden bg-slate-900/85 shadow-2xl' : design.frame)}>
+        className={classNames('relative h-full w-full', nativeHost ? 'rounded-2xl overflow-hidden bg-slate-900/85 text-slate-200 shadow-2xl' : design.frame)}>
         {children}
       </div>
       {above && !nativeHost && (
