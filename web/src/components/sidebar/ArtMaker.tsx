@@ -15,7 +15,8 @@ import { classNames } from '@/utils/helpers';
  *
  * Two ways to one:
  *   作る  the app framing the page draws it (Image Playground on the iPhone,
- *         lib/art — on its own screen there). Only where one can. First the
+ *         lib/art — on its own screen there). Elsewhere it is shown, not
+ *         pressable. First the
  *         words it will be drawn from (the phone's own model's), shown to be
  *         read, changed or asked for again (プロンプトを作り直す); then 描く.
  *   選ぶ  a picture already there — the thing's own photo, its kind's picture,
@@ -193,11 +194,12 @@ export const ArtMaker: React.FC<{
     cell('cancel', { icon: <X className={icon} />, label: 'やめる', tone: 'cancel', onClick: () => setStep({ at: 'idle' }) });
   } else {
     const describing = step.at === 'describing';
-    if (canDraw) {
-      cell('make', { icon: describing ? <Loader2 className={classNames(icon, 'animate-spin')} /> : <ImagePlus className={icon} />,
-        label: describing ? '考えています' : current ? '作り直す' : '作る',
-        tone: 'special', disabled: describing, onClick: () => void describe() });
-    }
+    // Shown where nothing can draw too, not pressable: left out, the card did
+    // not say there was such a thing as having one made.
+    cell('make', { icon: describing ? <Loader2 className={classNames(icon, 'animate-spin')} /> : <ImagePlus className={icon} />,
+      label: describing ? '考えています' : current ? '作り直す' : '作る',
+      title: canDraw ? undefined : '描けるのは iPhone のアプリの中だけです（Image Playground）',
+      tone: 'special', disabled: describing || !canDraw, onClick: () => void describe() });
     cell('choose', { icon: <Images className={icon} />, label: '選ぶ', tone: 'primary', disabled: describing,
       onClick: () => { setProblem(null); setStep({ at: 'choosing' }); } });
     if (current) {
