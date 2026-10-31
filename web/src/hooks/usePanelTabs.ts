@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useInputActions } from './useInputActions';
+import { nativePanelPage } from '@/lib/nativeHost';
 
 /** A value, or a way to read it at press time. */
 type Maybe<T> = T | (() => T);
@@ -112,7 +113,10 @@ export function usePanelTabs({ tabs, activeTab, onTabChange, enabled = true, foc
     const { tabs: t, activeTab: a, onTabChange: change, focus: f } = ref.current;
     const list = read(t);
     if (list.length === 0) return;
-    if (f && !f.hasFocus()) { f.takeFocus(); return; }
+    // A first press brings the keys in rather than switching — except on an
+    // app's panel page (nativePanelPage), whose keys stay with the board
+    // beside it: the app hands it only the bumpers, and each one is a step.
+    if (f && !f.hasFocus() && !nativePanelPage) { f.takeFocus(); return; }
     const cur = list.findIndex(x => x.id === read(a));
     const next = (cur + delta + list.length) % list.length;
     change(list[next].id);
