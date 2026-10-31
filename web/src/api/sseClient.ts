@@ -57,6 +57,36 @@ const reconnectHandlers = new Set<() => void>();
 let hasConnectedOnce = false;
 
 
+/**
+ * In an app that keeps several pages of this GUI at once (a tab's, a panel's,
+ * a map's, the corner cards'), the app holds the one stream and hands its
+ * events to every page. A stream per page held a connection each for as long
+ * as the page lived, and a web view has six to a server: with six pages up,
+ * every other request — the want list, the things — queued behind them.
+ */
+const hostEvents = typeof window !== 'undefined'
+  && !!(window as unknown as { __mywantHost?: { sharedEvents?: boolean } }).__mywantHost?.sharedEvents;
+if (hostEvents) {
+  const host = (window as unknown as { __mywantHost: Record<string, unknown> }).__mywantHost;
+  host.events = (list: Array<[string, string]>) => {
+    for (const [type, raw] of list) {
+      const hs = handlerSets.get(type);
+      if (!hs) continue;
+      try {
+        const data = JSON.parse(raw);
+        hs.forEach(h => h(data));
+      } catch {
+        // ignore malformed JSON
+      }
+    }
+  };
+  // The app's stream came back after a drop: catch up, as onopen does below.
+  host.eventsReconnected = () => {
+    flushOutbox();
+    reconnectHandlers.forEach(fn => fn());
+  };
+}
+
 export function onSSEReconnect(fn: () => void): () => void {
   reconnectHandlers.add(fn);
   return () => { reconnectHandlers.delete(fn); };
@@ -108,6 +138,7 @@ const AWAY_MS = 5000;
 let hiddenAt = 0;
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
+    if (hostEvents) return;
     if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
     if (!hiddenAt || Date.now() - hiddenAt < AWAY_MS || handlerSets.size === 0) return;
     hiddenAt = 0;
@@ -118,6 +149,7 @@ if (typeof document !== 'undefined') {
 }
 
 function ensureConnected() {
+  if (hostEvents) return;
   if (!es || es.readyState === EventSource.CLOSED) {
     connect();
   }
