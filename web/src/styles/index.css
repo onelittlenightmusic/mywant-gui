@@ -381,6 +381,16 @@
   background: #a8a8a8;
 }
 
+/* Framed by an app: no scrollbars. A phone's WebKit draws none whatever this
+   file says, but the same app on a Mac (Catalyst) drew the styled ones above —
+   a grey strip down the right of the board and along its bottom, where it
+   scrolls; the app scrolls by stick, drag and trackpad, never by a bar. */
+html.native-host ::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* Global scrollbar - dark mode */
 .dark ::-webkit-scrollbar-track {
   background: #1f2937;
