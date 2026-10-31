@@ -47,23 +47,81 @@ export const PanelIdentityRow: React.FC<{
    * panelIdentityMark slot). Nothing is drawn in the public edition.
    */
   subject?: PanelSubject;
-}> = ({ title, onClose, actions, subject }) => (
+}> = ({ title, onClose, actions, subject }) => {
+  // A subject with something to say (a want): its tile with its name under
+  // it, and the rest of the row its bubble's — the name no longer takes the
+  // room beside the tile that the line is read in.
+  const says = !!subject && extensionSlot('panelIdentitySpeech').length > 0
+    && extensionSlot('panelIdentityMark').length > 0;
+  return (
   // 50px is what the close button (min-h-[44px]) plus this row's own padding
   // comes to. Without a floor, a panel that cannot be closed — the Web Want
   // detail follows the focused card and has no way out — drew a shorter row,
   // and its name sat 13px above every other panel's name. The row is the same
   // row whether or not there is a button in it.
   <div className="flex items-center gap-2 pb-1.5 min-h-[50px] min-w-0">
-    {subject && extensionSlot('panelIdentityMark').length > 0 && (
-      <div className="flex-shrink-0" style={{ width: MARK_SIZE, height: MARK_SIZE }}>
-        <Slot name="panelIdentityMark" subject={subject} size={MARK_SIZE} />
-      </div>
+    {says ? (
+      <>
+        <MarkWithName subject={subject!} name={title} size={MARK_SIZE} />
+        <div className="flex-1 min-w-0">
+          <Slot name="panelIdentitySpeech" subject={subject!} />
+        </div>
+      </>
+    ) : (
+      <>
+        {subject && extensionSlot('panelIdentityMark').length > 0 && (
+          <div className="flex-shrink-0" style={{ width: MARK_SIZE, height: MARK_SIZE }}>
+            <Slot name="panelIdentityMark" subject={subject} size={MARK_SIZE} />
+          </div>
+        )}
+        <h2 className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate min-w-0 flex-1">
+          {title}
+        </h2>
+      </>
     )}
-    <h2 className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate min-w-0 flex-1">
-      {title}
-    </h2>
     {actions && <div className="flex items-stretch gap-0 flex-shrink-0">{actions}</div>}
     {onClose && <PanelCloseButton onClick={onClose} />}
+  </div>
+  );
+};
+
+/** What a subject is called, for a row that names it under its tile. */
+function subjectName(subject: PanelSubject): string {
+  if (subject.kind === 'want') return subject.want.metadata?.name || '';
+  if (subject.kind === 'thing') return subject.record.value;
+  return subject.name;
+}
+
+/** The subject's tile with its name under it, small: the head of a row
+ *  whose room beside the tile is its bubble's. */
+const MarkWithName: React.FC<{ subject: PanelSubject; name?: string; size: number }> = ({ subject, name, size }) => (
+  <div className="flex-shrink-0 flex flex-col items-center" style={{ width: size + 32 }}>
+    <div style={{ width: size, height: size }}>
+      <Slot name="panelIdentityMark" subject={subject} size={size} />
+    </div>
+    <div className="mt-0.5 w-full text-center text-[10px] leading-tight font-medium text-gray-700 dark:text-gray-200 truncate"
+      title={name || subjectName(subject)}>
+      {name || subjectName(subject)}
+    </div>
+  </div>
+);
+
+/** A corner card's first row, in the card's own px (it is drawn 420 wide). */
+export const CARD_IDENTITY_ROW = 56;
+
+/**
+ * The subject as its panel's first row opens — its tile, and what it is
+ * saying beside it — for a corner card to wear over the card itself: the same
+ * two, so the card that floats is the panel's head as well as its card.
+ */
+export const SubjectSays: React.FC<{ subject: PanelSubject; size?: number }> = ({ subject, size = 34 }) => (
+  <div className="flex items-center gap-2 min-w-0 px-2" style={{ height: CARD_IDENTITY_ROW }}>
+    {extensionSlot('panelIdentityMark').length > 0 && <MarkWithName subject={subject} size={size} />}
+    {extensionSlot('panelIdentitySpeech').length > 0 && (
+      <div className="flex-1 min-w-0">
+        <Slot name="panelIdentitySpeech" subject={subject} />
+      </div>
+    )}
   </div>
 );
 

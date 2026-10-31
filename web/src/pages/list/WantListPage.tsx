@@ -13,7 +13,8 @@ import { requestThingEdit } from '@/stores/thingEditStore';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
 import { ThingCard } from '@/components/dashboard/ThingCard';
 import { useMarkJumpStore } from '@/stores/markJumpStore';
-import { hasExtensionRoute } from '@/extensions/registry';
+import { hasExtensionRoute, type PanelSubject } from '@/extensions/registry';
+import { SubjectSays } from '@/components/sidebar/PanelIdentityRow';
 import { Slot } from '@/extensions/Slot';
 import { useConstellationStore } from '@/stores/constellationStore';
 import { classNames } from '@/utils/helpers';
@@ -492,7 +493,7 @@ export const WantListPage: React.FC<{
     if (kind === 'thing') {
       const t = thingRecords.find(r => r.id === id);
       return (
-        <HostCardFrame>
+        <HostCardFrame head={t && !embeddedCard ? { kind: 'thing', record: t } : undefined}>
           {t && (
             <ThingCard
               record={t}
@@ -513,7 +514,7 @@ export const WantListPage: React.FC<{
     // children), so it gets the page as it is.
     const Frame = maximizedCard ? HostCardPage : HostCardFrame;
     return (
-      <Frame>
+      <Frame head={w && !embeddedCard ? { kind: 'want', want: w } : undefined}>
         <HostCardPageButtons />
         {w && (
           <CardEmbeddedContext.Provider value={embeddedCard}>
@@ -651,7 +652,12 @@ export const WantListPage: React.FC<{
  * corner cards before shrinking them (CanvasFocusFloatCard, 420×260), and
  * shrunk to the page's width — the app's frame is that shape.
  */
-const HostCardFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const HostCardFrame: React.FC<{
+  /** A corner card's: the subject's tile and what it is saying, over the card
+   *  (SubjectSays). Not on a card embedded in a panel, whose panel has them. */
+  head?: PanelSubject;
+  children: React.ReactNode;
+}> = ({ head, children }) => {
   const [size, setSize] = React.useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => {
     const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight });
@@ -663,8 +669,10 @@ const HostCardFrame: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <HostFramedPanel.Provider value={true}>
       {/* 420 wide, shrunk to the page's width, and as tall as the page is at
           that scale: the frame may be another shape (a sheet's card row). */}
-      <div style={{ width: 420, height: size.h * 420 / size.w, transform: `scale(${size.w / 420})`, transformOrigin: 'top left' }}>
-        {children}
+      <div className="flex flex-col"
+        style={{ width: 420, height: size.h * 420 / size.w, transform: `scale(${size.w / 420})`, transformOrigin: 'top left' }}>
+        {head && <div className="flex-shrink-0"><SubjectSays subject={head} /></div>}
+        <div className="flex-1 min-h-0">{children}</div>
       </div>
       </HostFramedPanel.Provider>
     </div>
@@ -672,7 +680,7 @@ const HostCardFrame: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 };
 
 /** A maximized card's page: the page as it is, for the card to fill. */
-const HostCardPage: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+const HostCardPage: React.FC<{ head?: PanelSubject; children: React.ReactNode }> = ({ children }) => (
   <div className="fixed inset-0 bg-white dark:bg-gray-900">
     <HostFramedPanel.Provider value={true}>{children}</HostFramedPanel.Provider>
   </div>

@@ -15,9 +15,12 @@ export interface OverlayBubbleProps {
    * 'above' — centred on (left, top) and lifted clear of it, with a tail
    * pointing down at it: a question about something on the board, asked
    * where that something is. 'at' — (left, top) is the box's own corner, no
-   * tail: a control that places itself.
+   * tail: a control that places itself. 'beside' — drawn where it is put, in
+   * the flow of what holds it (left / top unused), with a tail on its left
+   * pointing back at what stands before it: a want's line beside its tile in
+   * a panel's first row.
    */
-  anchor?: 'above' | 'at';
+  anchor?: 'above' | 'at' | 'beside';
   /** Positioned against the viewport (default) or the nearest positioned ancestor. */
   position?: 'fixed' | 'absolute';
   /**
@@ -57,6 +60,7 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
 }, ref) => {
   const design = useOverlayDesign();
   const above = anchor === 'above';
+  const beside = anchor === 'beside';
   // Framed by an app, the tail is the app's (useHostBubble): the box keeps
   // its fill, its contents and its shadow — no outline, as the app's corner
   // cards have none — and the tail and the arrival are drawn natively. The
@@ -68,8 +72,8 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
   const box = (
     <div
       ref={ref}
-      className={classNames(position === 'fixed' ? 'fixed' : 'absolute', 'pointer-events-auto', className)}
-      style={{
+      className={classNames(beside ? 'relative' : position === 'fixed' ? 'fixed' : 'absolute', 'pointer-events-auto', className)}
+      style={beside ? { width, height, marginLeft: TAIL_PX } : {
         left, top: above ? top - LIFT_PX : top, width, height, zIndex,
         transform: above ? 'translate(-50%, -100%)' : undefined,
       }}
@@ -80,6 +84,19 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
         className={classNames('relative h-full w-full', design.frame, nativeHost && '!border-0')}>
         {children}
       </div>
+      {beside && (
+        // Its own, framed by an app too: the app draws only a free bubble's tail.
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', left: -TAIL_PX, top: '50%', marginTop: -TAIL_PX,
+            width: 0, height: 0,
+            borderTop: `${TAIL_PX}px solid transparent`,
+            borderBottom: `${TAIL_PX}px solid transparent`,
+            borderRight: `${TAIL_PX}px solid ${design.tailColor}`,
+          }}
+        />
+      )}
       {above && !nativeHost && (
         <div
           aria-hidden
@@ -98,6 +115,6 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
   // it was asked for, it sat in whatever stacking its parent made (the board's
   // layers), and things outside that — a character's chat — went over it
   // however high its own z-index.
-  return position === 'fixed' && typeof document !== 'undefined' ? createPortal(box, document.body) : box;
+  return position === 'fixed' && !beside && typeof document !== 'undefined' ? createPortal(box, document.body) : box;
 });
 OverlayBubble.displayName = 'OverlayBubble';

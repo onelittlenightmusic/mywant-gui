@@ -105,6 +105,9 @@ export interface ExtensionSlots {
    * apart before either name is read. `size` is the room the row has for it.
    */
   panelIdentityMark: ComponentType<{ subject: PanelSubject; size: number }>;
+  /** After the mark: what the subject is saying, in a bubble beside it (a
+   *  want's line, said here rather than over its tile while its panel is up). */
+  panelIdentitySpeech: ComponentType<{ subject: PanelSubject }>;
 }
 
 /** What a detail panel is about — see PanelIdentityRow. */
