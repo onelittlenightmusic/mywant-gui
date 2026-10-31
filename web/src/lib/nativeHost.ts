@@ -72,6 +72,9 @@ interface HostBridge {
   /** The app reads the controller itself and hands the page its state. */
   ownsController?: boolean;
   controller?: (frame: { buttons: boolean[]; axes: number[] }) => void;
+  /** A and B the other way round — the one setting, MyWantPad's 「A と B を
+   *  入れ替える」, which the app reads and keeps current here (controllerHub). */
+  swapAB?: boolean;
   /** Something on one of the page's native controls (useHostControl) was
    *  pressed, or put down or let go. */
   input?: (control: string, item: string, phase: HostInputPhase) => void;

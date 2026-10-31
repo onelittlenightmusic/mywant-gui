@@ -146,13 +146,32 @@ export function lendController(to: string | null): void {
   lentTo = to;
 }
 
+/**
+ * A and B the other way round: a Nintendo pad has its A on the right, where
+ * the standard mapping (and so this page) puts B — its A cancelled. One
+ * setting for every part of MyWant, MyWantPad's 「A と B を入れ替える」 (the
+ * Mac's pointer has always read it); a framing app passes it on
+ * (__mywantHost.swapAB). Applied here, where every reader of the controller
+ * comes — the board, the panels, the free cursor — and never anywhere else.
+ */
+function abSwapped(): boolean {
+  return typeof window !== 'undefined' && window.__mywantHost?.swapAB === true;
+}
+
+function swapAB(state: NormalizedControllerState | null): NormalizedControllerState | null {
+  if (!state || !abSwapped()) return state;
+  const buttons = state.buttons.slice();
+  [buttons[0], buttons[1]] = [buttons[1], buttons[0]];
+  return { ...state, buttons };
+}
+
 /** The current controller state (WebHID-preferred, Gamepad-API fallback); none while lent. */
 export function getControllerState(): NormalizedControllerState | null {
   if (lentTo) return null;
   // Framed by an app that reads the controller itself: its frames only, never
   // the Gamepad API as well (see lib/nativeHost).
-  if (hostOwnsController) return hostControllerFrame();
-  return resolver.getState();
+  if (hostOwnsController) return swapAB(hostControllerFrame());
+  return swapAB(resolver.getState());
 }
 
 export function isControllerConnected(): boolean {
