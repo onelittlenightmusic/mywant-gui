@@ -441,10 +441,20 @@ class MyWantApiClient {
   // What a want says when someone stands on its tile (/wants/{id}/voice):
   // its type's voice script, or the default lines — null for nothing — and
   // the line's mood, which the board plays as it comes up.
-  async getWantVoice(id: string): Promise<WantVoiceLine | null> {
-    const response = await this.client.get<{ say: string | null; mood?: WantVoiceMood; news?: boolean }>(`/api/v1/wants/${encodeURIComponent(id)}/voice`);
+  /** `lang`: the language the one standing there reads in — the line's
+   *  translation when the server has one, else the line as it is. */
+  async getWantVoice(id: string, lang?: string): Promise<WantVoiceLine | null> {
+    const response = await this.client.get<{ say: string | null; mood?: WantVoiceMood; news?: boolean }>(
+      `/api/v1/wants/${encodeURIComponent(id)}/voice`, { params: lang && lang !== 'ja' ? { lang } : undefined });
     const { say, mood, news } = response.data;
     return say ? { say, mood: mood ?? 'calm', ...(news ? { news } : {}) } : null;
+  }
+
+  /** Each text in `lang`, where the server has translated it; else itself.
+   *  Only what is kept: never waits on a model. */
+  async lookupTranslations(lang: string, texts: string[]): Promise<string[]> {
+    const response = await this.client.post<{ texts: string[] }>('/api/v1/translations/lookup', { lang, texts });
+    return response.data.texts;
   }
 
   // A want's answers — its result history — read and edited by hand

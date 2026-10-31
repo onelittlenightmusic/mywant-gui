@@ -40,6 +40,7 @@ export const DISPLAY_DEFAULTS: Required<Omit<CharacterDisplay, 'canvas_bg_url' |
   // this fades, so anything less makes the card genuinely see-through.
   card_opacity: 1,
   icon_font: 'lucide',
+  language: 'ja',
   canvas_bg_color: '',
   canvas_bg_url: '',
 };

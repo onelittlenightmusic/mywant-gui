@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Sun, Moon, Monitor, Volume2, VolumeX, Layout as LayoutIcon, ArrowUp, ArrowDown, Rows2, Rows3, Rows4, Type, ALargeSmall, Droplet, Blend, Contrast, Smile, Palette, ImageIcon, X, LayoutGrid } from 'lucide-react';
+import { Sun, Moon, Monitor, Volume2, VolumeX, Layout as LayoutIcon, ArrowUp, ArrowDown, Rows2, Rows3, Rows4, Type, ALargeSmall, Droplet, Blend, Contrast, Smile, Palette, ImageIcon, X, LayoutGrid, Languages } from 'lucide-react';
 import type { Character, CharacterDisplay } from '@/types/character';
 import { DISPLAY_DEFAULTS } from '@/hooks/useDisplaySettings';
 import { listOverlayDesigns, onOverlayDesignRegistered, overlayDesignOf, withOverlayDesign } from '@/components/overlay';
@@ -99,6 +99,12 @@ export const CharacterDisplaySettings: React.FC<Props> = ({ character, onSave })
             <Group title="Sound Effects" icon={<Volume2 className="w-3 h-3" />}>
               <Pill label="On"  icon={<Volume2 className="w-3 h-3" />}  active={d.sound_enabled !== false} onClick={() => put({ sound_enabled: true })} />
               <Pill label="Off" icon={<VolumeX className="w-3 h-3" />} active={d.sound_enabled === false} onClick={() => put({ sound_enabled: false })} />
+            </Group>
+
+            {/* What wants say, read in: their own Japanese, or its translation. */}
+            <Group title="Language" icon={<Languages className="w-3 h-3" />}>
+              <Pill label="日本語"  active={d.language !== 'en'} onClick={() => put({ language: 'ja' })} />
+              <Pill label="English" active={d.language === 'en'} onClick={() => put({ language: 'en' })} />
             </Group>
 
             <Group title="Layout" icon={<LayoutIcon className="w-3 h-3" />}>

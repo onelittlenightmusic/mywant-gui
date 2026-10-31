@@ -86,6 +86,13 @@ export interface CharacterDisplay {
   sound_enabled?: boolean;
   card_opacity?: number;
   icon_font?: 'lucide' | 'lucide-thin' | 'heroicons-outline' | 'heroicons-solid';
+  /**
+   * The language this person reads the board in. Wants speak Japanese; in
+   * another language their lines are shown translated, when the server has
+   * made the translation (it does, ahead and in batches — never while one
+   * waits), and as they are until then.
+   */
+  language?: 'ja' | 'en';
   canvas_bg_color?: string;
   canvas_bg_url?: string;
   /**
