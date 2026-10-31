@@ -1,17 +1,16 @@
-import { useWantStore } from '@/stores/wantStore';
-import type { Want } from '@/types/want';
+import { subscribeSSE } from '@/api/sseClient';
 
 /**
  * What a want's connections just did to the wants they reach — an attack
  * landing, a mend, a freeze, a value handed on (feed) — as moments, for whatever draws those wants to
  * show it landing (components/impact).
  *
- * The acting want says so on itself: its `impact` field ({kind, to, n}, the
- * engine's predefined.yaml), kept where its connections (stateSubscriptions)
- * are. A drawing is of the want acted ON, so the moments are turned round
- * here, once for the whole page: each new `n` on any want is one moment, told
- * to every drawing of each want named in its `to`. Read on the first sight of
- * a want, an `impact` is history and is not told.
+ * The acting want says so on itself — its `impact` field ({kind, to, n}, the
+ * engine's predefined.yaml) — and the server tells every page as it is
+ * written: a `moment` of kind impact, one per want it lands on, with what
+ * drawing it needs (engine server/moments.go). Read off the want instead, every
+ * effect sent the page back for the whole of the want that acted. Each one is
+ * told here to every drawing of the want it landed on.
  */
 
 export type ImpactKind = 'attack' | 'mend' | 'freeze' | 'feed';
@@ -28,7 +27,8 @@ export interface ImpactMoment {
   value?: string;
 }
 
-interface ImpactField { kind?: unknown; to?: unknown; n?: unknown; value?: unknown }
+/** An effect as the server says it: the wants by name. */
+interface ImpactMomentWire { kind: string; type?: string; from?: string; on?: string; value?: string }
 
 const KINDS = new Set<ImpactKind>(['attack', 'mend', 'freeze', 'feed']);
 
@@ -53,38 +53,12 @@ const FLAM_MS = 45;
 
 type Listener = (m: ImpactMoment) => void;
 const listeners = new Map<string, Set<Listener>>();
-const lastN = new Map<string, number>();          // acting want id → last n told
 const lastShown = new Map<string, number>();      // `${kind}\0${name}` → when
 const lastHeard = new Map<string, number>();       // `${kind}\0${name}`, or the kind alone → when
 const claimed = new Map<number, { by: object; heard: boolean }>(); // moment id → who makes its sound
 let nextId = 1;
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
-
-function impactOf(w: Want): { kind: ImpactKind; to: string[]; n: number; value?: string } | null {
-  const f = w.state?.current?.impact as ImpactField | null | undefined;
-  if (!f || typeof f !== 'object' || !KINDS.has(f.kind as ImpactKind) || !Array.isArray(f.to)) return null;
-  return {
-    kind: f.kind as ImpactKind,
-    to: f.to.filter((x): x is string => typeof x === 'string'),
-    n: Number(f.n) || 0,
-    value: typeof f.value === 'string' ? f.value : undefined,
-  };
-}
-
-function look(wants: Want[]): void {
-  const t = now();
-  for (const w of wants) {
-    const id = w.metadata?.id || w.id;
-    const imp = id ? impactOf(w) : null;
-    if (!id || !imp) continue;
-    const seen = lastN.get(id);
-    lastN.set(id, imp.n);
-    if (seen === undefined || seen === imp.n) continue;
-    const from = w.metadata?.name ?? id;
-    for (const name of imp.to) tell(name, imp.kind, from, imp.value, t);
-  }
-}
 
 function tell(name: string, kind: ImpactKind, from: string, value: string | undefined, t: number): void {
   const key = `${kind}\u0000${name}`;
@@ -109,9 +83,13 @@ let watching = false;
 function watch(): void {
   if (watching) return;
   watching = true;
-  // Seen now, so what was there before anything listened is history.
-  look(useWantStore.getState().wants);
-  useWantStore.subscribe((s, prev) => { if (s.wants !== prev.wants) look(s.wants); });
+  subscribeSSE<{ moments?: ImpactMomentWire[] }>('moment', (data) => {
+    const t = now();
+    for (const m of data?.moments ?? []) {
+      if (m.kind !== 'impact' || !m.on || !KINDS.has(m.type as ImpactKind)) continue;
+      tell(m.on, m.type as ImpactKind, m.from ?? '', m.value, t);
+    }
+  });
 }
 
 /** Be told each moment something lands on the want of this name. */
