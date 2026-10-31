@@ -93,7 +93,12 @@ function ask<T>(type: string, payload: Record<string, unknown> = {}, timeoutMs =
 
 /** Whether this Mac's model can answer for the page (the extension's fmtool
  *  native host, with Apple's model ready), or null when no extension replies. */
-export interface BrowserFMStatus { available: boolean; reason?: string }
+export interface BrowserFMStatus {
+  available: boolean;
+  /** Image Playground can be shown there (fmtool's draw) — the picture under something (lib/art). */
+  draws?: boolean;
+  reason?: string;
+}
 
 export function getBrowserFMStatus(): Promise<BrowserFMStatus | null> {
   return ask<BrowserFMStatus>('MYWANT_FM_STATUS', {}, 5000);
@@ -106,6 +111,19 @@ export interface BrowserFMAnswer { text?: string; cards?: unknown[]; error?: str
 export function askBrowserFM(question: string): Promise<BrowserFMAnswer | null> {
   // A model answering with tool calls takes seconds, sometimes tens of them.
   return ask<BrowserFMAnswer>('MYWANT_FM_ASK', { question }, 180_000);
+}
+
+/** A picture's words by this Mac's model, asked as the page's server put the
+ *  request (lib/art's describeArt), or null when no extension replies. */
+export function artGenerateInBrowser(request: string, warm: boolean): Promise<{ text?: string; error?: string } | null> {
+  return ask<{ text?: string; error?: string }>('MYWANT_ART_GENERATE', { ask: request, warm }, 120_000);
+}
+
+/** A drawing on this Mac — Image Playground in a window of fmtool's own — or
+ *  null when no extension replies. Answered when the person is done in that
+ *  window, so it is waited on as long as a person takes. */
+export function artDrawInBrowser(prompt: string): Promise<{ image?: string; prompt?: string; cancelled?: boolean; error?: string } | null> {
+  return ask('MYWANT_ART_DRAW', { prompt }, 10 * 60_000);
 }
 
 /** One server the extension is watching, or null when no extension replies.

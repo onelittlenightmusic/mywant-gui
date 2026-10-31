@@ -1657,6 +1657,13 @@ class MyWantApiClient {
     return (await this.client.post<{ url: string }>(`/api/v1/art/${kind}/${encodeURIComponent(id)}/scale`, { scale })).data.url;
   }
 
+  /** The words a picture is drawn from (the engine's art_words.go): already
+   *  written when the server has a model of its own, else the request to put
+   *  to one here (lib/art's describeArt). */
+  async describeArt(body: { value: string; subtype: string; instead?: string; context?: string }): Promise<import('@/lib/art').ArtWordsRecipe> {
+    return (await this.client.post<import('@/lib/art').ArtWordsRecipe>('/api/v1/art/describe', body, { timeout: 150_000 })).data;
+  }
+
   async deleteArt(kind: import('@/lib/art').ArtKind, id: string): Promise<void> {
     await this.client.delete(`/api/v1/art/${kind}/${encodeURIComponent(id)}`);
   }

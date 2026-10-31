@@ -1,19 +1,34 @@
 /**
  * Art: a picture laid on the board's floor under something on it — a thing,
  * a want, a constellation (the engine's art.go). This is what every one of
- * them shares: the label it is kept in, and having one drawn by the app
- * framing the page (ArtMaker asks; the board lays it — guiex FloorArtLayer).
+ * them shares: the label it is kept in, and having one drawn (ArtMaker asks;
+ * the board lays it — guiex FloorArtLayer).
  *
- * Drawn by the app — Image Playground on the iPhone (mywant-ios ThingArt) —
- * for the sidebar to show for review before it is kept, in two steps, so the
- * words it is drawn from can be read, asked for again or changed first:
+ * Drawn in two steps, so the words it is drawn from can be read, asked for
+ * again or changed first — one flow, wherever 作る is pressed:
  *
- *   page → app   mywantArt.postMessage({op: 'describe', value, subtype, instead?}) → {prompt}
- *   page → app   mywantArt.postMessage({op: 'draw', prompt})
- *                → {image: "data:image/png;base64,…", prompt} | {cancelled} | {error}
+ *   1. the words: asked of the server (POST /api/v1/art/describe, the engine's
+ *      art_words.go), which says what a model is to be asked and how its
+ *      answer becomes the words — and has written them already when it has a
+ *      model of its own (fmtool on a Mac). When it has none (Fly), the device
+ *      the page is on runs the request on its own model (`generate`);
+ *   2. the drawing: Image Playground on that device (`draw`), the picture the
+ *      person keeps there handed back as a PNG.
  *
- * Nothing drawn on a page with no such app: a browser cannot.
+ * The device is whatever has the models: the iPhone app framing the page
+ * (mywant-ios ThingArt, window.webkit.messageHandlers.mywantArt), or Chrome on
+ * a Mac through the MyWant extension and its fmtool (NativeHost, Drawing.swift)
+ * — the same two operations either way, and neither knows what a picture's
+ * words should be:
+ *
+ *   generate {ask, warm}  → {text} | {error}
+ *   draw {prompt}         → {image: "data:image/png;base64,…", prompt} | {cancelled} | {error}
+ *
+ * Nothing drawn on a page with neither: a browser alone cannot.
  */
+import { useSyncExternalStore } from 'react';
+import { apiClient } from '@/api/client';
+import { artDrawInBrowser, artGenerateInBrowser, getBrowserFMStatus } from '@/lib/extensionContext';
 
 /** What can have art, as the engine's /api/v1/art/{kind}/{id} names it. */
 export type ArtKind = 'thing' | 'want' | 'constellation';
@@ -49,15 +64,11 @@ export function artOf(labels: Record<string, string> | undefined): string | unde
 
 interface ArtHandler { postMessage: (msg: unknown) => Promise<unknown> }
 
-function handler(): ArtHandler | undefined {
+/** The iPhone app's, when it frames the page. */
+function appHandler(): ArtHandler | undefined {
   if (typeof window === 'undefined') return undefined;
   const w = window as unknown as { webkit?: { messageHandlers?: { mywantArt?: ArtHandler } } };
   return w.webkit?.messageHandlers?.mywantArt;
-}
-
-/** Whether this page can have a picture drawn — framed by the app. */
-export function hostDrawsArt(): boolean {
-  return !!handler();
 }
 
 export interface DrawnArt {
@@ -67,30 +78,95 @@ export interface DrawnArt {
   prompt: string;
 }
 
-type Reply = Partial<DrawnArt> & { error?: string; cancelled?: boolean } | null;
+type DrawReply = Partial<DrawnArt> & { error?: string; cancelled?: boolean } | null;
 
-/**
- * What the app would draw for `value` (a `kind` of thing, in words): a short
- * description in English, by the phone's own model. `instead`: one already
- * offered, for another.
- */
-export async function describeArt(value: string, kind: string, instead?: string, context?: string): Promise<string> {
-  const h = handler();
-  if (!h) throw new Error('この画面では描けません');
-  const reply = await h.postMessage({ op: 'describe', value, subtype: kind, instead, context: context || undefined }) as Reply;
-  if (!reply || reply.error || !reply.prompt) throw new Error(reply?.error || 'プロンプトを作れませんでした');
-  return reply.prompt;
+/** The device's two operations, whichever device it is. */
+interface ArtHost {
+  generate: (ask: string, warm: boolean) => Promise<{ text?: string; error?: string } | null>;
+  draw: (prompt: string) => Promise<DrawReply>;
 }
 
 /**
- * Has the app draw a picture from `prompt`: null when it was closed without
- * one (Apple's own screen, where the app draws on it); rejects with what went
- * wrong.
+ * Whether the extension's fmtool can draw here — asked once, when first
+ * wanted, and kept: whether a Mac has Image Playground does not change while
+ * a page is open. null while not yet known.
+ */
+let browserDraws: boolean | null = null;
+let browserAsked = false;
+const browserListeners = new Set<() => void>();
+
+function askBrowserOnce(): void {
+  if (browserAsked || appHandler()) return;
+  browserAsked = true;
+  void getBrowserFMStatus().then((st) => {
+    browserDraws = !!(st?.available && st.draws);
+    browserListeners.forEach((l) => l());
+  });
+}
+
+function artHost(): ArtHost | undefined {
+  const app = appHandler();
+  if (app) {
+    return {
+      generate: (ask, warm) => app.postMessage({ op: 'generate', ask, warm }) as Promise<{ text?: string; error?: string } | null>,
+      draw: (prompt) => app.postMessage({ op: 'draw', prompt }) as Promise<DrawReply>,
+    };
+  }
+  if (browserDraws) return { generate: artGenerateInBrowser, draw: artDrawInBrowser };
+  return undefined;
+}
+
+/** Whether this page can have a picture drawn — framed by the app, or in Chrome with the extension's fmtool. */
+export function hostDrawsArt(): boolean {
+  askBrowserOnce();
+  return !!artHost();
+}
+
+/** hostDrawsArt, for a component: it changes once, when the extension has said. */
+export function useHostDrawsArt(): boolean {
+  return useSyncExternalStore(
+    (l) => { browserListeners.add(l); return () => { browserListeners.delete(l); }; },
+    hostDrawsArt,
+    () => false,
+  );
+}
+
+/** What the server says about a picture's words (the engine's art_words.go). */
+export interface ArtWordsRecipe {
+  /** What a model is to be asked, and whether to let it range wider (another one). */
+  ask: string;
+  warm: boolean;
+  /** How its answer becomes the words: cut to `limit`, `suffix` after it. */
+  suffix: string;
+  limit: number;
+  /** The words when there is no answer. */
+  fallback: string;
+  /** Written already: the server had a model of its own. */
+  prompt?: string;
+}
+
+/**
+ * What would be drawn for `value` (a `kind` of thing, in words): a short
+ * description in English — the server's model's, or this device's. `instead`:
+ * one already offered, for another.
+ */
+export async function describeArt(value: string, kind: string, instead?: string, context?: string): Promise<string> {
+  const recipe = await apiClient.describeArt({ value, subtype: kind, instead, context: context || undefined });
+  if (recipe.prompt) return recipe.prompt;
+  const host = artHost();
+  const said = host ? (await host.generate(recipe.ask, recipe.warm).catch(() => null))?.text?.trim() : undefined;
+  return said ? [...said].slice(0, recipe.limit).join('') + recipe.suffix : recipe.fallback;
+}
+
+/**
+ * Has the device draw a picture from `prompt`: null when it was closed without
+ * one (Apple's own screen, where the person draws on it); rejects with what
+ * went wrong.
  */
 export async function drawArt(prompt: string): Promise<DrawnArt | null> {
-  const h = handler();
-  if (!h) throw new Error('この画面では描けません');
-  const reply = await h.postMessage({ op: 'draw', prompt }) as Reply;
+  const host = artHost();
+  if (!host) throw new Error('この画面では描けません');
+  const reply = await host.draw(prompt);
   if (reply?.cancelled) return null;
   if (!reply || reply.error || !reply.image) throw new Error(reply?.error || '描けませんでした');
   return { image: reply.image, prompt: reply.prompt ?? prompt };

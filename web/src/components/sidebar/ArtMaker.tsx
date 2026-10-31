@@ -4,7 +4,7 @@ import { OverlayCell, OVERLAY_STAGGER_MS } from '@/components/overlay';
 import { DisplayCard } from '@/components/forms/CardPrimitives';
 import { getTypeStyle } from '@/components/forms/sections/ParameterGridSection';
 import { apiClient } from '@/api/client';
-import { hostDrawsArt, describeArt, drawArt, artScale, nextArtScale, ART_SCALES, type ArtKind } from '@/lib/art';
+import { useHostDrawsArt, describeArt, drawArt, artScale, nextArtScale, ART_SCALES, type ArtKind } from '@/lib/art';
 import { classNames } from '@/utils/helpers';
 
 /**
@@ -14,11 +14,12 @@ import { classNames } from '@/utils/helpers';
  * it is of, what there is to choose, and what to reload once it has changed.
  *
  * Two ways to one:
- *   作る  the app framing the page draws it (Image Playground on the iPhone,
- *         lib/art — on its own screen there). Elsewhere it is shown, not
- *         pressable. First the
- *         words it will be drawn from (the phone's own model's), shown to be
- *         read, changed or asked for again (プロンプトを作り直す); then 描く.
+ *   作る  drawn with Image Playground where there is one (lib/art): the
+ *         iPhone app framing the page, or Chrome on a Mac through the MyWant
+ *         extension's fmtool. Elsewhere it is shown, not pressable. First the
+ *         words it will be drawn from (the server's model's, or the device's),
+ *         shown to be read, changed or asked for again (プロンプトを作り直す);
+ *         then 描く.
  *   選ぶ  a picture already there — the thing's own photo, its kind's picture,
  *         a member's (`choices`) — or a file from the device.
  * Either is shown as it will lie on the floor (FloorPreview), and kept only
@@ -85,7 +86,7 @@ export const ArtMaker: React.FC<{
   // Another subject: what was in hand for the last is not this one's.
   useEffect(() => { setStep({ at: 'idle' }); setProblem(null); }, [kind, id]);
 
-  const canDraw = hostDrawsArt();
+  const canDraw = useHostDrawsArt();
   const shownChoices = [...new Set(choices.filter(u => u && u !== current))];
   const failed = (e: unknown) => setProblem(e instanceof Error ? e.message : String(e));
 
@@ -198,7 +199,7 @@ export const ArtMaker: React.FC<{
     // not say there was such a thing as having one made.
     cell('make', { icon: describing ? <Loader2 className={classNames(icon, 'animate-spin')} /> : <ImagePlus className={icon} />,
       label: describing ? '考えています' : current ? '作り直す' : '作る',
-      title: canDraw ? undefined : '描けるのは iPhone のアプリの中だけです（Image Playground）',
+      title: canDraw ? undefined : '描けるのは iPhone のアプリか、fmtool を入れた Mac の Chrome（MyWant 拡張）です（Image Playground）',
       tone: 'special', disabled: describing || !canDraw, onClick: () => void describe() });
     cell('choose', { icon: <Images className={icon} />, label: '選ぶ', tone: 'primary', disabled: describing,
       onClick: () => { setProblem(null); setStep({ at: 'choosing' }); } });
