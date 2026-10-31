@@ -1,7 +1,8 @@
 import React from 'react';
 import { classNames } from '@/utils/helpers';
 import { CONTROL_TAB, CONTROL_ICON_CLASS } from '@/design/controls';
-import { tabTrayClass, tabClass, tabIconClass, TAB_LABEL } from '@/design/tabs';
+import { tabTrayClass, tabClass, tabIconClass, TAB_LABEL, TAB_HOST_ROOM } from '@/design/tabs';
+import { useHostTabs, iconName } from '@/lib/nativeHost';
 
 /**
  * The tab bar a detail sheet wears: icon above label, blue when active, a rule
@@ -27,6 +28,12 @@ export function SubTabBar<T extends string>({
   onChange: (id: T) => void;
   isBottom?: boolean;
 }) {
+  // In a panel the app frames, the app draws these tabs (useHostTabs).
+  const hostBox = useHostTabs(
+    tabs.map(t => ({ id: t.id, label: t.label, icon: iconName(t.icon as { displayName?: string }, 'Circle'), active: t.id === active, dim: !t.hasData && t.id !== active, badge: !!t.hasData && t.id !== active })),
+    id => onChange(id as T),
+  );
+  if (hostBox) return <div ref={hostBox} aria-hidden className={TAB_HOST_ROOM} />;
   return (
     <div className={tabTrayClass(!!isBottom)}>
       {tabs.map(({ id, label, icon: Icon, hasData }) => {

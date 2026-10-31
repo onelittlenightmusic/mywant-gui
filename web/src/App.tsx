@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { useBoardChanged, touchesThings } from '@/api/boardSync';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { WantListPage } from '@/pages/list/WantListPage';
+import { nativePanelPage } from '@/lib/nativeHost';
 import { WantAppPage } from '@/pages/WantAppPage';
 import { LogsPage } from '@/pages/ErrorHistoryPage';
 import { AgentsPage } from '@/pages/AgentsPage';
@@ -36,6 +37,18 @@ import { NoticeToast } from '@/components/common/NoticeToast';
 import { ReflectingIndicator } from '@/components/common/ReflectingIndicator';
 import { Slot } from '@/extensions/Slot';
 import { extensionRoutes, extensionBareRoutes, extensionPluginEndpoints, useExtensionHooks } from '@/extensions/registry';
+
+/**
+ * The workspace, made afresh for each panel its panel page is moved to. An
+ * app keeps one panel page and moves it from panel to panel in place (another
+ * want walked onto, a thing): what the last panel left selected, dismissed or
+ * open must not be the next one's start, so each panel id gets its own.
+ */
+function DashboardPage() {
+  const { search } = useLocation();
+  const panelId = nativePanelPage ? new URLSearchParams(search).get('__panel') : null;
+  return <WantListPage key={panelId ?? ''} />;
+}
 
 function DeviceManager() {
   useDeviceSession();
@@ -199,7 +212,7 @@ function App() {
             <RouteTransition>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<WantListPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
               {/* A corner card on its own, for an app's native card frame. */}
               <Route path="/panel/card/:kind/:id" element={<WantListPage card />} />
               <Route path="/agents" element={<AgentsPage />} />

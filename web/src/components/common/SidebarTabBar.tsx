@@ -4,7 +4,8 @@ import { useMyCursorColor } from '@/hooks/useMyCursorColor';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { characterBadgeColor } from '@/design/characterColor';
 import { CONTROL_TAB, CONTROL_ICON_CLASS } from '@/design/controls';
-import { tabTrayClass, tabClass, tabIconClass, TAB_LABEL } from '@/design/tabs';
+import { tabTrayClass, tabClass, tabIconClass, TAB_LABEL, TAB_HOST_ROOM } from '@/design/tabs';
+import { useHostTabs, iconName } from '@/lib/nativeHost';
 
 /**
  * A single tab definition for SidebarTabBar.
@@ -42,6 +43,13 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
   isBottom = false,
 }) => {
   const dotColor = characterBadgeColor(useMyCursorColor(), useDarkMode());
+  // In a panel the app frames, the app draws these tabs (useHostTabs): this
+  // keeps their room, at the tray's own height, for its strip to stand in.
+  const hostBox = useHostTabs(
+    tabs.map(t => ({ id: t.id, label: t.label, icon: iconName(t.icon as { displayName?: string }, 'Circle'), active: t.id === activeTab, badge: (t.badge ?? 0) > 0 })),
+    onTabChange,
+  );
+  if (hostBox) return <div ref={hostBox} aria-hidden className={TAB_HOST_ROOM} />;
   return (
     <div className={tabTrayClass(!!isBottom)}>
       {tabs.map((tab) => {

@@ -1,4 +1,4 @@
-import { nativePanelPage } from '@/lib/nativeHost';
+import { nativePanelPage, hostSideSheets } from '@/lib/nativeHost';
 import React, { useState, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useIconFont } from '@/hooks/useDisplaySettings';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
@@ -185,6 +185,10 @@ export const MinimapFrame: React.FC<{ isOpen: boolean; isCanvasMode?: boolean; c
   const isHeaderBottom = useHeaderAtBottom();
   const minimapFocused = useMinimapFocusStore(s => s.focused);
   const focusColor = useCharacterStore(s => s.getMyCharacter())?.color ?? '#38bdf8';
+  // Where the app draws its panels as drawers from the side (a Mac's), the map
+  // is one of them: not kept docked beside the page on a wide screen, as it
+  // is in a browser — that column stood over the board's right-hand side.
+  if (hostSideSheets && !nativePanelPage && !isOpen) return null;
   if (nativePanelPage) {
     return (
       // Opaque underneath: the surface is see-through, and under it in a

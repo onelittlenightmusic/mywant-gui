@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
-import { nativeHost, nativePanelPage, postToHost, HOST_PANEL_BAR, HostFramedPanel, useHostPanelStore, iconName, useHostSheet, hostSheetsOn } from '@/lib/nativeHost';
+import { nativeHost, nativePanelPage, postToHost, HOST_PANEL_BAR, HostFramedPanel, useHostPanelStore, iconName, useHostSheet, hostSheetsOn, hostPanelId } from '@/lib/nativeHost';
 import { useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
 import { PanelCloseButton } from '@/components/sidebar/PanelCloseButton';
@@ -529,12 +529,18 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   // is once it has arrived; the app's close comes back here.
   const hostFrame = nativeHost && isMobileSheet && !nativePanelPage;
   // On a panel page, the panel closing itself (a want made, a form cancelled)
-  // is the app's sheet's cue to go.
-  const hostWasOpen = useRef(false);
+  // is the app's sheet's cue to go. Not when the address has moved on: an
+  // app that keeps its panel page moves it to the next panel (another want
+  // walked onto), and the one before closing on the way is no close of the
+  // sheet's.
+  const hostOpenFor = useRef<string | null>(null);
   useEffect(() => {
     if (!nativePanelPage) return;
-    if (isOpen) hostWasOpen.current = true;
-    else if (hostWasOpen.current) { hostWasOpen.current = false; postToHost({ type: 'sheet-done' }); }
+    if (isOpen) { hostOpenFor.current = hostPanelId(); return; }
+    if (hostOpenFor.current === null) return;
+    const was = hostOpenFor.current;
+    hostOpenFor.current = null;
+    if (hostPanelId() === was) postToHost({ type: 'sheet-done' });
   }, [isOpen]);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -666,10 +672,10 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     return isOpen ? (
       <div data-sidebar="true" ref={containerRef}
         className={classNames('fixed inset-0 z-[60] flex flex-col bg-white dark:bg-gray-900', overflowHidden ? 'overflow-hidden' : 'overflow-y-auto')}
-        // Clear of the app's shrunk pill and tab bar under it (MiniDock: 52pt
-        // tall, 6pt off the safe area) and no further — a form's bottom bar
-        // sits right above them, not a band of nothing higher.
-        style={{ ...backgroundStyle, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)' }}>
+        // Down to the screen's bottom edge, its tabs along it: the app's
+        // shrunk tab bar and pill are along the sheet's top (MiniDock), and a
+        // Mac's drawer has none.
+        style={backgroundStyle}>
         <HostFramedPanel.Provider value={true}>{children}</HostFramedPanel.Provider>
       </div>
     ) : null;

@@ -381,6 +381,12 @@
   background: #a8a8a8;
 }
 
+/* Framed by an app that draws the panels as drawers of its own, from the side
+   (a Mac's, hostSideSheets): no page keeps a column for them on a wide screen,
+   where the drawer comes in over the page instead. */
+html.host-side-sheets .lg\:mr-\[480px\] { margin-right: 0; }
+html.host-side-sheets .lg\:pr-\[480px\] { padding-right: 0; }
+
 /* Framed by an app: no scrollbars. A phone's WebKit draws none whatever this
    file says, but the same app on a Mac (Catalyst) drew the styled ones above —
    a grey strip down the right of the board and along its bottom, where it

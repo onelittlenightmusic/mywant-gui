@@ -1,5 +1,5 @@
-import { createContext, useEffect, useRef, useState } from 'react';
-import type { RefCallback } from 'react';
+import { createContext, useEffect, useId, useRef, useState } from 'react';
+import type { RefCallback, RefObject } from 'react';
 import { create } from 'zustand';
 
 /**
@@ -72,6 +72,11 @@ interface HostBridge {
   /** The app reads the controller itself and hands the page its state. */
   ownsController?: boolean;
   controller?: (frame: { buttons: boolean[]; axes: number[] }) => void;
+  /** Panels as the app's drawers from the side, whatever the width — the
+   *  app on a Mac, whose window is never a phone's (see hostSheetsOn). */
+  sideSheets?: boolean;
+  /** How wide those drawers are, in px. */
+  sideSheetWidth?: number;
   /** A and B the other way round — the one setting, MyWantPad's 「A と B を
    *  入れ替える」, which the app reads and keeps current here (controllerHub). */
   swapAB?: boolean;
@@ -146,6 +151,11 @@ export function hostInsets(): { top: number; bottom: number } {
   return out;
 }
 
+/** Where a map panel page's map itself stands (its ground, the letterbox
+ *  left out), in the page's own coordinates: the app shows just that, as a
+ *  small map in the corner over the board, at the scale it is drawn at. */
+export interface HostMapRect { type: 'map-rect'; rect: { x: number; y: number; w: number; h: number } | null }
+
 /** A panel page (see nativePanelPage) whose panel has closed itself. */
 export interface HostSheetDone { type: 'sheet-done' }
 
@@ -169,7 +179,7 @@ export interface HostFocusCard {
 export interface HostCardAct { type: 'card-act'; act: string; kind: HostFloatCard['kind']; id: string }
 
 /** Hand a message to the app. Nothing happens without one. */
-export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostCardAct | HostCardSlot | HostFocusCard | HostControls | { type: 'haptic'; kind: 'lift' | 'drop' | 'land' }
+export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostMapRect | HostCardAct | HostCardSlot | HostFocusCard | HostControls | { type: 'haptic'; kind: 'lift' | 'drop' | 'land' }
   | { type: 'rumble'; ms: number }
   | { type: 'drag-shape'; shape: 'circle'; x: number; y: number; w: number; h: number }
   | { type: 'card-buttons'; list: { id: string; label: string; icon: string }[] }): void {
@@ -361,16 +371,60 @@ export function useHostSheet(route: string | null, title: string, icon: string, 
   const owner = useRef(`sheet-${Math.random().toString(36).slice(2)}`).current;
   const closeRef = useRef(close);
   closeRef.current = close;
+  // From the side wherever the app draws its panels that way (a Mac's window).
+  const from = hostSideSheets ? 'right' : edge;
   useEffect(() => {
     if (!route) { useHostSheetStore.getState().clear(owner); return; }
-    useHostSheetStore.getState().set(owner, { route, title, icon, edge }, () => closeRef.current());
-  }, [owner, route, title, icon, edge]);
+    useHostSheetStore.getState().set(owner, { route, title, icon, edge: from }, () => closeRef.current());
+  }, [owner, route, title, icon, from]);
   useEffect(() => () => useHostSheetStore.getState().clear(owner), [owner]);
 }
 
-/** Framed by an app on a phone, where panels are the app's sheets. */
+/** The app draws panels as drawers from the side, at any width (a Mac). */
+export const hostSideSheets: boolean = nativeHost && !!window.__mywantHost?.sideSheets;
+// For the stylesheet: no page keeps the panels' column (styles/index.css).
+if (hostSideSheets && typeof document !== 'undefined') document.documentElement.classList.add('host-side-sheets');
+
+// ── How much of the board a side drawer covers, eased ───────────────────────
+//
+// A Mac's drawer lies over the board's right edge (the board keeps its whole
+// width under it). While one is out, the camera centres the character in what
+// is left of the window; as it comes and goes, that centre slides — slowly,
+// more slowly than the drawer, so the view is seen to make room and give it
+// back. Read every frame by the board's camera (useBoardRefs).
+
+const DRAWER_EASE_MS = 650;
+const drawerWidth: number = Number(window.__mywantHost?.sideSheetWidth) || 420;
+let drawerFrom = 0, drawerTo = 0, drawerT0 = 0;
+
+function drawerAt(now: number): number {
+  const p = Math.min(1, (now - drawerT0) / DRAWER_EASE_MS);
+  const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+  return drawerFrom + (drawerTo - drawerFrom) * e;
+}
+
+/** The px of the board's right edge a side drawer covers now (0 without one). */
+export function hostDrawerInset(): number {
+  return drawerTo === drawerFrom ? drawerTo : drawerAt(performance.now());
+}
+
+if (hostSideSheets) {
+  useHostSheetStore.subscribe(({ sheet }) => {
+    // The map is no drawer: a small one in the corner, over the board.
+    const to = sheet && !sheet.route.includes('__panel=__minimap') ? drawerWidth : 0;
+    if (to === drawerTo) return;
+    const now = performance.now();
+    drawerFrom = drawerAt(now);
+    drawerTo = to;
+    drawerT0 = now;
+  });
+}
+
+/** Framed by an app on a phone, where panels are the app's sheets — or by the
+ *  app on a Mac, where they are its drawers from the side. */
 export function hostSheetsOn(): boolean {
-  return nativeHost && !nativePanelPage && typeof window !== 'undefined' && window.innerWidth < 640;
+  return nativeHost && !nativePanelPage && typeof window !== 'undefined'
+    && (hostSideSheets || window.innerWidth < 640);
 }
 
 // ── The corner card, drawn by the app ───────────────────────────────────────
@@ -534,12 +588,15 @@ export function useHostPanel(
   at?: { path?: string; extra?: Record<string, string | number> },
 ): string | undefined {
   const wanted = hostPanelId();
-  const done = useRef(false);
+  // What was last selected: an app keeps its panel page and moves it to the
+  // next panel in place (a want walked onto from another), so the address
+  // can name something else later and that is selected too.
+  const done = useRef<string | null>(null);
   const selectRef = useRef(select);
   selectRef.current = select;
   useEffect(() => {
-    if (!wanted || done.current) return;
-    if (selectRef.current(wanted) !== false) done.current = true;
+    if (!wanted || done.current === wanted) return;
+    if (selectRef.current(wanted) !== false) done.current = wanted;
   }, [wanted, ready]);
   return selected ? hostPanelRoute(at?.path ?? location.pathname, selected, at?.extra) : undefined;
 }
@@ -642,7 +699,7 @@ export function hostDragShape(rect: DOMRect, shape: 'circle'): void {
 // phase: 'press' for a button pressed once; 'down' and 'up' for what is held
 // (the pad's arrows and face buttons).
 
-export type HostControlKind = 'pill' | 'pad' | 'ring' | 'frame';
+export type HostControlKind = 'pill' | 'pad' | 'ring' | 'frame' | 'tabs';
 export type HostInputPhase = 'press' | 'down' | 'up';
 
 export interface HostControlItem {
@@ -667,6 +724,10 @@ export interface HostControlItem {
   at?: { x: number; y: number };
   /** Which way such a chip's arrow points. */
   dir?: 'up' | 'down' | 'left' | 'right';
+  /** A tab with something in it (the dot on its icon). */
+  badge?: boolean;
+  /** A tab with nothing in it yet, drawn faint (still pressable). */
+  dim?: boolean;
 }
 
 export interface HostControl {
@@ -742,4 +803,52 @@ export function useHostControl(control: HostControl | null, input: HostControlIn
     if (!nativeHost || !id) return;
     return () => { hostControls.delete(id); queueControls(); };
   }, [id]);
+}
+
+/**
+ * A panel's tab strip, drawn by the app (kind 'tabs'): in a panel page framed
+ * by an app (nativePanelPage — the phone's sheet, the Mac's drawer), a tab bar
+ * hands its tabs over and keeps their room, an empty box of its own height,
+ * whose place on the page goes with them; the app draws its own strip there,
+ * and a tab pressed comes back as onChange. Anywhere else, the page's own bar.
+ *
+ * Returns the ref for that box, or null where the page draws the bar itself.
+ */
+export function useHostTabs(
+  tabs: { id: string; label: string; icon: string; active: boolean; badge?: boolean; dim?: boolean;
+    /** A count (or ★, required and not yet filled) on the tab's icon. */
+    count?: string; alert?: boolean }[],
+  onChange: (id: string) => void,
+): RefObject<HTMLDivElement> | null {
+  const box = useRef<HTMLDivElement>(null);
+  const uid = useId();
+  const [at, setAt] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const native = nativeHost && nativePanelPage;
+  useEffect(() => {
+    if (!native) return;
+    const el = box.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setAt(prev => {
+        const next = { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
+        return prev && prev.x === next.x && prev.y === next.y && prev.w === next.w && prev.h === next.h ? prev : next;
+      });
+    };
+    // Every frame, not on resize alone: a panel's pages slide in sideways (a
+    // transform, which no observer reports), and a strip measured as its page
+    // began to slide was drawn a panel's width off to the side.
+    let raf = 0;
+    const tick = () => { measure(); raf = requestAnimationFrame(tick); };
+    tick();
+    return () => cancelAnimationFrame(raf);
+  }, [native]);
+  useHostControl(native && at ? {
+    id: `tabs-${uid}`,
+    kind: 'tabs',
+    at,
+    items: tabs.map(t => ({ id: t.id, label: t.label, icon: t.icon, active: t.active, badge: t.badge, dim: t.dim,
+      detail: t.count, tone: t.alert ? 'alert' : undefined })),
+  } : null, (item, phase) => { if (phase === 'press') onChange(item); });
+  return native ? box : null;
 }

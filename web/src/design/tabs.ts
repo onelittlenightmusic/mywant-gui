@@ -41,3 +41,9 @@ export function tabIconClass(active: boolean): string {
 
 /** A tab's word: one size, not shouted. */
 export const TAB_LABEL = 'hidden sm:block text-[11px] font-medium leading-tight truncate w-full text-center';
+
+/**
+ * Where a framing app draws the strip itself (useHostTabs): the room the tray
+ * took — a tab's 52px and the tray's 4px either side — kept empty for it.
+ */
+export const TAB_HOST_ROOM = 'flex-shrink-0 h-[60px]';

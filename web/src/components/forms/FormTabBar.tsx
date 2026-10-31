@@ -3,7 +3,8 @@ import { SlidersHorizontal, Clock, Tag, Link2, BadgeInfo, ArrowUpFromLine, Arrow
 import { classNames } from '@/utils/helpers';
 import { CountBadge } from '@/components/common/CountBadge';
 import { CONTROL_TAB, CONTROL_ICON_CLASS } from '@/design/controls';
-import { tabTrayClass, tabClass, tabIconClass, TAB_LABEL } from '@/design/tabs';
+import { tabTrayClass, tabClass, tabIconClass, TAB_LABEL, TAB_HOST_ROOM } from '@/design/tabs';
+import { useHostTabs, iconName } from '@/lib/nativeHost';
 
 export type FormTab = 'name' | 'params' | 'labels' | 'schedule' | 'deps' | 'expose' | 'import' | 'yaml';
 export const FORM_TABS: FormTab[] = ['params', 'labels', 'schedule', 'deps', 'expose', 'import', 'name'];
@@ -40,6 +41,22 @@ export function FormTabBar({
   isBottom: boolean;
   tabs?: FormTab[];
 }) {
+  // In a panel the app frames, the app draws these tabs (useHostTabs). Deps'
+  // mark is drawn here by hand, so its name is given rather than read off it.
+  const hostBox = useHostTabs(
+    tabs.map(tab => {
+      const badge = badges[tab];
+      return {
+        id: tab, label: FORM_TAB_META[tab].label,
+        icon: tab === 'deps' ? 'Link2' : iconName(FORM_TAB_META[tab].icon as { displayName?: string }, 'Circle'),
+        active: activeTab !== 'add' && activeTab === tab,
+        count: badge === null || badge === undefined ? undefined : String(badge),
+        alert: typeof badge === 'string' && badge.startsWith('★'),
+      };
+    }),
+    id => onTabChange(id as FormTab),
+  );
+  if (hostBox) return <div ref={hostBox} aria-hidden className={TAB_HOST_ROOM} />;
   return (
     <div className={tabTrayClass(!!isBottom)}>
       {tabs.map(tab => {

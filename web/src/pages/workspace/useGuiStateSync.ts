@@ -9,6 +9,7 @@ import { getExt } from '@/utils/ext';
 import { claimLocal } from '@/stores/guiStateSync';
 import { useCharacterStore } from '@/stores/characterStore';
 import { useGuiStateFlushStore } from '@/stores/guiStateFlushStore';
+import { nativePanelPage } from '@/lib/nativeHost';
 import type { BoardHandle } from './boardLink';
 import type { WantFormHandle } from '@/components/forms/WantForm';
 
@@ -192,6 +193,11 @@ export function useGuiStateSync(api: GuiStateSyncApi) {
   const cliFormStateInitializedRef = useRef<boolean>(false);
 
   const pollGUIState = useCallback(async () => {
+    // A panel page in an app's frame shows what its address names, beside the
+    // board that is this device's: the shared screen state is the board's to
+    // follow. Read here, another device's (a phone opening its board) put
+    // this panel's selection where that device's was, and the panel emptied.
+    if (nativePanelPage) return;
     const a = apiRef.current;
     try {
       const { data, etag } = await apiClient.getGUIStateConditional(lastGuiETagRef.current);
