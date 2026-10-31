@@ -547,7 +547,9 @@ export function useHostPanel(
 // connection's choices, a name prompt, a want's line…) keeps its contents,
 // its fill and its shadow here; framed by an app, its tail and its arrival
 // are the app's: a native control of kind 'frame' at the box the bubble
-// occupies, followed every frame. No outline on either side. The app's frame takes no touches, so the buttons
+// occupies, followed every frame, with the fill the box took (its computed
+// background) for the tail to continue — whatever the design and the light.
+// No outline on either side. The app's frame takes no touches, so the buttons
 // inside are pressed as ever.
 
 const hostBubbles = new Map<string, { el: HTMLElement; tail: boolean }>();
@@ -558,7 +560,7 @@ function lookAtBubbles() {
     const r = el.getBoundingClientRect();
     if (r.width > 0) {
       setHostControl(id, {
-        id, kind: 'frame', items: [], tail,
+        id, kind: 'frame', items: [], tail, color: getComputedStyle(el).backgroundColor,
         at: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) },
       });
     } else {
@@ -671,7 +673,8 @@ export interface HostControl {
   /** Where it stands, in the page's px, for a control tied to a place on
    *  screen (a ring's centre, a frame's box). */
   at?: { x: number; y: number; w?: number; h?: number };
-  /** A colour the control takes (the driven character's, for the pad). */
+  /** A colour the control takes (the driven character's, for the pad; a
+   *  frame's fill, as CSS computed it, for its tail). */
   color?: string;
   /** A frame with a tail, pointing down at what it is about. */
   tail?: boolean;

@@ -59,7 +59,10 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
   const above = anchor === 'above';
   // Framed by an app, the tail is the app's (useHostBubble): the box keeps
   // its fill, its contents and its shadow — no outline, as the app's corner
-  // cards have none — and the tail and the arrival are drawn natively.
+  // cards have none — and the tail and the arrival are drawn natively. The
+  // fill is the design's, as in a browser: the app's used to be slate-900
+  // whatever was chosen, black on the phone beside the sheet's white here,
+  // and the app is told the fill it took so its tail continues it.
   const [frameEl, setFrameEl] = React.useState<HTMLDivElement | null>(null);
   useHostBubble(frameEl, above);
   const box = (
@@ -74,7 +77,7 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
       onMouseDown={contain ? (e) => e.stopPropagation() : undefined}
     >
       <div ref={setFrameEl}
-        className={classNames('relative h-full w-full', nativeHost ? 'rounded-2xl overflow-hidden bg-slate-900/85 text-slate-200 shadow-2xl' : design.frame)}>
+        className={classNames('relative h-full w-full', design.frame, nativeHost && '!border-0')}>
         {children}
       </div>
       {above && !nativeHost && (
