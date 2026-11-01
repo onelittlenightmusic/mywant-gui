@@ -6,6 +6,7 @@ import { ARCHIVE_LABEL } from '@/utils/wantUtils';
 import { apiClient } from '@/api/client';
 import { send } from '@/api/outbox';
 import { useReflectingStore } from '@/stores/reflectingStore';
+import { loadWantSnapshot, saveWantSnapshot } from '@/lib/wantSnapshot';
 import { smartPollWants, registerWantCacheActions, getWantETag, setWantETag, getDetailETag, setDetailETag, seedWantETags, suspendWantPolling, invalidateCollectionETag } from '@/stores/wantHashCache';
 
 interface DraggingTemplate {
@@ -671,6 +672,20 @@ registerWantCacheActions(
   (id) => useWantStore.getState().removeWantById(id),
   (updatedList) => useWantStore.getState().patchWants(updatedList)
 );
+
+// The wants as last seen in this browser, drawn while the first fetch is out
+// (lib/wantSnapshot) — only if that fetch has not answered first. Their
+// hashes seed the poll's cache, so it asks again only for what changed.
+void loadWantSnapshot().then(cached => {
+  const s = useWantStore.getState();
+  if (!cached || !cached.length || !s.isInitialLoad || s.wants.length > 0) return;
+  seedWantETags(cached);
+  useWantStore.setState({ wants: cached });
+});
+// ...and kept, once the server has said what they are.
+useWantStore.subscribe((state, prev) => {
+  if (!state.isInitialLoad && state.wants !== prev.wants) saveWantSnapshot(state.wants);
+});
 
 // Auto-refresh via smart polling every 5 seconds (background baseline)
 let autoRefreshStarted = false;
