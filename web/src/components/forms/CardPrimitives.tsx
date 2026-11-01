@@ -178,6 +178,9 @@ interface DisplayCardProps {
   bgIconStyle?: React.CSSProperties;
   /** Set false to suppress the bg icon (e.g. when focused) */
   showBgIcon?: boolean;
+  /** The kind icon large and faint across the card's corner — the card's
+   *  kind read at a glance (a parameter's type) — instead of small. */
+  bgIconLarge?: boolean;
   /** Renders a thin glow bar at the bottom */
   showFocusBar?: boolean;
   onClick?: () => void;
@@ -211,6 +214,7 @@ export const DisplayCard: React.FC<DisplayCardProps> = ({
   bgIconColor = '',
   bgIconStyle,
   showBgIcon = true,
+  bgIconLarge,
   showFocusBar,
   onClick,
   onContextMenu,
@@ -242,7 +246,10 @@ export const DisplayCard: React.FC<DisplayCardProps> = ({
             swaps it for the subtype's icon and repaints it in the subtype's
             colour; it is never boxed into a badge. */}
         <BgIcon
-          className={classNames('absolute bottom-1.5 left-1.5 w-4 h-4 opacity-80', bgIconColor)}
+          className={classNames(
+            bgIconLarge ? 'absolute -bottom-2 -left-1.5 w-12 h-12 opacity-[.13]' : 'absolute bottom-1.5 left-1.5 w-4 h-4 opacity-80',
+            bgIconColor,
+          )}
           style={bgIconStyle}
         />
       </div>
@@ -380,6 +387,13 @@ export interface CardGridShellProps {
    *  Expose/import cards use it so each card is tinted by the type of the field
    *  it points at, the way the parameter and state field cards are. */
   getItemScheme?: (i: number) => CardScheme | null;
+  /**
+   * A card's own look in place of the field card's: its shape and face
+   * (classes, standing in for the scheme's surface and corners), something
+   * drawn over it (ornament), and no kind icon when it says so — a label's
+   * hang tag (design/labelTags).
+   */
+  getItemLook?: (i: number) => { className: string; ornament?: React.ReactNode; hideBgIcon?: boolean } | null;
 }
 
 export const CardGridShell: React.FC<CardGridShellProps> = ({
@@ -402,6 +416,7 @@ export const CardGridShell: React.FC<CardGridShellProps> = ({
   footerNote,
   getItemBgIcon,
   getItemScheme,
+  getItemLook,
   navFocusedIndex,
   navGridProps,
 }) => {
@@ -432,12 +447,15 @@ export const CardGridShell: React.FC<CardGridShellProps> = ({
           const bgOverride = getItemBgIcon?.(i) ?? null;
           const itemScheme = getItemScheme?.(i) ?? scheme;
           const isFocused = navFocusedIndex === i;
+          const look = getItemLook?.(i) ?? null;
           return (
             <DisplayCard
               key={i}
+              showBgIcon={!look?.hideBgIcon}
+              overlay={look?.ornament}
               className={classNames(
-                'relative rounded-lg sm:rounded-xl p-1.5 h-14 shadow-sm transition-all duration-150 group',
-                itemScheme.cardBg, itemScheme.cardHover,
+                'relative p-1.5 h-14 transition-all duration-150 group',
+                look ? look.className : classNames('rounded-lg sm:rounded-xl shadow-sm', itemScheme.cardBg, itemScheme.cardHover),
                 onClickItem ? 'cursor-pointer' : '',
                 isFocused ? 'mw-card-focus bg-white dark:bg-gray-800' : '',
               )}

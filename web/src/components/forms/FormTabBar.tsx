@@ -1,3 +1,4 @@
+import { TagSideways } from '@/components/common/TagSideways';
 import React from 'react';
 import { SlidersHorizontal, Clock, Tag, Link2, BadgeInfo, ArrowUpFromLine, ArrowDownToLine, Code } from 'lucide-react';
 import { classNames } from '@/utils/helpers';
@@ -20,7 +21,7 @@ const TagLinkIcon: React.FC<{ className?: string }> = ({ className }) => (
 export const FORM_TAB_META: Record<FormTab, { label: string; icon: React.ElementType }> = {
   name:     { label: 'Metadata', icon: BadgeInfo },
   params:   { label: 'Params',   icon: SlidersHorizontal },
-  labels:   { label: 'Labels',   icon: Tag      },
+  labels:   { label: 'Labels',   icon: TagSideways },
   schedule: { label: 'Schedule', icon: Clock    },
   deps:     { label: 'Deps',     icon: TagLinkIcon },
   expose:   { label: 'Expose',   icon: ArrowUpFromLine },

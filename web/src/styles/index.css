@@ -641,10 +641,41 @@ body::-webkit-scrollbar,
   --tw-ring-color: var(--mw-focus-ring, #38bdf8);
 }
 
+/* The room a framing app's own tab strip stands in (TAB_HOST_ROOM, useHostTabs):
+   the tray's size — a tab's 52px and 4px either side. An app that lays its
+   strips out its own way restyles this from its stylesheet. */
+.mw-tab-room { height: 60px; }
+
 /* The same ring on a panel's control the arrows walked to (useSpatialFocusNav):
    a row, a button, a card — whatever it is, it says the keys are here. Over
    the rule above that takes the browser's own ring off a focused button
    (button:focus-visible … outline: none !important), hence the weight. */
+/* A field card as a sticky note (ポストイット): square corners but the lower
+   right, which lifts off the page — the shadow under it says so — and a band
+   along the top a shade deeper, where it is stuck down. Its colour is the
+   card's own (the value's type). */
+.mw-postit {
+  border-radius: 2px 2px 10px 2px;
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, .06),
+    3px 6px 6px -5px rgba(0, 0, 0, .28);
+}
+.dark .mw-postit {
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, .3),
+    3px 6px 7px -5px rgba(0, 0, 0, .6);
+}
+.mw-postit::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 9px;
+  border-radius: 2px 2px 0 0;
+  background: rgba(0, 0, 0, .045);
+  pointer-events: none;
+}
+.dark .mw-postit::before { background: rgba(255, 255, 255, .05); }
+
 :root .mw-walked.mw-walked {
   outline: 2px solid var(--mw-focus-ring, #38bdf8) !important;
   outline-offset: 2px;

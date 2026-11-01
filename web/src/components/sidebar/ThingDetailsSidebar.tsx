@@ -1,3 +1,4 @@
+import { TagSideways } from '@/components/common/TagSideways';
 import React, { useEffect, useRef, useState } from 'react';
 import { Type, Clock, Zap, Tag, CreditCard, Bot, Hash, Settings, Folder } from 'lucide-react';
 import { ThingRecord, ThingEvent, MEMO_SOURCE_LABELS } from '@/types/thing';
@@ -306,7 +307,7 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
       <SidebarTabBar
         tabs={THING_TABS.map(t => (
           t.id === 'settings' ? { id: t.id, label: 'Settings', icon: Settings }
-          : t.id === 'labels' ? { id: t.id, label: 'Labels', icon: Tag, badge: Object.keys(ownLabels).length || null }
+          : t.id === 'labels' ? { id: t.id, label: 'Labels', icon: TagSideways, badge: Object.keys(ownLabels).length || null }
           : t.id === 'constellation' ? { id: t.id, label: 'Themes', icon: Folder, badge: recordGroups.length || null }
           : { id: t.id, label: 'History', icon: Clock, badge: events?.length ?? null }
         ))}

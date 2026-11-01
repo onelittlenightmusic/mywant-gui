@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, forwardRef, useRef } from 'react';
+import { labelTone } from '@/design/labelTags';
 import { useCardGridNavigation } from '@/hooks/useCardGridNavigation';
 import { Tag } from 'lucide-react';
 import { SectionNavigationCallbacks } from '@/types/formSection';
@@ -102,24 +103,38 @@ export const LabelsSection = forwardRef<HTMLButtonElement, LabelsSectionProps>((
         onAdd={startAdd}
         onClickItem={startEdit}
         onDeleteItem={handleDelete}
+        // Each label a hang tag in its key's colour (design/labelTags): the
+        // hole and its string at the narrow end.
+        getItemLook={(i) => {
+          const tone = labelTone(entries[i][0]);
+          return {
+            className: classNames('rounded-l-md rounded-r-2xl pl-6', tone.face, tone.edge),
+            hideBgIcon: true,
+            ornament: (
+              <span aria-hidden="true" className="pointer-events-none">
+                <span className="absolute left-[-10px] top-1/2 -mt-px w-[22px] h-0.5 rounded-sm bg-[#c9a77c]" />
+                <span className="absolute left-2 top-1/2 -mt-1 w-2 h-2 rounded-full bg-white dark:bg-gray-900 shadow-[inset_0_1px_2px_rgba(0,0,0,.2)]" />
+              </span>
+            ),
+          };
+        }}
         onSave={handleSave}
         onCancel={handleCancel}
         renderItemHeaderLeft={(i) => {
           const [key] = entries[i];
           return (
-            <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 truncate leading-none font-mono">{key}</span>
+            <span className={classNames('text-[10px] font-extrabold tracking-wide truncate leading-none opacity-75', labelTone(key).ink)}>{key}</span>
           );
         }}
         renderItemBody={(i) => {
-          const [, value] = entries[i];
+          const [key, value] = entries[i];
           const shownText = value || '—';
           const bigFont = shownText.length <= 8;
           return (
             <div className={classNames(
-              'italic text-right font-mono leading-tight',
-              bigFont
-                ? 'text-2xl font-medium text-green-700 dark:text-green-300'
-                : 'text-[10px] text-green-700 dark:text-green-300 truncate',
+              'text-right font-extrabold leading-tight',
+              labelTone(key).ink,
+              bigFont ? 'text-xl' : 'text-[10px] truncate',
             )}>
               {shownText}
             </div>

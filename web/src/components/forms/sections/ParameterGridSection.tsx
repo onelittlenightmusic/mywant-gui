@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useIconFont } from '@/hooks/useDisplaySettings';
-import { Type, Hash, ToggleLeft, Link, Plus, X, Zap, List, LucideIcon, Globe, Rows3, Braces, Edit3, RotateCcw, Trash2, Star } from 'lucide-react';
+import { Type, Hash, ToggleLeft, Link, Plus, X, Zap, List, LucideIcon, Globe, Rows3, Braces, Edit3, RotateCcw, Trash2, Star, ChevronDown } from 'lucide-react';
 import { OverlayActionGrid, OverlayItem } from '@/components/overlay';
 import { resolveLucideIcon } from '@/utils/subtypeIcons';
 import { ParameterDef, StateDef } from '@/types/wantType';
@@ -86,21 +86,37 @@ export interface ParameterGridSectionProps {
 export interface TypeStyle {
   scheme: CardScheme;
   BgIcon: LucideIcon;
+  /** The card's face, faintly in the type's colour — what kind of value it
+   *  holds, read off the card before anything on it is. */
+  tint: string;
+  /** The type's name and its badge's colour, before the parameter's name. */
+  typeName: string;
+  badge: string;
 }
+
+const TYPE_LOOK = {
+  choice: { tint: 'bg-cyan-50 dark:bg-cyan-950/40',     badge: 'bg-cyan-600 dark:bg-cyan-500',     typeName: '選択' },
+  list:   { tint: 'bg-indigo-50 dark:bg-indigo-950/40', badge: 'bg-indigo-600 dark:bg-indigo-500', typeName: '一覧' },
+  number: { tint: 'bg-orange-50 dark:bg-orange-950/40', badge: 'bg-orange-600 dark:bg-orange-500', typeName: '数値' },
+  bool:   { tint: 'bg-green-50 dark:bg-green-950/40',   badge: 'bg-green-600 dark:bg-green-500',   typeName: 'ON/OFF' },
+  kind:   { tint: 'bg-purple-50 dark:bg-purple-950/40', badge: 'bg-purple-600 dark:bg-purple-500', typeName: '種類' },
+  json:   { tint: 'bg-amber-50 dark:bg-amber-950/40',   badge: 'bg-amber-600 dark:bg-amber-500',   typeName: 'JSON' },
+  text:   { tint: 'bg-blue-50 dark:bg-blue-950/40',     badge: 'bg-blue-600 dark:bg-blue-500',     typeName: '文字' },
+} as const;
 
 export function getTypeStyle(type: string, hasEnum: boolean, subTypeIcon?: LucideIcon | null): TypeStyle {
   const SubIcon = subTypeIcon ?? null;
-  if (hasEnum) return { scheme: CYAN_SCHEME, BgIcon: SubIcon ?? List };
+  if (hasEnum) return { scheme: CYAN_SCHEME, BgIcon: SubIcon ?? List, ...TYPE_LOOK.choice };
   switch (type) {
-    case 'array':    return { scheme: INDIGO_SCHEME, BgIcon: SubIcon ?? Rows3 };
+    case 'array':    return { scheme: INDIGO_SCHEME, BgIcon: SubIcon ?? Rows3, ...TYPE_LOOK.list };
     case 'percent':
     case 'int':
-    case 'float64':  return { scheme: ORANGE_SCHEME, BgIcon: SubIcon ?? Hash };
-    case 'bool':     return { scheme: GREEN_SCHEME,  BgIcon: SubIcon ?? ToggleLeft };
-    case 'want_type':return { scheme: PURPLE_SCHEME, BgIcon: SubIcon ?? Zap };
+    case 'float64':  return { scheme: ORANGE_SCHEME, BgIcon: SubIcon ?? Hash, ...TYPE_LOOK.number };
+    case 'bool':     return { scheme: GREEN_SCHEME,  BgIcon: SubIcon ?? ToggleLeft, ...TYPE_LOOK.bool };
+    case 'want_type':return { scheme: PURPLE_SCHEME, BgIcon: SubIcon ?? Zap, ...TYPE_LOOK.kind };
     case 'json':
-    case 'object':   return { scheme: AMBER_SCHEME,  BgIcon: SubIcon ?? Braces };
-    default:         return { scheme: BLUE_SCHEME,   BgIcon: SubIcon ?? Type };
+    case 'object':   return { scheme: AMBER_SCHEME,  BgIcon: SubIcon ?? Braces, ...TYPE_LOOK.json };
+    default:         return { scheme: BLUE_SCHEME,   BgIcon: SubIcon ?? Type, ...TYPE_LOOK.text };
   }
 }
 
@@ -808,7 +824,8 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                 dataAttrs={{ 'data-robot-target': 'param_field', 'data-robot-param': param.name, 'data-param-key': param.name }}
                 backgroundImage={isEditing ? undefined : param.backgroundImage}
                 className={classNames(
-                  'relative rounded-lg sm:rounded-xl p-1.5 transition-all duration-150 cursor-pointer shadow-sm',
+                  // A sticky note (mw-postit) in its type's colour.
+                  'relative mw-postit p-1.5 transition-all duration-150 cursor-pointer',
                   !isEditing && 'h-14',
                   isFocused
                     ? 'shadow-md mw-card-focus bg-white dark:bg-gray-800'
@@ -816,8 +833,9 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                       ? 'bg-amber-50/60 dark:bg-amber-900/20 shadow hover:shadow-md hover:bg-amber-100/60 dark:hover:bg-amber-900/30'
                       : param.required && isEmpty
                         ? 'bg-red-50/40 dark:bg-red-900/15 shadow-sm hover:shadow hover:bg-red-100/40 dark:hover:bg-red-900/25'
-                        : `${ts.cardBg} ${ts.cardHover}`
+                        : `${typeStyle.tint} hover:shadow-md`
                 )}
+                bgIconLarge
                 BgIcon={BgIcon}
                 bgIconColor={subTypeColor ? '' : ts.bgIconColor}
                 inkColor={subTypeColor || ts.color}
@@ -851,8 +869,13 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                   setFocusedIndex(index); setEditingIndex(index); onDetailFocusEnter?.();
                 }}
                 headerLeft={
-                  <span className="text-[11px] font-semibold card-ink truncate leading-none">
-                    {param.title || param.name}{param.required && <span className="text-red-500 ml-0.5">★</span>}
+                  <span className="flex items-center gap-1 min-w-0">
+                    <span className={classNames('flex-shrink-0 px-1 py-px rounded-full text-[8px] font-bold leading-none text-white', typeStyle.badge)}>
+                      {typeStyle.typeName}
+                    </span>
+                    <span className="text-[11px] font-semibold card-ink truncate leading-none">
+                      {param.title || param.name}{param.required && <span className="text-red-500 ml-0.5">★</span>}
+                    </span>
                   </span>
                 }
                 headerRight={
@@ -889,19 +912,6 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                         <X className="w-2.5 h-2.5" />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={e => { e.stopPropagation(); handleToggleParamRef(param.name, isParamRef ? (paramRef ?? '') : null); }}
-                      title={isParamRef ? 'Global paramを参照中 — クリックでリテラル値に戻す' : 'Global paramを参照する'}
-                      className={classNames(
-                        'w-4 h-4 flex items-center justify-center rounded transition-colors',
-                        isParamRef
-                          ? 'text-teal-500 dark:text-teal-400 bg-teal-100 dark:bg-teal-900/40'
-                          : 'text-teal-700/30 dark:text-teal-500/30 hover:text-teal-500 dark:hover:text-teal-400 hover:bg-teal-100/50 dark:hover:bg-teal-900/30'
-                      )}
-                    >
-                      <Globe className="w-2.5 h-2.5" />
-                    </button>
                   </>
                 }
               >
@@ -1109,15 +1119,26 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                           </span>
                         );
                       })()
-                    ) : isCheckbox ? (
-                      <span className={classNames(
-                        'text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors',
-                        Boolean(currentValue ?? param.default ?? false)
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                      )}>
-                        {Boolean(currentValue ?? param.default ?? false) ? 'ON' : 'OFF'}
-                      </span>
+                    ) : isCheckbox ? ((() => {
+                      // A switch, as it is: pressed here, it flips — the one
+                      // value a press can say all of.
+                      const on = Boolean(currentValue ?? param.default ?? false);
+                      return (
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={on}
+                          aria-label={param.title || param.name}
+                          onClick={e => { e.stopPropagation(); handleUpdateParam(param.name, String(!on), 'bool'); }}
+                          className="flex items-center gap-1.5"
+                        >
+                          <span className={classNames('text-[10px] font-bold', on ? 'text-green-700 dark:text-green-400' : 'text-gray-500 dark:text-gray-400')}>{on ? 'ON' : 'OFF'}</span>
+                          <span className={classNames('relative w-8 h-[18px] rounded-full transition-colors', on ? 'bg-green-600 dark:bg-green-500' : 'bg-gray-300 dark:bg-gray-600')}>
+                            <span className={classNames('absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-all', on ? 'right-0.5' : 'left-0.5')} />
+                          </span>
+                        </button>
+                      );
+                    })()
                     ) : isCharacter ? (
                       // The person, not their id. Picking somebody by their
                       // face and then being shown chr-2c52fa0b undoes the point
@@ -1131,14 +1152,19 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                           || (displayValue ? `? ${displayValue}` : '—')}
                       </span>
                     ) : hasEnum ? (
+                      // One of its choices, as the chip a choice is picked from.
                       <span className={classNames(
-                        'text-[10px] font-medium px-2 py-0.5 rounded border truncate',
-                        ts.cardBg, ts.iconColor, ts.formBorder,
+                        'inline-flex items-center gap-0.5 max-w-full pl-2 pr-1 py-0.5 rounded-full text-xs font-bold text-white',
+                        typeStyle.badge,
                       )}>
-                        {String(hasGlobal && !isOverride && globalValue !== undefined ? globalValue : displayValue) || '—'}
+                        <span className="truncate">{String(hasGlobal && !isOverride && globalValue !== undefined ? globalValue : displayValue) || '—'}</span>
+                        <ChevronDown className="w-3 h-3 flex-shrink-0" />
                       </span>
                     ) : (() => {
-                      const shownText = displayValue || param.description || '—';
+                      // Words between quotes, so they read as words given;
+                      // a number as a number, digits lined up.
+                      const quoted = !isNumber && !isEmpty && !!displayValue;
+                      const shownText = isEmpty && !displayValue ? '未入力' : quoted ? `“${displayValue}”` : (displayValue || param.description || '—');
                       const bigFont = shownText.length <= 8;
                       const paramValueColor = (() => {
                         if (param.type === 'percent' && displayValue) {
@@ -1157,7 +1183,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                       return (
                         <span className={classNames(
                           'text-right leading-none',
-                          bigFont ? 'text-2xl font-medium' : 'text-xs truncate',
+                          bigFont ? (isNumber ? 'text-2xl font-bold tabular-nums' : 'text-xl font-semibold') : 'text-xs truncate',
                           paramValueColor,
                         )}>
                           {shownText}

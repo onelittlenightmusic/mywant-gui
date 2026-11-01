@@ -1,7 +1,7 @@
 /** One state field, as its own labeled card — the standard way a scalar or shallow object is shown. Exported: also used by GlobalStateSidebar. */
 import * as LucideIcons from 'lucide-react';
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Edit, X, Plus, LucideIcon, ArrowUpFromLine, ArrowDownToLine, Trash2, Star } from 'lucide-react';
+import { Edit, X, LucideIcon, ArrowUpFromLine, ArrowDownToLine, Trash2, Star } from 'lucide-react';
 import { useCharacterStore } from '@/stores/characterStore';
 import { useFieldNamingStore } from '@/stores/fieldNamingStore';
 import { useCardOverlaySound } from '@/stores/cardOverlaySounds';
@@ -150,7 +150,7 @@ export const StateFieldCard: React.FC<{
   const subTypeInfo = effectiveSubType ? getTypeInfo(effectiveSubType) : null;
   const subTypeIcon = subTypeInfo?.icon ? ((LucideIcons as Record<string, unknown>)[subTypeInfo.icon] as LucideIcon | undefined) ?? null : null;
   const subTypeColor = subTypeInfo?.color;
-  const { scheme, BgIcon } = getTypeStyle(type, false, subTypeIcon);
+  const { scheme, BgIcon, tint, typeName, badge } = getTypeStyle(type, false, subTypeIcon);
 
   // Naming this value into its catalog (the X key and the card's Aura action)
   // — create, rename and delete all live in this one flow. Shared with the
@@ -303,10 +303,12 @@ export const StateFieldCard: React.FC<{
     >
       <DisplayCard
         className={classNames(
-          'relative rounded-lg sm:rounded-xl p-1.5 shadow-sm h-14',
-          scheme.cardBg,
-          isFocused ? 'mw-card-focus bg-white dark:bg-gray-800' : '',
+          // A sticky note (mw-postit) in its type's colour.
+          'relative mw-postit p-1.5 h-14',
+          // The type's colour on the card's face, as a parameter's (getTypeStyle).
+          isFocused ? 'mw-card-focus bg-white dark:bg-gray-800' : tint,
         )}
+        bgIconLarge
         onClick={onFocusRequest}
         showFocusBar={isFocused}
         BgIcon={BgIcon}
@@ -315,11 +317,28 @@ export const StateFieldCard: React.FC<{
         bgIconStyle={subTypeColor ? { color: subTypeColor } : undefined}
         showBgIcon={true}
         headerLeft={
-          <span className={classNames(FIELD_CARD_LABEL, 'truncate')}>{name}</span>
+          <span className="flex items-center gap-1 min-w-0">
+            <span className={classNames('flex-shrink-0 px-1 py-px rounded-full text-[8px] font-bold leading-none text-white', badge)}>{typeName}</span>
+            <span className={classNames(FIELD_CARD_LABEL, 'truncate')}>{name}</span>
+          </span>
         }
       >
-        {(() => {
-          const bigFont = displayVal.length <= 8;
+        {typeof value === 'boolean' ? (
+          // A switch, read only: what the want holds, not something to flip.
+          <div className="h-full flex items-end justify-end">
+            <span key={bounceKey} className={classNames('flex items-center gap-1.5', bounceKey > 0 ? 'animate-value-bounce origin-bottom-right' : '')}>
+              <span className={classNames('text-[10px] font-bold', value ? 'text-green-700 dark:text-green-400' : 'text-gray-500 dark:text-gray-400')}>{value ? 'ON' : 'OFF'}</span>
+              <span className={classNames('relative w-8 h-[18px] rounded-full', value ? 'bg-green-600 dark:bg-green-500' : 'bg-gray-300 dark:bg-gray-600')}>
+                <span className={classNames('absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow', value ? 'right-0.5' : 'left-0.5')} />
+              </span>
+            </span>
+          </div>
+        ) : (() => {
+          // Words between quotes, so they read as words given; a number as a
+          // number, its digits lined up; a list and an object as what they hold.
+          const isNum = typeof value === 'number';
+          const shown = typeof value === 'string' ? (value ? `“${value}”` : '空') : displayVal;
+          const bigFont = shown.length <= 8;
           // overflow-visible (not hidden) so the bounce can grow upward past the
           // value box without being clipped by the key/header above; the span's
           // own max-w/min-w keeps long values truncated at rest so nothing spills
@@ -331,14 +350,16 @@ export const StateFieldCard: React.FC<{
                 // animation only applies once a real update has occurred.
                 key={bounceKey}
                 className={classNames(
-                  'text-right leading-none font-mono origin-bottom-right max-w-full min-w-0',
-                  bigFont ? 'text-2xl font-medium' : 'text-[11px] truncate',
-                  valueColorClass ?? (bigFont ? 'text-gray-700 dark:text-gray-300' : 'text-gray-600 dark:text-gray-400'),
+                  'text-right leading-none origin-bottom-right max-w-full min-w-0',
+                  isNum ? 'tabular-nums' : '',
+                  typeof value === 'object' && value !== null ? 'font-mono' : '',
+                  bigFont ? (isNum ? 'text-2xl font-bold' : 'text-xl font-semibold') : 'text-[11px] font-medium truncate',
+                  valueColorClass ?? (typeof value === 'string' && !value ? 'text-gray-400 dark:text-gray-500 italic' : bigFont ? 'text-gray-700 dark:text-gray-300' : 'text-gray-600 dark:text-gray-400'),
                   bounceKey > 0 ? 'animate-value-bounce' : '',
                 )}
                 title={displayVal}
               >
-                {displayVal}
+                {shown}
               </span>
             </div>
           );
@@ -352,19 +373,9 @@ export const StateFieldCard: React.FC<{
           only that the field was exposed; it now says who to, and stands beside
           the thing this value turned out to be. Always visible, above the
           overlay. */}
-      <MarkBadges marks={marks}>
-        {/* Nothing wired yet: the way to wire it. Not a mark — there is nowhere
-            to go — so it opens the card's own actions. */}
-        {wiringMarks.length === 0 && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowOverlay(true); }}
-            className="w-5 h-5 flex items-center justify-center rounded-full bg-gray-200/60 dark:bg-gray-700/60 hover:bg-gray-300/80 dark:hover:bg-gray-600/80 transition-colors opacity-50 hover:opacity-100"
-            title="Expose or import this field"
-          >
-            <Plus className="w-2.5 h-2.5 text-gray-500 dark:text-gray-400" />
-          </button>
-        )}
-      </MarkBadges>
+      {/* Wiring a field that has none yet is in its actions (right-click,
+          long press) — no button of its own in the corner. */}
+      <MarkBadges marks={marks} />
 
       {/* Context overlay — visible on hover */}
       {showOverlay && (
