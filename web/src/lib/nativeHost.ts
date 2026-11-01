@@ -281,6 +281,11 @@ export const HOST_PANEL_BAR = 20;
  */
 export const HostFramedPanel = createContext(false);
 
+/** A card whose maximized self the framing app shows (a Mac's drawer: the
+ *  card comes to the front of the whole window, which the drawer's page is
+ *  not): maximizing only asks (onMaximizeChange), and nothing grows here. */
+export const HostMaximizesCard = createContext(false);
+
 export interface HostPanel {
   title: string;
   /** A Lucide icon name, or "" for none. */

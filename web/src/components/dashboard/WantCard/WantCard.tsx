@@ -1,7 +1,7 @@
 import { openWebWant } from './plugins/types/WebFrameCardPlugin';
 import { CardEmbeddedContext } from './plugins/registry';
 import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
-import { HostFramedPanel, nativeHost } from '@/lib/nativeHost';
+import { HostFramedPanel, HostMaximizesCard, nativeHost } from '@/lib/nativeHost';
 import { useResultPageStore } from '@/stores/resultPageStore';
 import { deleteFocusedAnswer } from './deleteHistory';
 import { useDisplaySettings } from '@/hooks/useDisplaySettings';
@@ -331,6 +331,7 @@ export const WantCard: React.FC<WantCardProps> = ({
   // Inside an app's native card frame (HostFramedPanel), which is itself
   // what grows when the card is maximized.
   const hostFramed = useContext(HostFramedPanel);
+  const hostMaximizes = useContext(HostMaximizesCard);
   const getTargetRect = useCallback(() => {
     // The frame has already grown to the size the card should be: the
     // maximized card is the whole page, exactly over the card it replaces —
@@ -354,6 +355,8 @@ export const WantCard: React.FC<WantCardProps> = ({
   const canWiden = wideExpandWidth(window.innerWidth - EXPAND_PAD * 2, window.innerHeight * 0.82) >= EXPAND_MAX_W + WIDE_MIN_GAIN;
 
   const handleExpand = useCallback(() => {
+    // The app shows it maximized (HostMaximizesCard): asked, and nothing here.
+    if (hostMaximizes) { onMaximizeChange?.(wantId || null); return; }
     const rect = cardRef.current?.getBoundingClientRect();
     if (!rect) return;
     fromSidebarRef.current = !!cardRef.current?.closest('[data-sidebar-primary="true"]');
@@ -362,7 +365,7 @@ export const WantCard: React.FC<WantCardProps> = ({
     setExpandAnimated(false);
     requestAnimationFrame(() => requestAnimationFrame(() => setExpandAnimated(true)));
     onMaximizeChange?.(wantId || null);
-  }, [onMaximizeChange, wantId]);
+  }, [onMaximizeChange, wantId, hostMaximizes]);
 
   const handleCollapse = useCallback(() => {
     // Give the focus back. The blown-up card is a portal to <body>, so

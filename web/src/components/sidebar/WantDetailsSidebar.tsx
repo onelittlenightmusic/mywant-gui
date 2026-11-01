@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useBoardChanged } from '@/api/boardSync';
 import { useOutputFocusStore } from '@/stores/outputFocusStore';
-import { nativePanelPage, useHostCardSlot } from '@/lib/nativeHost';
+import { HostMaximizesCard, hostSideSheets, nativePanelPage, postToHost, useHostCardSlot } from '@/lib/nativeHost';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { Settings, Eye, Database, Check, History, MessageSquare, ArrowDownUp } from 'lucide-react';
 import { Want, WantExecutionStatus } from '@/types/want';
@@ -649,11 +649,15 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
           }}
           className="relative h-full rounded-xl outline-none"
         >
-          {/* In an app's sheet the card is the app's native card frame, put
-              over the room left here for it (useHostCardSlot). */}
-          {nativePanelPage ? (
+          {/* In a phone app's sheet the card is the app's native card frame,
+              put over the room left here for it (useHostCardSlot). A Mac's
+              drawer has the card here, as a browser does — its keys are this
+              page's, so the card's own Enter/A, double press and all, are what
+              answer them; only its maximized self is the app's (below). */}
+          {nativePanelPage && !hostSideSheets ? (
             <HostCardSlot id={wantDetails.metadata?.id || wantDetails.id || ''} />
           ) : (
+          <HostMaximizesCard.Provider value={nativePanelPage}>
           <WantCard
             want={wantDetails}
             // NOT selected: the quick-action overlay opens on right-click (or
@@ -672,8 +676,16 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
             // the agent's box. The card itself decides whether it has anything
             // to go into.
             confirmEntersInnerFocus={cardFocused}
-            maximizedWantId={cardMaximized ? (wantDetails.metadata?.id || wantDetails.id) : null}
-            onMaximizeChange={(id) => setCardMaximized(!!id)}
+            // In a Mac's drawer, maximized is the app's: the card comes to
+            // the front of the whole window, which this page is not.
+            maximizedWantId={!nativePanelPage && cardMaximized ? (wantDetails.metadata?.id || wantDetails.id) : null}
+            onMaximizeChange={(id) => {
+              if (nativePanelPage) {
+                if (id) postToHost({ type: 'card-act', act: 'maximize', kind: 'want', id });
+                return;
+              }
+              setCardMaximized(!!id);
+            }}
             onView={() => {}}
             onEdit={() => {}}
             onDelete={() => onDelete?.(wantDetails)}
@@ -686,6 +698,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
             index={0}
             className="h-full w-full"
           />
+          </HostMaximizesCard.Provider>
           )}
 
           {/* The highlight, on its own layer over the card.
