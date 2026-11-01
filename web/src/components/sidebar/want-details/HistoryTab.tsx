@@ -4,6 +4,7 @@ import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { Bot, FileText, Sparkles } from 'lucide-react';
 import { outputSummary, outputWhen, shortWhen } from '@/utils/outputSummary';
 import { outputEntryKey } from '@/stores/outputFocusStore';
+import { guideOf, openWithGuide } from '@/lib/webGuide';
 import { Want } from '@/types/want';
 import { useSidebarFocusStore } from '@/stores/sidebarFocusStore';
 import { SubTabBar } from '../SubTabBar';
@@ -92,7 +93,21 @@ export const HistoryTab: React.FC<{
                   dataAttrs={{ 'data-output-key': key }}
                   lit={key === highlightOutput}
                   last={i === all.length - 1}
-                  title={outputSummary(entry) || '—'}
+                  title={(() => {
+                    // An answer that is a place on a page (url + goto): a way
+                    // there, from any want (lib/webGuide).
+                    const place = guideOf(entry.result);
+                    const words = outputSummary(entry) || '—';
+                    return place ? (
+                      <button
+                        type="button"
+                        className="text-left underline decoration-dotted underline-offset-2 hover:decoration-solid"
+                        onClick={(e) => { e.stopPropagation(); openWithGuide(want.metadata.id ?? '', place.url, place.goto); }}
+                      >
+                        {words}
+                      </button>
+                    ) : words;
+                  })()}
                   when={shortWhen(outputWhen(entry))}
                   meta={entry.type}
                 />
