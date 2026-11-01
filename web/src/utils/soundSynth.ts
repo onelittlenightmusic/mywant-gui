@@ -51,6 +51,30 @@ export const PITCH = {
   roll: 1150,
 } as const;
 
+/**
+ * How loud a sound is — one of these, and nothing in between. A sound says
+ * which kind of moment it is; how loud that kind is is said here, once, for
+ * every sound there is. Picked one by one, the loudnesses had drifted apart
+ * (a checklist's press four times the arrival around it), and fixing one sound
+ * left the next as it was.
+ */
+export const VOLUME = {
+  /** What comes with getting somewhere: a step, a panel coming up, a want's voice. */
+  faint: 0.04,
+  /** Moving among things: a focus step, a pill, a suggestion, a flick. */
+  soft: 0.08,
+  /** A deed: placing, pressing, connecting, going in and coming out. */
+  firm: 0.14,
+  /** The game moving on, or a blow landing in a battle. */
+  loud: 0.22,
+  /** Calling someone back to the screen. */
+  alarm: 0.3,
+} as const;
+export type Volume = keyof typeof VOLUME;
+
+/** All of it at once: every sound goes out through this. */
+const MASTER_VOLUME = 1;
+
 // ── The floor ─────────────────────────────────────────────────────────────────
 
 interface Buses {
@@ -58,19 +82,24 @@ interface Buses {
   floor: AudioNode;
   /** Footsteps: straight out, top end on. */
   bright: AudioNode;
+  /** Straight out, at the master volume — what the other two go into. */
+  master: AudioNode;
 }
 
 const _buses = new WeakMap<BaseAudioContext, Buses>();
 
-function buses(c: BaseAudioContext): Buses {
+export function buses(c: BaseAudioContext): Buses {
   const have = _buses.get(c);
   if (have) return have;
+  const master = c.createGain();
+  master.gain.value = MASTER_VOLUME;
+  master.connect(c.destination);
   const floor = c.createBiquadFilter();
   floor.type = 'lowpass';
   floor.frequency.value = 2400;
   floor.Q.value = 0.5;
-  floor.connect(c.destination);
-  const b = { floor, bright: c.destination };
+  floor.connect(master);
+  const b = { floor, bright: master, master };
   _buses.set(c, b);
   return b;
 }
@@ -87,8 +116,8 @@ export interface PebbleOpts {
   freq: number;
   /** Seconds from now. Only the few sounds that are a rhythm use it. */
   at?: number;
-  /** Loudness. Faint: 0.08–0.2. */
-  amp?: number;
+  /** How loud — one of VOLUME. */
+  volume: Volume;
   /** Footsteps only: leave the top end on. */
   bright?: boolean;
 }
@@ -105,7 +134,7 @@ export function pebble(c: AudioContext, o: PebbleOpts): void {
   const out = o.bright ? buses(c).bright : buses(c).floor;
   const t = c.currentTime + (o.at ?? 0);
   const freq = o.freq * jitter(0.04);
-  const amp = (o.amp ?? 0.14) * jitter(0.25);
+  const amp = VOLUME[o.volume] * jitter(0.25);
 
   const modes: [ratio: number, gain: number, decay: number][] = [
     [1, 1, 0.015],
@@ -136,29 +165,29 @@ export function pebble(c: AudioContext, o: PebbleOpts): void {
 }
 
 /** One tap of the given stone — what nearly every sound here is. */
-export const tap = (freq: number, amp?: number) =>
-  (c: AudioContext) => pebble(c, { freq, amp });
+export const tap = (freq: number, volume: Volume) =>
+  (c: AudioContext) => pebble(c, { freq, volume });
 
 // ── The sounds ────────────────────────────────────────────────────────────────
 
-export const gridMove = tap(PITCH.tick, 0.1);
-export const wantPlaced = tap(PITCH.place, 0.18);
-export const buttonPress = tap(PITCH.press, 0.18);
-export const hapticClick = tap(PITCH.tick, 0.07);
-export const handoverIn = tap(PITCH.in, 0.14);
-export const handoverOut = tap(PITCH.out, 0.13);
-export const confirmIn = tap(PITCH.confirm, 0.16);
-export const sparkle = tap(PITCH.done, 0.14);
-export const chime = tap(PITCH.done, 0.16);
-export const pillExpand = tap(PITCH.open, 0.1);
-export const pillShrink = tap(PITCH.close, 0.1);
+export const gridMove = tap(PITCH.tick, 'soft');
+export const wantPlaced = tap(PITCH.place, 'firm');
+export const buttonPress = tap(PITCH.press, 'firm');
+export const hapticClick = tap(PITCH.tick, 'soft');
+export const handoverIn = tap(PITCH.in, 'firm');
+export const handoverOut = tap(PITCH.out, 'firm');
+export const confirmIn = tap(PITCH.confirm, 'firm');
+export const sparkle = tap(PITCH.done, 'firm');
+export const chime = tap(PITCH.done, 'firm');
+export const pillExpand = tap(PITCH.open, 'soft');
+export const pillShrink = tap(PITCH.close, 'soft');
 
 /**
  * A card opening or closing. ('whoosh' is the old name, kept because the
  * callers know it by that.)
  */
 export function whoosh(c: AudioContext, direction: 'up' | 'down'): void {
-  pebble(c, { freq: direction === 'up' ? PITCH.open : PITCH.close, amp: 0.13 });
+  pebble(c, { freq: direction === 'up' ? PITCH.open : PITCH.close, volume: 'firm' });
 }
 
 /**
@@ -167,9 +196,9 @@ export function whoosh(c: AudioContext, direction: 'up' | 'down'): void {
  * a gap before the last — and the loudest; each tap is still just a pebble.
  */
 export function ring(c: AudioContext): void {
-  pebble(c, { freq: PITCH.done, amp: 0.3 });
-  pebble(c, { freq: PITCH.done, at: 0.13, amp: 0.28 });
-  pebble(c, { freq: PITCH.done, at: 0.34, amp: 0.32 });
+  pebble(c, { freq: PITCH.done, volume: 'alarm' });
+  pebble(c, { freq: PITCH.done, at: 0.13, volume: 'alarm' });
+  pebble(c, { freq: PITCH.done, at: 0.34, volume: 'alarm' });
 }
 
 // ── What lands on a want ─────────────────────────────────────────────────────
@@ -179,6 +208,9 @@ export function ring(c: AudioContext): void {
 // told from the other two without looking, and from every tap above, so they
 // keep a body a pebble does not: a puff, a glide, a tick that stops. Still
 // faint, still through the floor, and each over in well under half a second.
+//
+// Each is as loud as one VOLUME; the numbers beside its layers are only how
+// that loudness is shared among them — the mix, not the level.
 
 /** A noise burst shaped by a filter: the body of a puff. */
 function puff(c: AudioContext, out: AudioNode, t: number, o: {
@@ -226,15 +258,15 @@ function glide(c: AudioContext, out: AudioNode, t: number, from: number, to: num
  * the loudest of the impacts: a hit has to be heard over the rest of a battle.
  */
 export function impactAttack(c: AudioContext): void {
-  const out = c.destination;
+  const out = buses(c).master;
   const t = c.currentTime;
-  const a = jitter(0.15);
+  const v = VOLUME.alarm * jitter(0.15);
   // The crack: bright, short.
-  puff(c, out, t, { dur: 0.05, amp: 0.34 * a, type: 'bandpass', from: 3200, to: 1500, q: 1.4 });
+  puff(c, out, t, { dur: 0.05, amp: 1.1 * v, type: 'bandpass', from: 3200, to: 1500, q: 1.4 });
   // The fire: a wide puff falling from bright to dark.
-  puff(c, out, t + 0.01, { dur: 0.3, amp: 0.3 * a, type: 'lowpass', from: 4200, to: 380, q: 0.9 });
+  puff(c, out, t + 0.01, { dur: 0.3, amp: v, type: 'lowpass', from: 4200, to: 380, q: 0.9 });
   // The thump, falling from where it is heard into where it is felt.
-  glide(c, out, t, 260 * jitter(0.08), 70, 0.22, 0.36 * a);
+  glide(c, out, t, 260 * jitter(0.08), 70, 0.22, 1.2 * v);
 }
 
 /**
@@ -244,9 +276,9 @@ export function impactAttack(c: AudioContext): void {
 export function impactFeed(c: AudioContext): void {
   const out = buses(c).bright;
   const t = c.currentTime;
-  pebble(c, { freq: PITCH.connect * 1.5, amp: 0.16, bright: true });
-  pebble(c, { freq: PITCH.connect * 2, at: 0.07, amp: 0.16, bright: true });
-  glide(c, out, t + 0.03, 1300 * jitter(0.03), 1950, 0.16, 0.06);
+  pebble(c, { freq: PITCH.connect * 1.5, volume: 'firm', bright: true });
+  pebble(c, { freq: PITCH.connect * 2, at: 0.07, volume: 'firm', bright: true });
+  glide(c, out, t + 0.03, 1300 * jitter(0.03), 1950, 0.16, 0.4 * VOLUME.firm);
 }
 
 /**
@@ -257,9 +289,10 @@ export function impactMend(c: AudioContext): void {
   const out = buses(c).floor;
   const t = c.currentTime;
   const base = 520 * jitter(0.04);
-  glide(c, out, t, base, base * 1.5, 0.32, 0.09);
-  glide(c, out, t + 0.07, base * 1.5, base * 2, 0.3, 0.06);
-  puff(c, out, t, { dur: 0.34, amp: 0.035, type: 'bandpass', from: 1400, to: 2300, q: 1.2 });
+  const v = VOLUME.soft;
+  glide(c, out, t, base, base * 1.5, 0.32, 1.1 * v);
+  glide(c, out, t + 0.07, base * 1.5, base * 2, 0.3, 0.75 * v);
+  puff(c, out, t, { dur: 0.34, amp: 0.45 * v, type: 'bandpass', from: 1400, to: 2300, q: 1.2 });
 }
 
 /**
@@ -269,8 +302,8 @@ export function impactMend(c: AudioContext): void {
 export function impactFreeze(c: AudioContext): void {
   const out = buses(c).floor;
   const t = c.currentTime;
-  pebble(c, { freq: PITCH.tick * 1.6, amp: 0.13 });
-  pebble(c, { freq: PITCH.tick * 1.8, at: 0.09, amp: 0.13 });
-  glide(c, out, t + 0.2, 300, 220, 0.09, 0.16);
-  puff(c, out, t + 0.2, { dur: 0.05, amp: 0.08, type: 'lowpass', from: 1200, to: 400 });
+  pebble(c, { freq: PITCH.tick * 1.6, volume: 'firm' });
+  pebble(c, { freq: PITCH.tick * 1.8, at: 0.09, volume: 'firm' });
+  glide(c, out, t + 0.2, 300, 220, 0.09, 1.15 * VOLUME.firm);
+  puff(c, out, t + 0.2, { dur: 0.05, amp: 0.6 * VOLUME.firm, type: 'lowpass', from: 1200, to: 400 });
 }
