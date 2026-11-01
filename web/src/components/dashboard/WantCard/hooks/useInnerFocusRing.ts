@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { FREE_CURSOR_ITEM_ATTR, warpFreeCursorToElement } from '@/hooks/useFreeCursorNav';
+import { pickToward } from '@/hooks/useSpatialFocusNav';
 
 /**
  * Where the caret goes when a card is operated, and how it walks from there.
@@ -17,9 +18,17 @@ import { FREE_CURSOR_ITEM_ATTR, warpFreeCursorToElement } from '@/hooks/useFreeC
  *   <textarea data-inner-focus data-inner-focus-default />
  *   <button   data-inner-focus />
  *
+ * Any card that declares a stop can be gone into — Enter or A on it, as on a
+ * control's — and there is nothing more for a plugin to do: what can be picked
+ * in a card (a note's buttons, a list's items, the open slots of a booking
+ * card) is marked, and the card does the rest.
+ *
  * On entering inner focus the caret lands on the element marked default, or on
- * the first one in source order. Tab / Shift+Tab step through the ring and wrap;
- * the arrows do the same, but only for keys nothing else has already taken —
+ * the first one in source order. Tab / Shift+Tab step through the ring and wrap.
+ * The arrows and the D-pad go by where the stops are — up to the one above,
+ * right to the one beside — the same walk the panels have (pickToward); with
+ * nothing that way they step through the ring as Tab does. Only keys nothing
+ * else has already taken —
  * a plugin that binds its own arrows (see SliderCardPlugin) consumes them in
  * the capture phase, so they never reach here.
  *
@@ -72,6 +81,11 @@ export const INNER_FOCUS_RING_CLASS = 'mw-inner-focus-ring';
 
 const ARROWS = ['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'];
 const FORWARD = ['ArrowDown', 'ArrowRight'];
+
+/** Whether a card declares anything to go into. */
+export function declaresInnerFocus(root: HTMLElement | null): boolean {
+  return stops(root).length > 0;
+}
 
 /** The ring's live members: declared, on screen, and able to take focus. */
 function stops(root: HTMLElement | null): HTMLElement[] {
@@ -172,6 +186,14 @@ export function useInnerFocusRing(
       if (ring.length < 2) return;   // nowhere to step; leave Tab to the browser
 
       const here = ring.indexOf(document.activeElement as HTMLElement);
+      // By where they are, when there is something that way.
+      const toward = isArrow && here >= 0 ? pickToward(ring[here], ring, e.key) : null;
+      if (toward) {
+        e.preventDefault();
+        e.stopPropagation();
+        toward.focus();
+        return;
+      }
       const forward = isTab ? !e.shiftKey : FORWARD.includes(e.key);
       const next = here < 0
         ? (forward ? 0 : ring.length - 1)

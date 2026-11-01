@@ -538,23 +538,29 @@ export const WantCardContent: React.FC<WantCardContentProps> = ({
   const edgeToEdge = plugin || hasTypeRenderer;
 
   /**
-   * Left and right turn the pages once the card holds the keys (A/Enter into
-   * it), which is how a stack of cards on a table would work.
+   * A held with left or right turns the pages once the card holds the keys
+   * (A/Enter into it) — Option with ← → on a keyboard, which has no A to hold —
+   * which is how a stack of cards on a table would work. The plain arrows are
+   * the card's own: they walk what it marks to pick (useInnerFocusRing).
    *
    * Off on a control card: those hand left/right to the thing they control (a
    * slider's value, a gear's notch), and a control want has one answer anyway.
    * Off while the reaction buttons are up: those own the same two keys for
-   * Deny/Approve. B backs out to the front of the stack before it gives the
-   * keys up, so escaping a card you turned back leaves it showing the present.
+   * Deny/Approve. B backs out to the front of the stack before it gives
+   * the keys up, so escaping a card you turned back leaves it showing the present.
    */
   useInputActions({
     enabled: !!isInnerFocused && pages.pages.length > 1 && !shouldShowReactionButtons && !isControl,
     captureInput: true,
     ignoreWhenInputFocused: false,
     ignoreWhenInSidebar: false,
-    onNavigate: (dir) => {
+    onWarp: (dir) => {
       if (dir === 'left') pages.turn(1);    // left goes back in time
       if (dir === 'right') pages.turn(-1);  // right comes forward again
+    },
+    onSwipeNavigate: (dir) => {
+      if (dir === 'left') pages.turn(1);
+      if (dir === 'right') pages.turn(-1);
     },
     onCancel: () => {
       if (pages.page > 0) pages.turn(-pages.page);

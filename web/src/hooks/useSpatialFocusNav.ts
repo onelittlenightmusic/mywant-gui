@@ -91,6 +91,16 @@ function pick(from: Rect, stops: HTMLElement[], dir: Dir): HTMLElement | null {
   return row[0].el;
 }
 
+/** The stop an arrow key moves to from `from`, by where they are; null when
+ *  nothing lies that way (or the key is not an arrow). The same walk the
+ *  panels have, for anything else that walks its stops — a want card's own
+ *  (useInnerFocusRing). */
+export function pickToward(from: Element, stops: HTMLElement[], key: string): HTMLElement | null {
+  const dir = KEY_TO_DIR[key];
+  if (!dir) return null;
+  return pick(rectOf(from), stops.filter(el => el !== from), dir);
+}
+
 /**
  * @param rootRef  the panel whose controls are walked
  * @param enabled  false while something else owns the arrows (an open editor)

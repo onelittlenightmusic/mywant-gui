@@ -1,6 +1,6 @@
 import { openWebWant } from './plugins/types/WebFrameCardPlugin';
 import { CardEmbeddedContext } from './plugins/registry';
-import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useContext } from 'react';
 import { HostFramedPanel, HostMaximizesCard, nativeHost } from '@/lib/nativeHost';
 import { useResultPageStore } from '@/stores/resultPageStore';
 import { deleteFocusedAnswer } from './deleteHistory';
@@ -49,7 +49,7 @@ import { playSound } from '@/utils/sounds';
 import { useLongPress } from './hooks/useLongPress';
 import { useTouchReorder } from './hooks/useTouchReorder';
 import { useCardOverlay } from './hooks/useCardOverlay';
-import { useInnerFocusRing } from './hooks/useInnerFocusRing';
+import { useInnerFocusRing, declaresInnerFocus } from './hooks/useInnerFocusRing';
 import { dropLabelOnWant } from './hooks/labelDrop';
 import { CARD_BORDER_BASE, CARD_FOCUS_BASE, CARD_SHELL_BASE, CARD_SURFACE_BASE, CARD_FOCUS_RING, CARD_HOVER_RING, GRID_CARD_HEIGHT, hoverRingVars } from './hooks/cardStyles';
 import { useMyCursorColor } from '@/hooks/useMyCursorColor';
@@ -600,7 +600,13 @@ export const WantCard: React.FC<WantCardProps> = ({
   // frame stays the mouse's (the click over the frame); keys in a
   // cross-origin frame are the page's anyway, not the board's.
   const isWebCard = labels['form-type'] === 'web';
-  const canInnerFocus = isControl || currentSlideIsControl || hasReactionQueue || isNoteCard;
+  // And any card that marks something in it to pick (data-inner-focus): what a
+  // card shows to be chosen is gone into the same way on every card, with no
+  // card having to ask (useInnerFocusRing). Read from the card as drawn, after
+  // each render — its stops come and go with what it shows.
+  const [hasStops, setHasStops] = useState(false);
+  useLayoutEffect(() => { setHasStops(declaresInnerFocus(cardRef.current)); });
+  const canInnerFocus = isControl || currentSlideIsControl || hasReactionQueue || isNoteCard || hasStops;
   useInputActions({
     enabled: confirmEntersInnerFocus && !isInnerFocused,
     ignoreWhenInputFocused: false,
