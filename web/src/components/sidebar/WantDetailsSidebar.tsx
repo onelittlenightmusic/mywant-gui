@@ -15,6 +15,7 @@ import { PanelIdentityRow } from './PanelIdentityRow';
 import { stringifyYaml, validateYaml, validateYamlWithSpec, WantTypeDefinition } from '@/utils/yaml';
 import { WantCardContent } from '@/components/dashboard/WantCardContent';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
+import { useResultPages } from '@/components/dashboard/WantCard/hooks/useResultPages';
 import { SummarySidebarContent } from './SummarySidebarContent';
 import { ConfirmationBubble } from '@/components/notifications';
 import { apiClient } from '@/api/client';
@@ -254,6 +255,9 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
   }, []);
 
   const wantDetails = selectedWantDetails || want;
+  // The want's answers, now and before — the same pages every card of it is
+  // turned to (resultPageStore), so turning them here turns the card above.
+  const answerPages = useResultPages(wantDetails);
 
   const handleClearState = async () => {
     if (!wantId) return;
@@ -632,9 +636,19 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
           data-sidebar-primary="true"
           tabIndex={-1}
           onKeyDown={(e) => {
-            // Down/Right step into whatever tab is showing. Up/Left are left
-            // alone: the card is the top of the walk, so there is nowhere
-            // above it.
+            // Left and right, while the card is lit, turn its answers — back
+            // in time to the left, forward again to the right — as they do
+            // once inside it (WantCardContent), without going in first. The
+            // pad's D-pad comes here too, as the arrow keys it stands for.
+            if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && answerPages.pages.length > 1) {
+              e.preventDefault();
+              e.stopPropagation();
+              answerPages.turn(e.key === 'ArrowLeft' ? 1 : -1);
+              return;
+            }
+            // Down (and Right, with no answers to turn) steps into whatever
+            // tab is showing. Up is left alone: the card is the top of the
+            // walk, so there is nowhere above it.
             if (!['ArrowDown', 'ArrowRight'].includes(e.key)) return;
             // Hand the arrows down. The grids activate on the region change
             // and focus their first card themselves, so this only has to say
@@ -739,8 +753,20 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
         layout="header-overlay"
       />
 
-      {/* Tab content */}
-      <div className={classNames('flex-1 min-h-0 overflow-hidden relative', isBottom ? 'order-first' : '')}>
+      {/* Tab content. Up that nothing in it took — a list's top row, a tab
+          with no walk of its own — goes back to the card above, so the card
+          is always one press away from wherever the arrows have gone. */}
+      <div
+        className={classNames('flex-1 min-h-0 overflow-hidden relative', isBottom ? 'order-first' : '')}
+        onKeyDown={(e) => {
+          if (e.key !== 'ArrowUp' || e.defaultPrevented || detailRegion !== 'fields') return;
+          const t = e.target as HTMLElement;
+          if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return;
+          e.preventDefault();
+          setDetailRegion('card');
+          focusSidebarCard();
+        }}
+      >
         {loading && !selectedWantDetails ? (
           <div className="flex items-center justify-center py-12">
             <LoadingSpinner size="lg" />
@@ -828,6 +854,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
                   sidebarDetailFocused={fieldsFocused}
                   focusRequest={sidebarFocusRequest}
                   onDetailFocusEnter={() => setSidebarDetailFocused(true)}
+                  onBackToCard={() => { setDetailRegion('card'); focusSidebarCard(); }}
                 />
               </div>
             )}

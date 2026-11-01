@@ -72,6 +72,9 @@ export interface ParameterGridSectionProps {
   focusRequest?: number;
   /** Called when user clicks a parameter card — parent uses this to enter detail-focus mode */
   onDetailFocusEnter?: () => void;
+  /** Up on the top row: back to whatever sits above the grid (the panel's
+   *  card — see useCardGridNavigation's onExitTop). */
+  onExitTop?: () => void;
   /** Values the server suggests per parameter, best first. Offered on empty
    *  cards so a want can be filled by tapping rather than typing. */
   recommendations?: Record<string, ParamRecommendation[]>;
@@ -145,6 +148,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
   sidebarDetailFocused = false,
   focusRequest,
   onDetailFocusEnter,
+  onExitTop,
   recommendations = {},
   onApplyRecommendation,
 }) => {
@@ -310,6 +314,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
     count: navCount,
     cols: COLS,
     isActive,
+    onExitTop,
     focusedIndex,
     setFocusedIndex,
     // X names the focused value, Y goes to what it is. Bound on the grid

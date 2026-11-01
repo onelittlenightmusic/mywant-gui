@@ -59,6 +59,9 @@ export const SettingsTab: React.FC<{
   onDetailFocusEnter: () => void;
   /** Increments on every L1/R1 / B+L1/R1 press — forwarded to useCardGridNavigation for auto-focus */
   focusRequest?: number;
+  /** Up from the top of a sub-tab: back to the panel's card, the step above
+   *  every field (as the Results tab's fields go back to it). */
+  onBackToCard?: () => void;
 }> = ({
   want,
   isEditing,
@@ -76,6 +79,7 @@ export const SettingsTab: React.FC<{
   sidebarDetailFocused,
   onDetailFocusEnter,
   focusRequest,
+  onBackToCard,
 }) => {
   const [localUpdateLoading, setLocalUpdateLoading] = useState(false);
   const [localUpdateError, setLocalUpdateError] = useState<string | null>(null);
@@ -285,8 +289,12 @@ export const SettingsTab: React.FC<{
     } else if (e.key === 'ArrowUp' && currentIndex > 0) {
       if (typeof e.preventDefault === 'function') e.preventDefault();
       focusableElements[currentIndex - 1].focus();
+    } else if (e.key === 'ArrowUp' && currentIndex === 0 && onBackToCard) {
+      // The top section: up goes back to the card above them all.
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      onBackToCard();
     }
-  }, []);
+  }, [onBackToCard]);
 
   // Re-read the want's own fields whenever they actually change.
   //
@@ -495,6 +503,7 @@ export const SettingsTab: React.FC<{
                   sidebarDetailFocused={sidebarDetailFocused}
                   focusRequest={focusRequest}
                   onDetailFocusEnter={onDetailFocusEnter}
+                  onExitTop={onBackToCard}
                 />
               </div>
             )}
