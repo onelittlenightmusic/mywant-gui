@@ -641,6 +641,15 @@ body::-webkit-scrollbar,
   --tw-ring-color: var(--mw-focus-ring, #38bdf8);
 }
 
+/* The same ring on a panel's control the arrows walked to (useSpatialFocusNav):
+   a row, a button, a card — whatever it is, it says the keys are here. Over
+   the rule above that takes the browser's own ring off a focused button
+   (button:focus-visible … outline: none !important), hence the weight. */
+:root .mw-walked.mw-walked {
+  outline: 2px solid var(--mw-focus-ring, #38bdf8) !important;
+  outline-offset: 2px;
+}
+
 /* ── WantCard responsive auto-layout (CSS container queries) ───────────────── */
 /* Container for .wc-frame — placed on its PARENT, not on it.
    CSS container queries cannot style the container element itself (self-reference is

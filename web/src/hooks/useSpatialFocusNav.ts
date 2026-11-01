@@ -25,6 +25,14 @@ import { FREE_CURSOR_ITEM_ATTR } from '@/hooks/useFreeCursorNav';
 
 type Dir = 'up' | 'down' | 'left' | 'right';
 
+/** The "you are here" ring on an element the keys were just put on (.mw-walked),
+ *  until focus leaves it — for the walk, and for anything that moves the keys
+ *  along by itself (a picture's buttons, changing under them). */
+export function markWalked(el: HTMLElement): void {
+  el.classList.add('mw-walked');
+  el.addEventListener('blur', () => el.classList.remove('mw-walked'), { once: true });
+}
+
 const KEY_TO_DIR: Record<string, Dir> = {
   ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
 };
@@ -40,10 +48,20 @@ function rectOf(el: Element): Rect {
   return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, left: r.left, right: r.right, top: r.top, bottom: r.bottom };
 }
 
-/** The stop to move to from `from`, or null when there is nothing that way. */
+/** How far past the nearest stop that way another still counts as the same
+ *  row (or column) — the cells of one row are never quite level. */
+const SAME_ROW_PX = 12;
+
+/** The stop to move to from `from`, or null when there is nothing that way.
+ *
+ *  One row at a time, as a table is walked: the nearest row that way first
+ *  (the stops whose near edge is within SAME_ROW_PX of the nearest one's),
+ *  and in it the one most nearly in line. Scored as one sum, a stop straight
+ *  ahead but rows away beat the row next door whenever that row's controls
+ *  sat to one side — a panel's buttons, left-aligned, were stepped over to
+ *  the cards below them. */
 function pick(from: Rect, stops: HTMLElement[], dir: Dir): HTMLElement | null {
-  let best: HTMLElement | null = null;
-  let bestScore = Infinity;
+  const ahead: { el: HTMLElement; near: number; off: number; score: number }[] = [];
   for (const el of stops) {
     const r = rectOf(el);
     // Along the direction of travel, measured edge to centre so a wide control
@@ -53,13 +71,24 @@ function pick(from: Rect, stops: HTMLElement[], dir: Dir): HTMLElement | null {
                 : dir === 'left' ? from.left - r.cx
                 :                  r.cx - from.right;
     if (along <= 0) continue;                 // behind, or overlapping — not that way
+    // Its near edge, for which row it is in.
+    const near = dir === 'up'   ? from.top - r.bottom
+               : dir === 'down' ? r.top - from.bottom
+               : dir === 'left' ? from.left - r.right
+               :                  r.left - from.right;
+    // Past the edge it leaves from, not merely centred further on: a wide row
+    // above a button reaches past it to the right, and is not to its right.
+    if (near < -SAME_ROW_PX) continue;
     const off = dir === 'up' || dir === 'down'
       ? Math.abs(r.cx - from.cx)
       : Math.abs(r.cy - from.cy);
-    const score = along + off * OFF_AXIS_WEIGHT;
-    if (score < bestScore) { bestScore = score; best = el; }
+    ahead.push({ el, near, off, score: along + off * OFF_AXIS_WEIGHT });
   }
-  return best;
+  if (ahead.length === 0) return null;
+  const nearest = Math.min(...ahead.map(a => a.near));
+  const row = ahead.filter(a => a.near <= nearest + SAME_ROW_PX);
+  row.sort((a, b) => a.off - b.off || a.score - b.score);
+  return row[0].el;
 }
 
 /**
@@ -89,13 +118,20 @@ export function useSpatialFocusNav(
                   || (active.tagName === 'INPUT' && (active as HTMLInputElement).type !== 'range')
                   || active.isContentEditable)) return;
 
-      const stops = Array.from(root.querySelectorAll<HTMLElement>(`[${FREE_CURSOR_ITEM_ATTR}]`))
+      // The places themselves, not what holds them: a stop with stops in it
+      // (a card around its buttons) is walked through to those. Except a
+      // panel's landing spot ([data-sidebar-primary]): it and the card in it
+      // are one place, the one the keys arrived at.
+      const all = Array.from(root.querySelectorAll<HTMLElement>(`[${FREE_CURSOR_ITEM_ATTR}]`))
         .filter(el => el.offsetParent !== null && !el.hasAttribute('disabled'));
+      const stops = all.filter(el => el.hasAttribute('data-sidebar-primary')
+        || (!el.parentElement?.closest('[data-sidebar-primary]')
+            && !all.some(other => other !== el && el.contains(other))));
       if (stops.length === 0) return;
 
       // Arriving from outside: land on the first stop rather than guessing a
       // direction from a caret that is not in here.
-      const here = active && root.contains(active) && active.hasAttribute(FREE_CURSOR_ITEM_ATTR)
+      const here = active && root.contains(active) && stops.includes(active)
         ? active
         : null;
       const next = here ? pick(rectOf(here), stops.filter(s => s !== here), dir) : stops[0];
@@ -103,7 +139,15 @@ export function useSpatialFocusNav(
 
       e.preventDefault();
       e.stopPropagation();
+      // A stop the pointer lands on need not take focus by itself (a card's
+      // box): it is made to, so the keys can land there too.
+      if (next.tabIndex < 0 && !next.hasAttribute('tabindex')) next.tabIndex = -1;
       next.focus({ preventScroll: false });
+      // Said where it is: the "you are here" ring (.mw-walked), put on by the
+      // walk itself — the browser's own focus ring shows for a key it trusts,
+      // not for the pad's D-pad, which arrives as a key made for it — and
+      // taken off as focus leaves.
+      markWalked(next);
     };
 
     // Bubble phase on the panel: anything that handles its own arrows (a slider

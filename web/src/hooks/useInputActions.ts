@@ -16,7 +16,10 @@ export interface UseInputActionsOptions {
    * Enter always has been. Plain Space is NOT grouped with Enter — see
    * onCancel, which Space is grouped with instead.
    */
-  onConfirm?: () => void;
+  /** Returning false says the press was not this handler's after all (it
+   *  had nothing to do with it): for the pad's A, the press then goes on to
+   *  what has focus, as Enter's would (see _fallBackToClick). */
+  onConfirm?: () => unknown;
   /**
    * Called when Enter/Gamepad A is pressed twice within 300 ms.
    * On the second (double) press, this fires instead of onConfirm.
@@ -753,6 +756,9 @@ let _tabActionConsumed = false;
 
 // The same idea for D-pad directions — see the arrow-key fallback in _emit.
 let _navActionConsumed = false;
+/** The same for A: whether any instance's onConfirm (or onDoubleConfirm) took
+ *  this press — see _fallBackToClick. */
+let _confirmActionConsumed = false;
 
 // True while the A/Cross (confirm) button is physically held.
 // When held, D-pad direction inputs are upgraded to "warp-*" actions so
@@ -1006,6 +1012,8 @@ function _emit(action: GamepadActionType): void {
 
   const isNav = NAV_ACTIONS.has(effectiveAction);
   if (isNav) _navActionConsumed = false;
+  const isConfirm = effectiveAction === 'confirm';
+  if (isConfirm) _confirmActionConsumed = false;
 
   // Route exclusively to the capture slot, but only while its claim is still
   // credible — a focus-derived claim whose element no longer holds focus is
@@ -1018,11 +1026,35 @@ function _emit(action: GamepadActionType): void {
       console.error('[useInputActions] capture listener threw', effectiveAction, err);
     }
     if (isNav && !_navActionConsumed) _fallBackToArrowKey(effectiveAction as StickDir);
+    if (isConfirm && !_confirmActionConsumed) _fallBackToClick();
     return;
   }
 
   _broadcast(effectiveAction);
   if (isNav && !_navActionConsumed) _fallBackToArrowKey(effectiveAction as StickDir);
+  if (isConfirm && !_confirmActionConsumed) _fallBackToClick();
+}
+
+/**
+ * An A nobody bound presses what has focus, as Enter does.
+ *
+ * The D-pad's gap again (see _fallBackToArrowKey), on the other button: Enter
+ * on a focused button is the browser's to carry out — it clicks it — so every
+ * button the arrows can walk to answers the keyboard, while the pad's A,
+ * arriving only as an action, reached nothing that had not bound onConfirm.
+ * A panel's own buttons (a picture's 作る, a tab) were walked to and then could
+ * not be pressed. Only what Enter would press: a button, a link, something that
+ * says it is one — never a key made up for whatever else has focus.
+ */
+function _fallBackToClick(): void {
+  const el = document.activeElement;
+  if (!(el instanceof HTMLElement) || el === document.body) return;
+  if ((el as HTMLButtonElement).disabled) return;
+  const pressable = el.tagName === 'BUTTON'
+    || (el.tagName === 'A' && el.hasAttribute('href'))
+    || el.getAttribute('role') === 'button'
+    || (el.tagName === 'INPUT' && ['checkbox', 'radio', 'button', 'submit'].includes((el as HTMLInputElement).type));
+  if (pressable) el.click();
 }
 
 /**
@@ -1859,7 +1891,8 @@ export function useInputActions({
    * unreachable — you were always already inside the card by the time the
    * second press landed.
    */
-  const resolveConfirm = useCallback((consume?: () => void) => {
+  /** True when onConfirm said the press was not its own (returned false). */
+  const resolveConfirm = useCallback((consume?: () => void): boolean => {
     const now = Date.now();
     const isDouble = !!onDoubleConfirmRef.current && (now - lastConfirmMsRef.current < DOUBLE_CONFIRM_MS);
     lastConfirmMsRef.current = isDouble ? 0 : now;
@@ -1868,18 +1901,18 @@ export function useInputActions({
       if (confirmDeferRef.current) { clearTimeout(confirmDeferRef.current); confirmDeferRef.current = null; }
       consume?.();
       onDoubleConfirmRef.current!();
-      return;
+      return false;
     }
-    if (!onConfirmRef.current) return;
+    if (!onConfirmRef.current) return false;
     consume?.();
     if (onDoubleConfirmRef.current) {
       confirmDeferRef.current = setTimeout(() => {
         confirmDeferRef.current = null;
         onConfirmRef.current?.();
       }, DOUBLE_CONFIRM_MS);
-    } else {
-      onConfirmRef.current();
+      return false;
     }
+    return onConfirmRef.current() === false;
   }, []);
 
   // A press left waiting when the hook goes away must not fire into a card that
@@ -2454,7 +2487,10 @@ export function useInputActions({
         case 'warp-left':  onWarpRef.current?.('left');  break;
         case 'warp-right': onWarpRef.current?.('right'); break;
         case 'confirm': {
-          resolveConfirm();
+          // Past this instance's guards, as the directions are: a handler
+          // that was skipped has not taken the press (see _fallBackToClick).
+          const bound = !!(onConfirmRef.current || onDoubleConfirmRef.current);
+          if (bound && !resolveConfirm()) _confirmActionConsumed = true;
           break;
         }
         case 'confirm-long':

@@ -6,6 +6,7 @@ import { getTypeStyle } from '@/components/forms/sections/ParameterGridSection';
 import { apiClient } from '@/api/client';
 import { useHostDrawsArt, describeArt, drawArt, artScale, nextArtScale, ART_SCALES, type ArtKind } from '@/lib/art';
 import { classNames } from '@/utils/helpers';
+import { markWalked } from '@/hooks/useSpatialFocusNav';
 
 /**
  * A picture for the board's floor — a thing's, a want's, a constellation's
@@ -82,6 +83,28 @@ export const ArtMaker: React.FC<{
   const [step, setStep] = useState<Step>({ at: 'idle' });
   const [problem, setProblem] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // The keys stay with the strip as its buttons change under them. Pressing
+  // 作る swaps the row for 描く and the rest, and the button that had focus
+  // goes with it: focus fell to <body>, the panel took that for the keys
+  // leaving it, and the arrows went back to walking the board. Where focus
+  // was in the strip, it is put on the new row's first button that can be
+  // pressed — or on the strip itself while none can (it is thinking).
+  const stripRef = useRef<HTMLDivElement>(null);
+  const keysHere = useRef(false);
+  useEffect(() => {
+    if (!keysHere.current) return;
+    const strip = stripRef.current;
+    if (!strip) return;
+    const active = document.activeElement;
+    // Already on one of its buttons: left where it is.
+    if (active && active !== strip && strip.contains(active)) return;
+    const first = strip.querySelector<HTMLButtonElement>('button:not([disabled])');
+    // Waiting on the strip itself, it stays until a button can be pressed.
+    if (active === strip && !first) return;
+    const to = first ?? strip;
+    to.focus({ preventScroll: true });
+    markWalked(to);
+  });
 
   // Another subject: what was in hand for the last is not this one's.
   useEffect(() => { setStep({ at: 'idle' }); setProblem(null); }, [kind, id]);
@@ -165,7 +188,7 @@ export const ArtMaker: React.FC<{
   const cells: React.ReactNode[] = [];
   const cell = (key: string, props: React.ComponentProps<typeof OverlayCell>) => cells.push(
     <div key={key} style={{ width: CELL, height: CELL }} className="shrink-0">
-      <OverlayCell delay={cells.length * OVERLAY_STAGGER_MS} {...props} />
+      <OverlayCell delay={cells.length * OVERLAY_STAGGER_MS} cursorStop {...props} />
     </div>,
   );
   if (shown) {
@@ -250,7 +273,17 @@ export const ArtMaker: React.FC<{
         {/* One strip, the cells touching, rounded only at its ends — an
             overlay's grid, one row of it. It scrolls sideways rather than
             wrapping when there are more choices than room. */}
-        <div className="flex w-max max-w-full overflow-x-auto rounded-md">{cells}</div>
+        <div
+          ref={stripRef}
+          tabIndex={-1}
+          onFocus={() => { keysHere.current = true; }}
+          onBlur={(e) => {
+            // Leaving for somewhere else (not a button of its own changing
+            // under it, which blurs to nowhere): the keys are not here now.
+            if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) keysHere.current = false;
+          }}
+          className="flex w-max max-w-full overflow-x-auto rounded-md outline-none"
+        >{cells}</div>
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void fromFile(f); }} />
         {problem && <div className="text-xs text-red-600 dark:text-red-400">{problem}</div>}

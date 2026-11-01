@@ -4,6 +4,10 @@ import type { OverlayTone } from './tones';
 import { useOverlayDesign } from './design';
 
 export interface OverlayCellProps {
+  /** A place the keys and the roaming cursor stop at (data-free-cursor-item):
+   *  for a cell that sits in a panel among its other controls, not in an
+   *  overlay of its own that walks its cells itself. */
+  cursorStop?: boolean;
   icon: React.ReactNode;
   /** The word under the icon. */
   label?: React.ReactNode;
@@ -62,7 +66,7 @@ export interface OverlayCellProps {
  */
 export const OverlayCell: React.FC<OverlayCellProps> = ({
   icon, label, title, tone, color, off, onClick, disabled, focused, focusRingClass, delay = 0,
-  showLabel = true, labelClassName, onMouseEnter, static: isStatic, children,
+  showLabel = true, labelClassName, onMouseEnter, static: isStatic, children, cursorStop,
 }) => {
   const design = useOverlayDesign();
   const className = classNames(
@@ -101,6 +105,7 @@ export const OverlayCell: React.FC<OverlayCellProps> = ({
       onMouseEnter={onMouseEnter}
       className={className}
       style={style}
+      {...(cursorStop ? { 'data-free-cursor-item': '' } : undefined)}
     >
       {body}
     </button>

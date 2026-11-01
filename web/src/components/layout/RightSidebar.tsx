@@ -244,7 +244,11 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       const ae = document.activeElement as HTMLElement | null;
       const el = containerRef.current;
       const claimedInside = !!ae && !!el && el.contains(ae) && ae !== el;
-      if (!claimedInside) releaseSidebarFocus();
+      if (!claimedInside) { releaseSidebarFocus(); return; }
+      // Something inside has focus: the press is for it, not for the panel —
+      // a button the arrows walked to is pressed by it (the pad's A reaching
+      // it as Enter does; useInputActions' _fallBackToClick).
+      return false;
     },
     /**
      * Shift+Enter / gamepad Start on the panel's embedded card — its action

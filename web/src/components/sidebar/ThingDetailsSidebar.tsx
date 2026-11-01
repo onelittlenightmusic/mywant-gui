@@ -21,6 +21,7 @@ import { LogCard } from '@/components/common/LogCard';
 import { useThingNames } from '@/hooks/useThingNames';
 import { ThemeOrderSection } from './ThemeOrderSection';
 import { ArtMaker } from './ArtMaker';
+import { useSpatialFocusNav } from '@/hooks/useSpatialFocusNav';
 import { artOf } from '@/lib/art';
 import { kindBackgroundSrc } from '@/utils/thingBackground';
 import { LabelsSection } from '@/components/forms/sections/LabelsSection';
@@ -156,6 +157,10 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
   // is walked the same way whatever it is about. No `focus` half: this panel
   // has no card grid to hand the keys to yet, so every press switches.
   const panelRef = useRef<HTMLDivElement>(null);
+  // The arrows walk everything in the panel by where it is — the card, the
+  // rows, the picture's buttons — as the want panel's walk its card and its
+  // fields (useSpatialFocusNav; a grid of its own, History's, answers first).
+  useSpatialFocusNav(panelRef, sidebarFocused);
   usePanelTabs({
     tabs: THING_TABS,
     activeTab,
@@ -274,7 +279,7 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
           carries it, exactly as it does in the want panel where the two sit in
           one block. */}
       <div className={classNames('flex-shrink-0 px-3', isBottom ? 'order-first' : '')}>
-        <div className="h-32 sm:h-36" data-sidebar-primary="true" tabIndex={-1}>
+        <div className="h-32 sm:h-36" data-sidebar-primary="true" data-free-cursor-item tabIndex={-1}>
           {/* selected: EntityCard closes any overlay opened on a card that is
               not selected (see its effect on `selected && showActions`), so an
               unselected embed would open on long-press and shut again in the

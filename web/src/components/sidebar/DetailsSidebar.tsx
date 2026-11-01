@@ -163,8 +163,9 @@ export const InfoRow: React.FC<{
   value: React.ReactNode;
 }> = ({ label, value }) => (
   // A card of its own, as every value in a panel is (design/cards.ts): its
-  // name small above, the value under it.
-  <div className={classNames('flex flex-col gap-1 rounded-lg sm:rounded-xl px-2 py-1.5 min-w-0', FIELD_CARD_SURFACE)}>
+  // name small above, the value under it — and, as the want panel's field
+  // cards are, a place the arrows and the cursor stop at.
+  <div className={classNames('flex flex-col gap-1 rounded-lg sm:rounded-xl px-2 py-1.5 min-w-0', FIELD_CARD_SURFACE)} data-free-cursor-item>
     <dt className={FIELD_CARD_LABEL}>{label}</dt>
     <dd className="text-sm font-medium text-slate-900 dark:text-slate-100 break-words min-w-0">{value}</dd>
   </div>
