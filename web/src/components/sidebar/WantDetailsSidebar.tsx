@@ -3,7 +3,7 @@ import { useBoardChanged } from '@/api/boardSync';
 import { useOutputFocusStore } from '@/stores/outputFocusStore';
 import { HostMaximizesCard, hostSideSheets, nativePanelPage, postToHost, useHostCardSlot } from '@/lib/nativeHost';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
-import { Settings, Eye, Database, Check, History, MessageSquare, ArrowDownUp } from 'lucide-react';
+import { Settings, Eye, StickyNote, Check, History, MessageSquare, ArrowDownUp } from 'lucide-react';
 import { Want, WantExecutionStatus } from '@/types/want';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useWantStore } from '@/stores/wantStore';
@@ -156,7 +156,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
   // Sub-tab state — all lifted here so the common sub-tab (B+L1/R1) handler can dispatch to
   // whichever tab is currently active.
   const [activeSettingsTab, setActiveSettingsTab] = useState<FormTab>('params');
-  const [historySubTab, setHistorySubTab] = useState<HistorySubTab>('state');
+  const [historySubTab, setHistorySubTab] = useState<HistorySubTab>('outputs');
   // An answer of this want asked to be shown (the board's answer ball):
   // History › Outputs, with it lit.
   const [highlightOutput, setHighlightOutput] = useState<string | null>(null);
@@ -281,7 +281,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
   const prevWantIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     setActiveSettingsTab('params');
-    setHistorySubTab('state');
+    setHistorySubTab('outputs');
     if (prevWantIdRef.current !== undefined && prevWantIdRef.current !== wantId) {
       setSidebarDetailFocused(false);
     }
@@ -557,7 +557,8 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
 
   const tabs = [
     { id: 'settings' as TabType, label: 'Settings', icon: Settings },
-    { id: 'results' as TabType, label: 'Results', icon: Database, badge: resultsBadge },
+    // A sticky note, as the values in it are drawn (mw-postit).
+    { id: 'results' as TabType, label: 'Results', icon: StickyNote, badge: resultsBadge },
     // One tab, because it is one story: what comes in, and what goes out.
     { id: 'wiring' as TabType, label: 'Wiring', icon: ArrowDownUp,
       badge: (importBadge ?? 0) + (exposeBadge ?? 0) || null },
