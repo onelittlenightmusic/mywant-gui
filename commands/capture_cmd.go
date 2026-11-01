@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -96,6 +98,9 @@ Examples:
 	},
 }
 
+// captureTimeout is how long a capture may take, its extra wait aside.
+const captureTimeout = 60 * time.Second
+
 // screenshotElement navigates to url in a headless Chrome, waits for selector,
 // then saves a screenshot of that element to outputPath.
 func screenshotElement(url, selector string, extraWait time.Duration, outputPath string) error {
@@ -104,8 +109,19 @@ func screenshotElement(url, selector string, extraWait time.Duration, outputPath
 		chromedp.WindowSize(1440, 900),
 	)
 
+	// The Chrome launched here never outlives the capture. Left running, a
+	// headless Chrome is still Chrome to macOS, and links opened anywhere on
+	// the Mac (open, an app's "open in the browser") went to it and were never
+	// seen. So: a time it may take at most — a selector that never shows no
+	// longer waits forever — and Ctrl-C or a kill from whatever ran us cancels
+	// the run, which closes Chrome, rather than ending us with it still up.
+	base, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	defer stop()
+	base, cancelTimeout := context.WithTimeout(base, captureTimeout+extraWait)
+	defer cancelTimeout()
+
 	fmt.Println("  [1/5] Launching headless Chrome...")
-	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(), opts...)
+	allocCtx, cancelAlloc := chromedp.NewExecAllocator(base, opts...)
 	defer cancelAlloc()
 
 	ctx, cancelCtx := chromedp.NewContext(allocCtx)
