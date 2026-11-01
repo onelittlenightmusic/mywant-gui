@@ -11,6 +11,10 @@
  *                  the first is lit and the CursorMan stood on it
  *   goto.then      pages the way goes on to in the same tab
  *
+ * A want whose answer is a list of many places keeps the way's shape once,
+ * as its `goto_template` state, and each place only the values that go into
+ * it (`goto_values`); the way is filled here when one is opened (gotoOf).
+ *
  * Each step and element may name its moment (say_key). Opening asks the
  * want's voice for a line per moment, and a short name for it in the way's
  * progress ("title:<moment>") (POST /wants/{id}/voice/guide), in the
@@ -37,13 +41,38 @@ export interface WebGuide {
   then?: GuidePage[];
 }
 
+/** `template` with every `{{name}}` in its strings replaced by values[name] —
+ *  the SDK's fill_template, the same way round. */
+export function fillTemplate<T>(template: T, values: Record<string, unknown>): T {
+  if (typeof template === 'string') {
+    return template.replace(/\{\{(\w+)\}\}/g, (m, k: string) => (k in values ? String(values[k]) : m)) as T;
+  }
+  if (Array.isArray(template)) return template.map(t => fillTemplate(t, values)) as T;
+  if (template && typeof template === 'object') {
+    return Object.fromEntries(
+      Object.entries(template).filter(([k]) => !k.startsWith('_')).map(([k, v]) => [k, fillTemplate(v, values)]),
+    ) as T;
+  }
+  return template;
+}
+
+/** A place's way: its own `goto`, or the want's `goto_template` filled with its `goto_values`. */
+export function gotoOf(x: unknown, template?: unknown): WebGuide | undefined {
+  if (!x || typeof x !== 'object') return undefined;
+  const o = x as Record<string, unknown>;
+  if (o.goto && typeof o.goto === 'object') return o.goto as WebGuide;
+  if (o.goto_values && typeof o.goto_values === 'object' && template && typeof template === 'object') {
+    return fillTemplate(template as WebGuide, o.goto_values as Record<string, unknown>);
+  }
+  return undefined;
+}
+
 /** Whether something (an answer, an item in one) is a place on a page to be brought to. */
-export function guideOf(x: unknown): { url: string; goto: WebGuide } | null {
+export function guideOf(x: unknown, template?: unknown): { url: string; goto: WebGuide } | null {
   if (!x || typeof x !== 'object') return null;
   const o = x as Record<string, unknown>;
-  return typeof o.url === 'string' && o.url && o.goto && typeof o.goto === 'object'
-    ? { url: o.url, goto: o.goto as WebGuide }
-    : null;
+  const goto = gotoOf(o, template);
+  return typeof o.url === 'string' && o.url && goto ? { url: o.url, goto } : null;
 }
 
 /** The way with the robot's lines in it, put on each step by its moment.

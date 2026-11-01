@@ -96,7 +96,7 @@ export const HistoryTab: React.FC<{
                   title={(() => {
                     // An answer that is a place on a page (url + goto): a way
                     // there, from any want (lib/webGuide).
-                    const place = guideOf(entry.result);
+                    const place = guideOf(entry.result, want.state?.current?.goto_template);
                     const words = outputSummary(entry) || '—';
                     return place ? (
                       <button

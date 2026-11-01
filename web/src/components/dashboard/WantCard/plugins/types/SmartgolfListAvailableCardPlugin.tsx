@@ -2,7 +2,7 @@ import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
 import { WantCardLayout } from '../../WantCardLayout';
-import { openWithGuide, type WebGuide } from '@/lib/webGuide';
+import { gotoOf, openWithGuide, type WebGuide } from '@/lib/webGuide';
 
 /**
  * The open slots of every store watched, on one line of time running down:
@@ -21,6 +21,9 @@ interface Slot {
   /** The way to this slot on its booking page (lib/webGuide): the room
    *  chosen, the time lit and the CursorMan on it. */
   goto?: WebGuide;
+  /** What goes into the want's goto_template for this slot — kept instead of
+   *  a whole `goto` per slot (gotoOf). */
+  goto_values?: Record<string, unknown>;
 }
 
 /** A store's colour, so the eye finds 北新宿 down the column without reading. */
@@ -50,7 +53,7 @@ function dayLabel(date: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-interface Row { time: string; stores: { store: string; url?: string; goto?: Slot['goto']; rooms: number }[] }
+interface Row { time: string; stores: { store: string; url?: string; slot: Slot; rooms: number }[] }
 interface Day { date: string; rows: Row[] }
 
 function timeline(slots: Slot[]): Day[] {
@@ -67,7 +70,7 @@ function timeline(slots: Slot[]): Day[] {
     const hit = row.stores.find(x => x.store === name);
     if (hit) hit.rooms += 1;
     // Two rooms free at one store and time are one chip; it goes to the first.
-    else row.stores.push({ store: name, url: s.url, goto: s.goto, rooms: 1 });
+    else row.stores.push({ store: name, url: s.url, slot: s, rooms: 1 });
   }
   return days;
 }
@@ -88,10 +91,10 @@ const SmartgolfListAvailableContent: React.FC<WantCardPluginProps> = ({ want, is
    * it there (lib/webGuide) — and the press stopped, so the card under it does
    * not open its panel as well.
    */
-  const open = (url: string, goto?: WebGuide) => (e: React.MouseEvent) => {
+  const open = (url: string, slot: Slot) => (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    openWithGuide(want.metadata?.id ?? '', url, goto);
+    openWithGuide(want.metadata?.id ?? '', url, gotoOf(slot, cur.goto_template));
   };
 
   const content = (
@@ -128,7 +131,7 @@ const SmartgolfListAvailableContent: React.FC<WantCardPluginProps> = ({ want, is
                       type="button"
                       data-inner-focus
                       title={`${s.store}の予約ページを開く`}
-                      onClick={open(s.url, s.goto)}
+                      onClick={open(s.url, s.slot)}
                       onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
                       className={`${cls} hover:brightness-95 hover:underline`}
                     >
