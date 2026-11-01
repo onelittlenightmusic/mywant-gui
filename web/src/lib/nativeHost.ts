@@ -87,6 +87,9 @@ interface HostBridge {
    *  says "reflecting…" until its next read brings it back (reflectingStore).
    *  Which parts — 'wants', 'things' — or, left out, both. */
   sent?: (parts?: ('wants' | 'things')[]) => void;
+  /** A panel page: the keys are now yours (true), or the board's again
+   *  (false) — the app has moved them between its web views (focusOwner). */
+  focusPanel?: (on: boolean) => void;
 }
 
 declare global {
@@ -180,6 +183,7 @@ export interface HostCardAct { type: 'card-act'; act: string; kind: HostFloatCar
 
 /** Hand a message to the app. Nothing happens without one. */
 export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostMapRect | HostCardAct | HostCardSlot | HostFocusCard | HostControls | { type: 'haptic'; kind: 'lift' | 'drop' | 'land' }
+  | { type: 'panel-focus'; on: boolean }
   | { type: 'rumble'; ms: number }
   | { type: 'drag-shape'; shape: 'circle'; x: number; y: number; w: number; h: number }
   | { type: 'card-buttons'; list: { id: string; label: string; icon: string }[] }): void {
@@ -392,10 +396,20 @@ if (hostSideSheets && typeof document !== 'undefined') document.documentElement.
 // is left of the window; as it comes and goes, that centre slides — slowly,
 // more slowly than the drawer, so the view is seen to make room and give it
 // back. Read every frame by the board's camera (useBoardRefs).
+//
+// Only once the walking has stopped: the drawer comes and goes as the
+// character crosses wants, and a view sliding over at every one of them on
+// the way somewhere was only in the way. The slide waits until the keys and
+// the stick have been still a moment (noteBoardMove) — at once when the
+// drawer came from anything else.
 
 const DRAWER_EASE_MS = 650;
+const DRAWER_SETTLE_MS = 700;
 const drawerWidth: number = Number(window.__mywantHost?.sideSheetWidth) || 420;
 let drawerFrom = 0, drawerTo = 0, drawerT0 = 0;
+/** Where the drawer's cover is going, once the walking stops. */
+let drawerWanted = 0;
+let lastMoveAt = -Infinity;
 
 function drawerAt(now: number): number {
   const p = Math.min(1, (now - drawerT0) / DRAWER_EASE_MS);
@@ -403,20 +417,26 @@ function drawerAt(now: number): number {
   return drawerFrom + (drawerTo - drawerFrom) * e;
 }
 
+/** The character was walked — by a key or the stick — just now. */
+export function noteBoardMove(): void {
+  lastMoveAt = performance.now();
+}
+
 /** The px of the board's right edge a side drawer covers now (0 without one). */
 export function hostDrawerInset(): number {
-  return drawerTo === drawerFrom ? drawerTo : drawerAt(performance.now());
+  const now = performance.now();
+  if (drawerWanted !== drawerTo && now - lastMoveAt >= DRAWER_SETTLE_MS) {
+    drawerFrom = drawerAt(now);
+    drawerTo = drawerWanted;
+    drawerT0 = now;
+  }
+  return drawerTo === drawerFrom ? drawerTo : drawerAt(now);
 }
 
 if (hostSideSheets) {
   useHostSheetStore.subscribe(({ sheet }) => {
     // The map is no drawer: a small one in the corner, over the board.
-    const to = sheet && !sheet.route.includes('__panel=__minimap') ? drawerWidth : 0;
-    if (to === drawerTo) return;
-    const now = performance.now();
-    drawerFrom = drawerAt(now);
-    drawerTo = to;
-    drawerT0 = now;
+    drawerWanted = sheet && !sheet.route.includes('__panel=__minimap') ? drawerWidth : 0;
   });
 }
 

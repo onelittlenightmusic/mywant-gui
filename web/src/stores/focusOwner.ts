@@ -8,6 +8,7 @@ import {
 import { giveStickToBoard, isStickWithPanel } from './stickOwner';
 import { warpFreeCursorToElement, FREE_CURSOR_ITEM_ATTR } from '@/hooks/useFreeCursorNav';
 import { playSound } from '@/utils/sounds';
+import { hostSheetsOn, nativePanelPage, postToHost, useHostSheetStore } from '@/lib/nativeHost';
 
 /**
  * Where the keys are, as one value — and the only way to move them.
@@ -186,6 +187,51 @@ function leave(to: FocusDestination, deliberate: boolean): void {
   }
 }
 
+/** A panel the app shows beside the board (not its corner map). */
+function hostPanelUp(): boolean {
+  const sheet = useHostSheetStore.getState().sheet;
+  return !!sheet && !sheet.route.includes('__panel=__minimap');
+}
+
+/** The app is moving the keys itself: nothing to tell it back. */
+let keysTakenByHost = false;
+
+// A panel page in an app: the app says when the keys come to it (A on the
+// board) and when they go back (the drawer closing, another panel).
+if (nativePanelPage && typeof window !== 'undefined' && window.__mywantHost) {
+  window.__mywantHost.focusPanel = (on: boolean) => {
+    if (on) { handOverToSidebarWhenReady(); return; }
+    keysTakenByHost = true;
+    try { moveFocusTo('board', { deliberate: false }); } finally { keysTakenByHost = false; }
+  };
+  // However the panel let go of them — not every way out goes through
+  // moveFocusTo (B in a card grid leaves the sidebar by its own exit, or by
+  // focus simply going) — the app is told, so the keys go back to the board
+  // and not stay here with nothing taking them. A moment's grace: the flag
+  // reads where focus sits, and focus moving within the panel can drop it for
+  // a frame.
+  let letGo: number | undefined;
+  useSidebarFocusStore.subscribe(({ focused }, prev) => {
+    if (focused || !prev.focused) { window.clearTimeout(letGo); return; }
+    window.clearTimeout(letGo);
+    letGo = window.setTimeout(() => {
+      if (!keysTakenByHost && readFocusOwner() === 'board') postToHost({ type: 'panel-focus', on: false });
+    }, 150);
+  });
+}
+
+// The board in an app: a drawer gone takes the keys it was given with it.
+// (A Mac keeps the drawer's web view, hidden, for the next one: the app cannot
+// tell a drawer closed from the web view going.)
+if (!nativePanelPage && typeof window !== 'undefined' && window.__mywantHost) {
+  let up = false;
+  useHostSheetStore.subscribe(() => {
+    const now = hostPanelUp();
+    if (up && !now) postToHost({ type: 'panel-focus', on: false });
+    up = now;
+  });
+}
+
 /**
  * Move the keys. The one transition.
  *
@@ -203,7 +249,23 @@ export function moveFocusTo(to: FocusDestination, opts: MoveOptions = {}): boole
   const panel = to === 'panel'
     ? document.querySelector<HTMLElement>('[data-sidebar="true"][data-sidebar-open="true"]')
     : null;
+  // Framed by an app, the panel is a page of its own in a web view beside this
+  // one (a Mac's drawer, a phone's sheet), not in this document: the app moves
+  // the keys and the pad over to it, and that page takes them (focusPanel).
+  if (to === 'panel' && !panel && hostSheetsOn() && hostPanelUp()) {
+    leave(to, deliberate);
+    // The note is the panel page's, said as it takes them.
+    postToHost({ type: 'panel-focus', on: true });
+    return true;
+  }
   if (to === 'panel' && !panel) return false;
+  // That page, giving them back. Whatever it thinks it holds: its own flag is
+  // a reading of where focus sits in it, and is often gone by the time B is
+  // pressed — while the app still has the keys here. (Said when it had none,
+  // the app lets it go.)
+  if (to === 'board' && nativePanelPage && !keysTakenByHost) {
+    postToHost({ type: 'panel-focus', on: false });
+  }
 
   leave(to, deliberate);
 
