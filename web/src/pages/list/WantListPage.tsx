@@ -493,7 +493,7 @@ export const WantListPage: React.FC<{
     if (kind === 'thing') {
       const t = thingRecords.find(r => r.id === id);
       return (
-        <HostCardFrame head={t && !embeddedCard ? { kind: 'thing', record: t } : undefined}>
+        <HostCardFrame head={t && !embeddedCard ? { kind: 'thing', record: t } : undefined} onHeadTap={() => act('open')}>
           {t && (
             <ThingCard
               record={t}
@@ -514,7 +514,7 @@ export const WantListPage: React.FC<{
     // children), so it gets the page as it is.
     const Frame = maximizedCard ? HostCardPage : HostCardFrame;
     return (
-      <Frame head={w && !embeddedCard ? { kind: 'want', want: w } : undefined}>
+      <Frame head={w && !embeddedCard ? { kind: 'want', want: w } : undefined} onHeadTap={() => act('open')}>
         <HostCardPageButtons />
         {w && (
           <CardEmbeddedContext.Provider value={embeddedCard}>
@@ -656,8 +656,11 @@ const HostCardFrame: React.FC<{
   /** A corner card's: the subject's tile and what it is saying, over the card
    *  (SubjectSays). Not on a card embedded in a panel, whose panel has them. */
   head?: PanelSubject;
+  /** A tap on the head — off the card itself — opens the subject's panel
+   *  (the app's: card-act open), as the card's view button does. */
+  onHeadTap?: () => void;
   children: React.ReactNode;
-}> = ({ head, children }) => {
+}> = ({ head, onHeadTap, children }) => {
   const [size, setSize] = React.useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => {
     const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight });
@@ -671,7 +674,7 @@ const HostCardFrame: React.FC<{
           that scale: the frame may be another shape (a sheet's card row). */}
       <div className="flex flex-col"
         style={{ width: 420, height: size.h * 420 / size.w, transform: `scale(${size.w / 420})`, transformOrigin: 'top left' }}>
-        {head && <div className="flex-shrink-0"><SubjectSays subject={head} /></div>}
+        {head && <div className="flex-shrink-0" onClick={onHeadTap}><SubjectSays subject={head} inert /></div>}
         <div className="flex-1 min-h-0">{children}</div>
       </div>
       </HostFramedPanel.Provider>
@@ -680,7 +683,7 @@ const HostCardFrame: React.FC<{
 };
 
 /** A maximized card's page: the page as it is, for the card to fill. */
-const HostCardPage: React.FC<{ head?: PanelSubject; children: React.ReactNode }> = ({ children }) => (
+const HostCardPage: React.FC<{ head?: PanelSubject; onHeadTap?: () => void; children: React.ReactNode }> = ({ children }) => (
   <div className="fixed inset-0 bg-white dark:bg-gray-900">
     <HostFramedPanel.Provider value={true}>{children}</HostFramedPanel.Provider>
   </div>

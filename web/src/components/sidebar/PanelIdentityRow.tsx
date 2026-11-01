@@ -94,10 +94,10 @@ function subjectName(subject: PanelSubject): string {
 
 /** The subject's tile with its name under it, small: the head of a row
  *  whose room beside the tile is its bubble's. */
-const MarkWithName: React.FC<{ subject: PanelSubject; name?: string; size: number }> = ({ subject, name, size }) => (
+const MarkWithName: React.FC<{ subject: PanelSubject; name?: string; size: number; inert?: boolean }> = ({ subject, name, size, inert }) => (
   <div className="flex-shrink-0 flex flex-col items-center" style={{ width: size + 32 }}>
     <div style={{ width: size, height: size }}>
-      <Slot name="panelIdentityMark" subject={subject} size={size} />
+      <Slot name="panelIdentityMark" subject={subject} size={size} inert={inert} />
     </div>
     <div className="mt-0.5 w-full text-center text-[10px] leading-tight font-medium text-gray-700 dark:text-gray-200 truncate"
       title={name || subjectName(subject)}>
@@ -114,9 +114,9 @@ export const CARD_IDENTITY_ROW = 56;
  * saying beside it — for a corner card to wear over the card itself: the same
  * two, so the card that floats is the panel's head as well as its card.
  */
-export const SubjectSays: React.FC<{ subject: PanelSubject; size?: number }> = ({ subject, size = 34 }) => (
+export const SubjectSays: React.FC<{ subject: PanelSubject; size?: number; inert?: boolean }> = ({ subject, size = 34, inert }) => (
   <div className="flex items-center gap-2 min-w-0 px-2" style={{ height: CARD_IDENTITY_ROW }}>
-    {extensionSlot('panelIdentityMark').length > 0 && <MarkWithName subject={subject} size={size} />}
+    {extensionSlot('panelIdentityMark').length > 0 && <MarkWithName subject={subject} size={size} inert={inert} />}
     {extensionSlot('panelIdentitySpeech').length > 0 && (
       <div className="flex-1 min-w-0">
         <Slot name="panelIdentitySpeech" subject={subject} />

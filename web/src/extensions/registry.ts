@@ -104,7 +104,9 @@ export interface ExtensionSlots {
    * want's tile, the thing's ball), so a want's panel and a thing's tell
    * apart before either name is read. `size` is the room the row has for it.
    */
-  panelIdentityMark: ComponentType<{ subject: PanelSubject; size: number }>;
+  /** inert: drawn only, not a way to the tile (a float card's head, whose tap
+   *  is the card's own). */
+  panelIdentityMark: ComponentType<{ subject: PanelSubject; size: number; inert?: boolean }>;
   /** After the mark: what the subject is saying, in a bubble beside it (a
    *  want's line, said here rather than over its tile while its panel is up). */
   panelIdentitySpeech: ComponentType<{ subject: PanelSubject }>;
