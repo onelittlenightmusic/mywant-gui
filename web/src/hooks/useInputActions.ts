@@ -584,6 +584,27 @@ function _pressStartedInTextField(key: string): boolean {
 // Asked as early as an event can be seen: before the target's own handlers,
 // before React's delegated ones, before anything can blur or unmount what the
 // press landed on. One listener for the whole app, installed with the module.
+
+/**
+ * Keys that belong to an input method — typing Japanese, the Enter that
+ * settles 「変換」 — and not to the app.
+ *
+ * A key pressed while composing comes as keydown with isComposing (keyCode
+ * 229), and its keyup after the composition has ended, with neither: on its
+ * own the keyup reads as a plain Enter. Enter and Escape are resolved on
+ * keyup (see _keydownInTextField), so settling a word in a text field was a
+ * confirm — the panel took the press and the focus with it. So the press is
+ * known by its keydown, and its keyup goes with it.
+ */
+const _keydownForIme = new Set<string>();
+function _isImeKey(e: KeyboardEvent): boolean {
+  return e.isComposing || e.keyCode === 229;
+}
+/** Whether a key event is the input method's: composing, or the keyup of a press that was. */
+export function isImeKeyEvent(e: KeyboardEvent): boolean {
+  return _isImeKey(e) || (e.type === 'keyup' && _keydownForIme.has(e.key));
+}
+
 if (typeof window !== 'undefined') {
   const _primeKeyOwner = (e: KeyboardEvent) => {
     const owner = _keyOwner(e);
@@ -602,6 +623,8 @@ if (typeof window !== 'undefined') {
     if (e.type !== 'keydown') return;
     if (_isTextEditableTarget(e.target)) _keydownInTextField.add(e.key);
     else _keydownInTextField.delete(e.key);
+    if (_isImeKey(e)) _keydownForIme.add(e.key);
+    else _keydownForIme.delete(e.key);
   };
   window.addEventListener('keydown', _primeKeyOwner, true);
   window.addEventListener('keyup', _primeKeyOwner, true);
@@ -2027,6 +2050,8 @@ export function useInputActions({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!enabledRef.current) return;
+      // The input method's (settling a word): the field's, never an action.
+      if (isImeKeyEvent(e)) return;
       // The one routing rule, shared with the gamepad (see _emit): while a claim
       // is live the press goes to it and to nobody else; with no claim it goes
       // to everyone, and each instance's own guards decide.
@@ -2235,6 +2260,7 @@ export function useInputActions({
       if (e.key === 'x' || e.key === 'X') xHeldRef.current = false;
       if (e.key === 'y' || e.key === 'Y' || e.key === 'z' || e.key === 'Z') yHeldRef.current = false;
       if (!enabledRef.current) return;
+      if (isImeKeyEvent(e)) return;
       const owner = _keyOwner(e);
       const isOwner = owner?.token === instanceToken;
       if (owner && !isOwner) return;

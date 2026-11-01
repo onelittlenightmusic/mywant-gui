@@ -40,6 +40,24 @@ export const CommitInput = React.forwardRef<CommitInputHandle, CommitInputProps>
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  /**
+   * While a word is being composed (Japanese: なかの → Space → 中野) the
+   * field's look stays as it was. WebKit (the Mac and iPhone app's web view)
+   * settles the word wrongly when a field is restyled mid-composition, and the
+   * first letter of a word would turn it to "changed" yellow. Its value still
+   * follows every keystroke: a field whose value stood still while the text
+   * moved was set back each time by React, the composing reading wiped from it.
+   */
+  const composing = useRef(false);
+  const typed = (v: string) => setLocalValue(v);
+  const compositionProps = {
+    onCompositionStart: () => { composing.current = true; },
+    onCompositionEnd: (e: React.CompositionEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      composing.current = false;
+      setLocalValue(e.currentTarget.value);
+    },
+  };
+
   // Sync local value when prop value changes (unless focused)
   useEffect(() => {
     if (!isFocused) {
@@ -74,7 +92,10 @@ export const CommitInput = React.forwardRef<CommitInputHandle, CommitInputProps>
   }));
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && e.nativeEvent.isComposing) {
+    // The input method's Enter, settling a word, is not a commit: WebKit sends
+    // it after the composition has ended, without isComposing but as keyCode
+    // 229 — taken as one, it cancelled the word going in and left the field.
+    if (e.key === 'Enter' && (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229)) {
       return;
     }
     if (e.key === 'Enter') {
@@ -127,9 +148,11 @@ export const CommitInput = React.forwardRef<CommitInputHandle, CommitInputProps>
     onFocusProp?.(e as React.FocusEvent<HTMLInputElement>);
   };
 
+  // Not restyled while a word is composed (see `composing`).
+  const looksChanged = hasChanges && !composing.current;
   const sharedClassName = classNames(
     'w-full px-2 py-1 sm:px-3 sm:py-2 border rounded sm:rounded-md focus:outline-none focus:ring-2 transition-colors text-xs sm:text-sm',
-    hasChanges
+    looksChanged
       ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-400 dark:border-yellow-600 focus:ring-yellow-400 text-gray-900 dark:text-gray-100'
       : transparent
         ? 'bg-white/70 dark:bg-gray-800/60 border-gray-200/70 dark:border-gray-600/60 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-gray-100'
@@ -143,7 +166,8 @@ export const CommitInput = React.forwardRef<CommitInputHandle, CommitInputProps>
         <textarea
           ref={textareaRef}
           value={localValue}
-          onChange={(e) => setLocalValue(e.target.value)}
+          onChange={(e) => typed(e.target.value)}
+          {...compositionProps}
           onKeyDown={handleKeyDown as React.KeyboardEventHandler<HTMLTextAreaElement>}
           onFocus={handleFocus}
           onBlur={handleBlur as React.FocusEventHandler<HTMLTextAreaElement>}
@@ -157,14 +181,15 @@ export const CommitInput = React.forwardRef<CommitInputHandle, CommitInputProps>
           {...props}
           ref={inputRef}
           value={localValue}
-          onChange={(e) => setLocalValue(e.target.value)}
+          onChange={(e) => typed(e.target.value)}
+          {...compositionProps}
           onKeyDown={handleKeyDown as React.KeyboardEventHandler<HTMLInputElement>}
           onFocus={handleFocus}
           onBlur={handleBlur as React.FocusEventHandler<HTMLInputElement>}
           className={sharedClassName}
         />
       )}
-      {hasChanges && (
+      {looksChanged && (
         <div className="absolute right-2 -top-5 text-[10px] font-medium text-yellow-700 bg-yellow-100 px-1.5 py-0.5 rounded shadow-sm border border-yellow-200 pointer-events-none animate-in fade-in slide-in-from-bottom-1">
           {hint ?? (multiline ? 'Enter to commit / Shift+Enter for newline' : 'Enter to commit')}
         </div>

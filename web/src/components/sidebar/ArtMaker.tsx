@@ -6,6 +6,7 @@ import { getTypeStyle } from '@/components/forms/sections/ParameterGridSection';
 import { apiClient } from '@/api/client';
 import { useHostDrawsArt, describeArt, drawArt, artScale, nextArtScale, ART_SCALES, type ArtKind } from '@/lib/art';
 import { classNames } from '@/utils/helpers';
+import { CommitInput } from '@/components/common/CommitInput';
 import { markWalked } from '@/hooks/useSpatialFocusNav';
 
 /**
@@ -98,6 +99,10 @@ export const ArtMaker: React.FC<{
     const active = document.activeElement;
     // Already on one of its buttons: left where it is.
     if (active && active !== strip && strip.contains(active)) return;
+    // Somewhere else on purpose — the words being written above it, settled
+    // a word at a time in Japanese, each a new render — is not focus that
+    // fell: only a button gone from under it (focus on <body>) is taken back.
+    if (active && active !== strip && active !== document.body) return;
     const first = strip.querySelector<HTMLButtonElement>('button:not([disabled])');
     // Waiting on the strip itself, it stays until a button can be pressed.
     if (active === strip && !first) return;
@@ -255,18 +260,18 @@ export const ArtMaker: React.FC<{
 
         {/* The words it will be drawn from: read, changed, or asked for again. */}
         {(step.at === 'prompt' || step.at === 'drawing' || (step.at === 'describing' && step.instead !== undefined)) && (
-          <textarea
-            value={step.at === 'describing' ? step.instead : step.text}
-            onChange={e => { if (step.at === 'prompt') setStep({ at: 'prompt', text: e.target.value }); }}
-            readOnly={step.at !== 'prompt'}
-            rows={3}
+          // Held in the field as it is written and handed up on Enter or on
+          // leaving it (CommitInput), as a parameter's words are: the strip
+          // below is not redrawn for each letter, and a Japanese word is
+          // settled in the field before anything here hears of it.
+          <CommitInput
+            multiline
+            value={(step.at === 'describing' ? step.instead : step.text) ?? ''}
+            onChange={v => { if (step.at === 'prompt') setStep({ at: 'prompt', text: v }); }}
+            disabled={step.at !== 'prompt'}
             aria-label="プロンプト"
-            className={classNames(
-              'w-full text-xs rounded-md px-2 py-1.5 resize-none',
-              'bg-white/80 dark:bg-gray-900/60 text-gray-800 dark:text-gray-100',
-              'ring-1 ring-black/10 dark:ring-white/15 focus:outline-none focus:ring-2 focus:ring-blue-500',
-              step.at !== 'prompt' && 'opacity-60',
-            )}
+            hint="Enter で決める / Shift+Enter で改行"
+            className={classNames('text-xs', step.at !== 'prompt' && 'opacity-60')}
           />
         )}
 
