@@ -1670,7 +1670,7 @@ class MyWantApiClient {
   /** The words a picture is drawn from (the engine's art_words.go): already
    *  written when the server has a model of its own, else the request to put
    *  to one here (lib/art's describeArt). */
-  async describeArt(body: { value: string; subtype: string; instead?: string; context?: string }): Promise<import('@/lib/art').ArtWordsRecipe> {
+  async describeArt(body: { value: string; subtype: string; instead?: string; context?: string; language?: string }): Promise<import('@/lib/art').ArtWordsRecipe> {
     return (await this.client.post<import('@/lib/art').ArtWordsRecipe>('/api/v1/art/describe', body, { timeout: 150_000 })).data;
   }
 

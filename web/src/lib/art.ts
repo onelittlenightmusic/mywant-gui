@@ -28,6 +28,7 @@
  */
 import { useSyncExternalStore } from 'react';
 import { apiClient } from '@/api/client';
+import { displaySettings } from '@/hooks/useDisplaySettings';
 import { artDrawInBrowser, artGenerateInBrowser, getBrowserFMStatus } from '@/lib/extensionContext';
 
 /** What can have art, as the engine's /api/v1/art/{kind}/{id} names it. */
@@ -151,7 +152,9 @@ export interface ArtWordsRecipe {
  * one already offered, for another.
  */
 export async function describeArt(value: string, kind: string, instead?: string, context?: string): Promise<string> {
-  const recipe = await apiClient.describeArt({ value, subtype: kind, instead, context: context || undefined });
+  // In the language the person reads the board in: the words are theirs to
+  // read, and change, before it is drawn.
+  const recipe = await apiClient.describeArt({ value, subtype: kind, instead, context: context || undefined, language: displaySettings().language });
   if (recipe.prompt) return recipe.prompt;
   const host = artHost();
   const said = host ? (await host.generate(recipe.ask, recipe.warm).catch(() => null))?.text?.trim() : undefined;
