@@ -187,7 +187,8 @@ export function postToHost(message: HostMessage | HostChoice | HostSheetDone | H
   | { type: 'rumble'; ms: number }
   | { type: 'drag-shape'; shape: 'circle'; x: number; y: number; w: number; h: number }
   | { type: 'card-buttons'; list: { id: string; label: string; icon: string }[] }
-  | { type: 'open-guide'; url: string; title: string; steps: unknown[]; elements: unknown[]; then: unknown[] }): void {
+  | { type: 'open-guide'; url: string; title: string; steps: unknown[]; elements: unknown[]; then: unknown[] }
+  | { type: 'typing'; on: boolean; composing: boolean }): void {
   window.webkit?.messageHandlers?.mywantHost?.postMessage(message);
 }
 
@@ -207,6 +208,46 @@ export function hostTrace(text: string): void {
   try {
     (window as any).webkit?.messageHandlers?.mywantPageError?.postMessage({ kind: 'trace', text, path: location.pathname });
   } catch { /* no app listening */ }
+}
+
+/**
+ * Whether an element is a field written in: text typed into it, an input
+ * method's words composed in it — not a box ticked, a button, a slider.
+ */
+export function isTextEntry(el: Element | null): boolean {
+  const h = el as HTMLElement | null;
+  if (!h) return false;
+  if (h.isContentEditable) return true;
+  if (h.tagName === 'TEXTAREA') return !(h as HTMLTextAreaElement).readOnly && !(h as HTMLTextAreaElement).disabled;
+  if (h.tagName !== 'INPUT') return false;
+  const input = h as HTMLInputElement;
+  return !input.readOnly && !input.disabled
+    && !['checkbox', 'radio', 'button', 'submit', 'reset', 'image', 'range', 'color', 'file'].includes(input.type);
+}
+
+/**
+ * Framed by an app: telling it when a field of this page is being written in
+ * (focus in a text field, or a word being composed in one), and when no
+ * longer. In a browser the GUI keeps its own keys off a field
+ * (useInputActions); the app has keys of its own on top — the keyboard it
+ * reads and plays into the page, the page it hands the keys to — and keeps
+ * them off while this says so (the app's ControllerFeed.typing). Said only as
+ * it changes.
+ */
+if (nativeHost && typeof document !== 'undefined') {
+  let composing = false;
+  let said: { on: boolean; composing: boolean } | null = null;
+  const say = () => {
+    const now = { on: composing || isTextEntry(document.activeElement), composing };
+    if (said && said.on === now.on && said.composing === now.composing) return;
+    said = now;
+    postToHost({ type: 'typing', ...now });
+  };
+  document.addEventListener('focusin', say, true);
+  // Focus leaving a field lands somewhere (or on <body>) a moment later.
+  document.addEventListener('focusout', () => setTimeout(say, 0), true);
+  document.addEventListener('compositionstart', () => { composing = true; say(); }, true);
+  document.addEventListener('compositionend', () => { composing = false; say(); }, true);
 }
 
 export function iconName(icon: { displayName?: string } | undefined, fallback: string): string {
