@@ -7,7 +7,6 @@ import { apiClient } from '@/api/client';
 import { send } from '@/api/outbox';
 import { useReflectingStore } from '@/stores/reflectingStore';
 import { loadWantSnapshot, saveWantSnapshot } from '@/lib/wantSnapshot';
-import { bootMark, bootMarkDrawn, sendBootTiming } from '@/lib/bootTiming';
 import { smartPollWants, registerWantCacheActions, getWantETag, setWantETag, getDetailETag, setDetailETag, seedWantETags, suspendWantPolling, invalidateCollectionETag } from '@/stores/wantHashCache';
 
 interface DraggingTemplate {
@@ -274,7 +273,6 @@ export const useWantStore = create<WantStore>()(
 
       try {
         const startedAt = Date.now();
-        if (currentState.isInitialLoad) bootMark('server-asked');
         const wants = await apiClient.listWants();
         // Sort by orderKey for consistent ordering that respects reordering
         const sortedWants = [...wants].sort((a, b) => {
@@ -680,20 +678,13 @@ registerWantCacheActions(
 // hashes seed the poll's cache, so it asks again only for what changed.
 void loadWantSnapshot().then(cached => {
   const s = useWantStore.getState();
-  bootMark('snapshot-read', cached?.length ?? 0);
   if (!cached || !cached.length || !s.isInitialLoad || s.wants.length > 0) return;
   seedWantETags(cached);
   useWantStore.setState({ wants: cached });
-  bootMarkDrawn('snapshot-drawn', cached.length);
 });
 // ...and kept, once the server has said what they are.
 useWantStore.subscribe((state, prev) => {
   if (!state.isInitialLoad && state.wants !== prev.wants) saveWantSnapshot(state.wants);
-  // The server's first answer, and the board drawn from it: the start is over.
-  if (prev.isInitialLoad && !state.isInitialLoad) {
-    bootMark('server-wants', state.wants.length);
-    requestAnimationFrame(() => requestAnimationFrame(() => { bootMark('server-drawn'); sendBootTiming(); }));
-  }
 });
 
 // Auto-refresh via smart polling every 5 seconds (background baseline)

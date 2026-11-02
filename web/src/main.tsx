@@ -1,5 +1,3 @@
-// Before anything: when this page's script began (lib/bootTiming).
-import '@/lib/bootTiming'
 // First: extensions register before anything that asks what they added.
 import '@/extensions/installed'
 import { installSidebarFocusTracking } from '@/stores/sidebarFocusStore';
