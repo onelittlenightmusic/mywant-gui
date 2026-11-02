@@ -84,6 +84,12 @@ export interface EntityCardProps {
    * card on the board, zoomed in), where the list's size reads as small.
    */
   faceNamePx?: number;
+  /**
+   * The face's name drawn by someone else over this card — a thing's card on
+   * the board, whose name the board's symbols draw at one size on screen. Its
+   * room is kept (hidden, not taken out), so the card looks as it always does.
+   */
+  faceNameHidden?: boolean;
   selected: boolean;
   /**
    * Keep DOM focus where it is when this card becomes selected.
@@ -201,6 +207,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
   navId,
   title,
   faceNamePx,
+  faceNameHidden = false,
   selected,
   keepFocus = false,
   noCursorMan = false,
@@ -564,6 +571,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
               className={classNames('font-semibold text-center leading-tight text-gray-800 dark:text-gray-100', !faceNamePx && faceNameSize)}
               style={{
                 fontSize: faceNamePx,
+                visibility: faceNameHidden ? 'hidden' : undefined,
                 overflow: 'hidden',
                 display: '-webkit-box',
                 WebkitLineClamp: 2,

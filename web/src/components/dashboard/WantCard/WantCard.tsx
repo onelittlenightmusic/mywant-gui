@@ -367,7 +367,13 @@ export const WantCard: React.FC<WantCardProps> = ({
     onMaximizeChange?.(wantId || null);
   }, [onMaximizeChange, wantId, hostMaximizes]);
 
+  /** A collapse under way — Escape reaches it by two routes (the key, and the
+   *  input layer's cancel), and the second must not start it again. */
+  const collapsingRef = useRef(false);
   const handleCollapse = useCallback(() => {
+    if (collapsingRef.current) return;
+    collapsingRef.current = true;
+    setTimeout(() => { collapsingRef.current = false; }, 300);
     // Give the focus back. The blown-up card is a portal to <body>, so
     // collapsing it unmounts whatever had focus and leaves it on <body> — the
     // nowhere state where the next press does nothing at all. Same rule the
@@ -567,11 +573,23 @@ export const WantCard: React.FC<WantCardProps> = ({
   // Escape leaves inner focus. Plugins that bind onCancel (the slider reverts,
   // for instance) consume it first and this never runs; this is the floor for
   // the ones that do not, so the way out never depends on the plugin.
+  // Blown up, it leaves that too: the card had the keys because it filled the
+  // screen, and handing them back with it still filling it left nowhere to go.
   useInputActions({
     enabled: isInnerFocused,
     ignoreWhenInputFocused: false,
     ignoreWhenInSidebar: false,
-    onCancel: () => setIsInnerFocused(false),
+    onCancel: () => { setIsInnerFocused(false); if (expandShowing) handleCollapse(); },
+  });
+  // B (and Space) too, not only the Escape key (the listener by handleCollapse): blown up, the card is
+  // where the keys are, so the way back out of it is the way out of being
+  // blown up — not only a focus handed back with the card still filling the
+  // screen.
+  useInputActions({
+    enabled: expandShowing && !isInnerFocused,
+    ignoreWhenInputFocused: false,
+    ignoreWhenInSidebar: false,
+    onCancel: () => handleCollapse(),
   });
 
   // For recipe-based target cards, track whether the current slide supports user-control.

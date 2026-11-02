@@ -55,13 +55,16 @@ interface MemoCardProps {
    * mistaken for the card in a grid or a panel.
    */
   display?: boolean;
+  /** Its name is drawn over it by someone else (the board's symbols): its room
+   *  on the face is kept, empty. */
+  nameElsewhere?: boolean;
 }
 
 /** Turn a hex like "#06b6d4" into an rgba tint. */
 /** The name's size on the card drawn on the board, in its layout px. */
 const DISPLAY_NAME_PX = 30;
 
-export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, keepFocus, corner = false, selectMode = false, checked = false, constellations = [], onEditConstellation, onView, onDelete, onAddWant, className, display = false }) => {
+export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, keepFocus, corner = false, selectMode = false, checked = false, constellations = [], onEditConstellation, onView, onDelete, onAddWant, className, display = false, nameElsewhere = false }) => {
   const Icon = resolveLucideIcon(record.icon) ?? Type;
   const wantTypes = useWantTypeStore((s) => s.wantTypes);
   const iconFont = useIconFont() as IconFamily;
@@ -216,6 +219,7 @@ export const ThingCard: React.FC<MemoCardProps> = ({ record, selected = false, k
       // On the board (display) the card is a picture of itself, scaled into
       // its cell: the name is what is read there, so it is written large.
       faceNamePx={display ? DISPLAY_NAME_PX : undefined}
+      faceNameHidden={nameElsewhere}
       selected={display ? false : selected}
       keepFocus={display || keepFocus}
       noCursorMan={corner}
