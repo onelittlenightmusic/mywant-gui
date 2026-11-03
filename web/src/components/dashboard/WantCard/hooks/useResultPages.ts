@@ -115,7 +115,15 @@ const asWant = (want: Want, entry: ResultHistoryEntry): Want => {
 
 export function useResultPages(want: Want): ResultPages {
   const history = want.history?.resultHistory;
-  const live = want.state?.final_result;
+  // Which answer page 0 is: the history says (an entry's `current`), and it
+  // is the truth — page 0 is that entry, and every other entry has a page.
+  // None current, the live want has no answer now, and every entry is a page
+  // behind it. A server that does not say (no entry carries the flag) is read
+  // the old way: page 0 is final_result's answer.
+  const told = (history ?? []).some(e => typeof e.current === 'boolean');
+  const live = told
+    ? (history ?? []).find(e => e.current)?.result
+    : want.state?.final_result;
 
   const pages = useMemo<ResultPage[]>(() => {
     const now: ResultPage = { want, isPast: false };
@@ -132,7 +140,7 @@ export function useResultPages(want: Want): ResultPages {
     const entries: ResultHistoryEntry[] = [];
     let ahead: unknown = live;
     for (const e of [...(history ?? [])].reverse()) {
-      if (same(e.result, ahead)) continue;
+      if (e.current || same(e.result, ahead)) continue;
       entries.push(e);
       ahead = e.result;
     }

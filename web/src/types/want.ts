@@ -206,6 +206,12 @@ export interface ResultHistoryEntry {
   result?: unknown;
   /** The rest of the answer: the fields the type publishes or keeps. */
   fields?: Record<string, unknown>;
+  /**
+   * This answer is the want's answer now — the live state is this entry. At
+   * most one is; none while the want has no answer. Absent from a server
+   * that does not say (then every entry lacks it).
+   */
+  current?: boolean;
 }
 
 export interface WantHistory {
