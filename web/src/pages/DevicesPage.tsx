@@ -106,16 +106,14 @@ export default function DevicesPage() {
   }, [devices, characters]);
 
   /**
-   * One device setting, written — without the seq guard. Every device's
-   * heartbeat writes gui_state every half minute, so the seq moves on its own,
-   * and a page whose live updates lag (SSE through a proxy, as on Fly) was
-   * always behind: the press was refused and the choice snapped back. The
-   * write is one key, which the server merges into the rest, so there is
-   * nothing for the guard to protect.
+   * One device setting, written to devices.yaml through its own resource
+   * (PUT /devices/settings) — not merged into gui_state, whose seq every
+   * device's heartbeat moves on its own: a page whose live updates lag (SSE
+   * through a proxy, as on Fly) was always behind it. The server mirrors the
+   * settings back into gui_state, and its push brings them here.
    */
-  const writeSetting = async (updates: Record<string, unknown>) => {
-    const { seq } = await apiClient.updateGUIState(updates);
-    setGuiSeq(seq);
+  const writeSetting = async (updates: { homeBrowserDevice?: string; activeLocationDevice?: string }) => {
+    await apiClient.putDeviceSettings(updates);
   };
 
   // The browser that browser-run work is pinned to. Unset means whichever

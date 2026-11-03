@@ -174,5 +174,7 @@ func (s *Server) Start() error {
 		log.Printf("[mywant-gui] Basic auth enabled for user %q", s.config.AuthUser)
 	}
 	log.Printf("[mywant-gui] serving on http://%s  →  backend %s", addr, s.config.BackendURL)
+	// What the extensions define for the backend (extension_register.go).
+	s.registerExtensionResources()
 	return http.ListenAndServe(addr, s.handler())
 }

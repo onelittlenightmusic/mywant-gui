@@ -37,6 +37,9 @@ type extensionManifest struct {
 	Styles   []string `json:"styles,omitempty"`
 	// Public is a directory, relative to the extension, served at the site root.
 	Public string `json:"public,omitempty"`
+	// Register is a directory, relative to the extension, of YAML the backend
+	// is given when this server starts (extension_register.go).
+	Register string `json:"register,omitempty"`
 
 	dir string // where it is installed
 }

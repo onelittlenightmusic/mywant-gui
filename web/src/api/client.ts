@@ -1339,6 +1339,13 @@ class MyWantApiClient {
     return response.data;
   }
 
+  /** Which browser browser work is pinned to and which sends its location
+   *  (devices.yaml) — PUT /devices/settings; "" unsets. */
+  async putDeviceSettings(settings: { homeBrowserDevice?: string; activeLocationDevice?: string; locationWantId?: string }): Promise<{ homeBrowserDevice?: string; activeLocationDevice?: string; locationWantId?: string }> {
+    const response = await this.client.put('/api/v1/devices/settings', settings);
+    return response.data;
+  }
+
   async pruneCharacterDevices(deviceIds: string[]): Promise<void> {
     await this.client.post('/api/v1/characters/prune-devices', { deviceIds });
   }
@@ -1636,17 +1643,21 @@ class MyWantApiClient {
     );
   }
 
-  async getThingLabels(): Promise<Record<string, Record<string, string>>> {
-    const response = await this.client.get<{ labels: Record<string, Record<string, string>> }>(`/api/v1/things/labels`);
-    return response.data.labels ?? {};
-  }
 
+  // A thing's own labels, as a want's are (POST /things/{id}/labels, DELETE
+  // /things/{id}/labels/{key}, PATCH for several).
   async setThingLabel(valueId: string, key: string, value: string): Promise<void> {
-    await this.client.post(`/api/v1/things/labels`, { value_id: valueId, key, value });
+    await this.client.post(`/api/v1/things/${encodeURIComponent(valueId)}/labels`, { key, value });
   }
 
   async removeThingLabel(valueId: string, key: string): Promise<void> {
-    await this.client.post(`/api/v1/things/labels/remove`, { value_id: valueId, key });
+    await this.client.delete(`/api/v1/things/${encodeURIComponent(valueId)}/labels/${encodeURIComponent(key)}`);
+  }
+
+  /** Several of a thing's labels at once — set and removed — told to the board
+   *  once (PATCH /things/{id}/labels). */
+  async patchThingLabels(id: string, set: Record<string, string>, remove: string[] = []): Promise<void> {
+    await this.client.patch(`/api/v1/things/${encodeURIComponent(id)}/labels`, { set, remove });
   }
 
   /**

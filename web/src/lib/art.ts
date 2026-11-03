@@ -32,7 +32,15 @@ import { displaySettings } from '@/hooks/useDisplaySettings';
 import { artDrawInBrowser, artGenerateInBrowser, getBrowserFMStatus } from '@/lib/extensionContext';
 
 /** What can have art, as the engine's /api/v1/art/{kind}/{id} names it. */
-export type ArtKind = 'thing' | 'want' | 'constellation';
+export type ArtKind = 'thing' | 'want' | 'constellation' | 'skill';
+
+/**
+ * A character's picture for one of its Y skills (art kind `skill`, id
+ * "<character>:<skill>"), kept as a label on the character — the engine's
+ * art.go. The canvas shows it at the character's upper right while the skill
+ * is the one equipped.
+ */
+export const skillArtLabel = (skill: string) => `mywant.io/skill-art/${skill}`;
 
 /** The label a thing's or a want's art rides on: its URL. A constellation's rides on its members. */
 export const ART_LABEL = 'mywant.io/art';

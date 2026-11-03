@@ -247,15 +247,12 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
   // Every label the thing carries — its theme memberships and colours too
   // (constellation/…, constellation-color/…), which Themes is where to change.
   const ownLabels: Record<string, string> = record.labels ?? {};
-  // Written back as what changed: each label set or removed on its own.
+  // Written back as what changed, in one request (PATCH /things/{id}/labels).
   const saveLabels = async (next: Record<string, string>) => {
     const id = record.id;
-    for (const k of Object.keys(ownLabels)) {
-      if (!(k in next)) await apiClient.removeThingLabel(id, k).catch(() => {});
-    }
-    for (const [k, v] of Object.entries(next)) {
-      if (ownLabels[k] !== v) await apiClient.setThingLabel(id, k, v).catch(() => {});
-    }
+    const remove = Object.keys(ownLabels).filter(k => !(k in next));
+    const set = Object.fromEntries(Object.entries(next).filter(([k, v]) => ownLabels[k] !== v));
+    if (remove.length || Object.keys(set).length) await apiClient.patchThingLabels(id, set, remove).catch(() => {});
     void useThingStore.getState().fetchThings();
   };
 
@@ -355,7 +352,7 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
 
         {activeTab === 'labels' && (
           // The want panel's LABELS tab, about a thing: the same editor, its
-          // labels written back one at a time (things/labels).
+          // labels written back in one request (PATCH /things/{id}/labels).
           <LabelsSection
             labels={ownLabels}
             onChange={(next) => { void saveLabels(next); }}

@@ -462,8 +462,7 @@ export const useThingTileStore = create<ThingTileStore>()(
       const moved = before?.x !== x || before?.y !== y;
       set({ tiles: prev.map(t => (t.id === id ? { ...t, x, y } : t)) });
       try {
-        await apiClient.setThingLabel(id, THING_CANVAS_LABEL_X, String(x));
-        await apiClient.setThingLabel(id, THING_CANVAS_LABEL_Y, String(y));
+        await apiClient.patchThingLabels(id, { [THING_CANVAS_LABEL_X]: String(x), [THING_CANVAS_LABEL_Y]: String(y) });
       } catch {
         set({ tiles: prev });
         return;
@@ -491,11 +490,10 @@ export const useThingTileStore = create<ThingTileStore>()(
       const y = corner?.y;
       set({ tiles: prev.map(p => (p.id === id ? { ...p, size, ...(x !== undefined && y !== undefined ? { x, y } : {}) } : p)) });
       try {
-        await apiClient.setThingLabel(id, CANVAS_LABEL_SIZE, String(size));
-        if (x !== undefined && y !== undefined) {
-          await apiClient.setThingLabel(id, THING_CANVAS_LABEL_X, String(x));
-          await apiClient.setThingLabel(id, THING_CANVAS_LABEL_Y, String(y));
-        }
+        await apiClient.patchThingLabels(id, {
+          [CANVAS_LABEL_SIZE]: String(size),
+          ...(x !== undefined && y !== undefined ? { [THING_CANVAS_LABEL_X]: String(x), [THING_CANVAS_LABEL_Y]: String(y) } : {}),
+        });
       } catch {
         set({ tiles: prev });
       }
@@ -574,8 +572,7 @@ export const useThingTileStore = create<ThingTileStore>()(
         if (archived) {
           // Stopped as well as put away, or it would set off again the moment
           // it came back out.
-          await apiClient.setThingLabel(id, THING_MOVING_LABEL, 'false').catch(() => {});
-          await apiClient.setThingLabel(id, THING_ARCHIVE_LABEL, 'true').catch(() => {});
+          await apiClient.patchThingLabels(id, { [THING_MOVING_LABEL]: 'false', [THING_ARCHIVE_LABEL]: 'true' }).catch(() => {});
         } else {
           await apiClient.removeThingLabel(id, THING_ARCHIVE_LABEL).catch(() => {});
         }
@@ -618,11 +615,10 @@ export const useThingTileStore = create<ThingTileStore>()(
         // the thing where it was put rather than drawing it once at the
         // auto-placed cell and moving it on the next pass.
         const cell = cells.get(id);
-        if (cell) {
-          await apiClient.setThingLabel(id, THING_CANVAS_LABEL_X, String(cell.x)).catch(() => {});
-          await apiClient.setThingLabel(id, THING_CANVAS_LABEL_Y, String(cell.y)).catch(() => {});
-        }
-        await apiClient.setThingLabel(id, THING_CANVAS_PIN_LABEL, pinned ? 'true' : 'false').catch(() => {});
+        await apiClient.patchThingLabels(id, {
+          ...(cell ? { [THING_CANVAS_LABEL_X]: String(cell.x), [THING_CANVAS_LABEL_Y]: String(cell.y) } : {}),
+          [THING_CANVAS_PIN_LABEL]: pinned ? 'true' : 'false',
+        }).catch(() => {});
       }));
       // A pinned thing needs its icon, colour and roads before it can be drawn,
       // and only a fetch knows those. Once for the whole batch.
@@ -661,9 +657,9 @@ export const useThingTileStore = create<ThingTileStore>()(
         }),
       });
       await Promise.all([...cells].map(async ([id, cell]) => {
-        await apiClient.setThingLabel(id, THING_CANVAS_LABEL_X, String(cell.x)).catch(() => {});
-        await apiClient.setThingLabel(id, THING_CANVAS_LABEL_Y, String(cell.y)).catch(() => {});
-        await apiClient.setThingLabel(id, THING_CANVAS_PIN_LABEL, 'true').catch(() => {});
+        await apiClient.patchThingLabels(id, {
+          [THING_CANVAS_LABEL_X]: String(cell.x), [THING_CANVAS_LABEL_Y]: String(cell.y), [THING_CANVAS_PIN_LABEL]: 'true',
+        }).catch(() => {});
       }));
       await get().fetchTiles();
       return before;
@@ -674,14 +670,14 @@ export const useThingTileStore = create<ThingTileStore>()(
       // Set what was set, remove what was absent. Not a write of the old values
       // alone: arrangeMany pins everything it places, so a thing that was never
       // on the board would stay on it wearing its old coordinates.
-      const put = async (id: string, key: string, value: string | undefined) => {
-        if (value === undefined) await apiClient.removeThingLabel(id, key).catch(() => {});
-        else await apiClient.setThingLabel(id, key, value).catch(() => {});
-      };
       await Promise.all([...before].map(async ([id, labels]) => {
-        await put(id, THING_CANVAS_LABEL_X, labels.x);
-        await put(id, THING_CANVAS_LABEL_Y, labels.y);
-        await put(id, THING_CANVAS_PIN_LABEL, labels.pin);
+        const set: Record<string, string> = {};
+        const remove: string[] = [];
+        for (const [key, value] of [[THING_CANVAS_LABEL_X, labels.x], [THING_CANVAS_LABEL_Y, labels.y], [THING_CANVAS_PIN_LABEL, labels.pin]] as const) {
+          if (value === undefined) remove.push(key);
+          else set[key] = value;
+        }
+        await apiClient.patchThingLabels(id, set, remove).catch(() => {});
       }));
       await get().fetchTiles();
     },

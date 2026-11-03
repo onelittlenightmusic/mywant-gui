@@ -80,6 +80,12 @@ export interface ExtensionSlots {
   /** In a character's sheet, after the colour and the shape — how they appear
    *  on a board the extension draws (the canvas: tile, aura, speeds). */
   characterDetails: ComponentType<{ character: Character }>;
+  /**
+   * A character's sheet's 技能 tab, whole: the Y skills an extension gives the
+   * board (the canvas's skill slot), each with its picture. Filled, the sheet
+   * shows the tab; the public edition has no skills, and no tab.
+   */
+  characterSkills: ComponentType<{ character: Character }>;
   /** In a character's Display tab, after Icon Style — look choices only an
    *  extension has (the canvas's design). `put` saves a patch of the display. */
   characterDisplay: ComponentType<{ display: CharacterDisplay; put: (patch: Partial<CharacterDisplay>) => void }>;
