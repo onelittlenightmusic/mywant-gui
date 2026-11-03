@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Check, Plus, X, GripVertical } from 'lucide-react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Check, Plus, X, GripVertical, ChevronDown } from 'lucide-react';
 import { WantCardPluginProps, registerWantCardPlugin } from '../registry';
 import { WantCardLayout } from '../../WantCardLayout';
 import { classNames } from '@/utils/helpers';
@@ -25,7 +25,98 @@ function normalize(raw: unknown): Item[] {
   });
 }
 
-const ROW = 'group relative flex items-center gap-2 rounded-lg p-2 shadow-sm bg-gray-50/80 dark:bg-gray-800/50';
+const ROW = 'group relative flex gap-2 rounded-lg p-2 shadow-sm bg-gray-50/80 dark:bg-gray-800/50';
+
+/**
+ * An item's text, as one line — and, when that line cannot hold it, a chevron
+ * that opens it to the whole of it, wrapped and still editable. The chevron is
+ * there only for a line that is cut off (or open): a short item carries none.
+ */
+const ItemText: React.FC<{
+  value: string;
+  done: boolean;
+  open: boolean;
+  onToggle: () => void;
+  onChange: (text: string) => void;
+  onFocus: () => void;
+  onCommit: () => void;
+  onCancel: () => void;
+}> = ({ value, done, open, onToggle, onChange, onFocus, onCommit, onCancel }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const areaRef = useRef<HTMLTextAreaElement>(null);
+  const [cut, setCut] = useState(false);
+  // Whether the one line cuts it off — again whenever its width or text moves.
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const check = () => setCut(el.scrollWidth > el.clientWidth + 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [value, open]);
+  // Open, as tall as what it holds.
+  useLayoutEffect(() => {
+    const el = areaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value, open]);
+  const keys = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.stopPropagation();
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); onCommit(); e.currentTarget.blur(); }
+    if (e.key === 'Escape') { e.preventDefault(); onCancel(); e.currentTarget.blur(); }
+  };
+  const textClass = classNames(
+    'flex-1 min-w-0 bg-transparent outline-none text-sm border-b border-transparent focus:border-gray-300 dark:focus:border-gray-600',
+    done && 'line-through text-gray-400',
+  );
+  return (
+    <>
+      {open ? (
+        <textarea
+          ref={areaRef}
+          data-inner-focus
+          rows={1}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={onFocus}
+          onBlur={onCommit}
+          onMouseDown={(e) => e.stopPropagation()}
+          onKeyDown={keys}
+          placeholder="項目…"
+          className={classNames(textClass, 'resize-none overflow-hidden leading-snug break-words')}
+        />
+      ) : (
+        <input
+          ref={inputRef}
+          data-inner-focus
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={onFocus}
+          onBlur={onCommit}
+          onMouseDown={(e) => e.stopPropagation()}
+          onKeyDown={keys}
+          placeholder="項目…"
+          className={textClass}
+        />
+      )}
+      {(cut || open) && (
+        <button
+          data-inner-focus
+          type="button"
+          aria-expanded={open}
+          onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="w-4 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0"
+          title={open ? 'たたむ' : '全文を表示'}
+        >
+          <ChevronDown className={classNames('w-3.5 h-3.5 transition-transform', open && 'rotate-180')} />
+        </button>
+      )}
+    </>
+  );
+};
 
 /**
  * A checklist: a set of tasks to work through, each on its own card in the
@@ -53,6 +144,13 @@ const ChecklistContentSection: React.FC<WantCardPluginProps> = ({
   // does not type over an unfinished line. Everything else (tick, add, drop,
   // reorder) writes straight through.
   const [draft, setDraft] = useState<{ id: string; text: string } | null>(null);
+  // The items opened to their whole text (ItemText's chevron).
+  const [opened, setOpened] = useState<Set<string>>(() => new Set());
+  const toggleOpen = (itemId: string) => setOpened((prev) => {
+    const next = new Set(prev);
+    if (next.has(itemId)) next.delete(itemId); else next.add(itemId);
+    return next;
+  });
 
   const write = (next: Item[]) => { if (id) writeWantState(id, { items: next }); };
 
@@ -161,9 +259,11 @@ const ChecklistContentSection: React.FC<WantCardPluginProps> = ({
           type="button"
           onClick={(e) => { e.stopPropagation(); add(); }}
           onMouseDown={(e) => e.stopPropagation()}
-          className="flex items-center justify-center gap-1 flex-shrink-0 py-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-400 hover:border-emerald-400 hover:text-emerald-500 transition-colors"
+          // On the items' own light ground, in dark ink: a grey (or the card's
+          // ink) straight on a navy checklist's cover all but vanished.
+          className="flex items-center justify-center gap-1 flex-shrink-0 py-1.5 rounded-lg border-2 border-dashed border-gray-400 dark:border-gray-500 bg-white/90 dark:bg-gray-800/80 text-sm font-semibold text-gray-800 dark:text-gray-100 shadow-sm hover:border-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
         >
-          <Plus className="w-3.5 h-3.5" /> 追加
+          <Plus className="w-4 h-4" strokeWidth={2.5} /> 追加
         </button>
 
         <div
@@ -190,7 +290,7 @@ const ChecklistContentSection: React.FC<WantCardPluginProps> = ({
               <div
                 key={it.id}
                 data-reorder-id={it.id}
-                className={classNames(ROW, isDragSrc && 'opacity-40')}
+                className={classNames(ROW, opened.has(it.id) ? 'items-start' : 'items-center', isDragSrc && 'opacity-40')}
                 draggable={dragProps?.draggable ?? false}
                 onDragStart={dragProps?.onDragStart}
                 onDragOver={dragProps?.onDragOver}
@@ -198,23 +298,15 @@ const ChecklistContentSection: React.FC<WantCardPluginProps> = ({
                 onDragEnd={dragProps?.onDragEnd}
               >
                 {checkbox(it)}
-                <input
-                  data-inner-focus
+                <ItemText
                   value={draft?.id === it.id ? draft.text : it.text}
-                  onChange={(e) => setDraft({ id: it.id, text: e.target.value })}
+                  done={it.done}
+                  open={opened.has(it.id)}
+                  onToggle={() => toggleOpen(it.id)}
+                  onChange={(text) => setDraft({ id: it.id, text })}
                   onFocus={() => setDraft({ id: it.id, text: it.text })}
-                  onBlur={commitDraft}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => {
-                    e.stopPropagation();
-                    if (e.key === 'Enter') { e.preventDefault(); commitDraft(); (e.target as HTMLInputElement).blur(); }
-                    if (e.key === 'Escape') { e.preventDefault(); setDraft(null); (e.target as HTMLInputElement).blur(); }
-                  }}
-                  placeholder="項目…"
-                  className={classNames(
-                    'flex-1 min-w-0 bg-transparent outline-none text-sm border-b border-transparent focus:border-gray-300 dark:focus:border-gray-600',
-                    it.done && 'line-through text-gray-400',
-                  )}
+                  onCommit={commitDraft}
+                  onCancel={() => setDraft(null)}
                 />
                 <span
                   className="opacity-0 group-hover:opacity-60 hover:!opacity-100 cursor-grab active:cursor-grabbing text-gray-400 flex-shrink-0"
