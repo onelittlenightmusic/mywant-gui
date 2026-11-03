@@ -60,6 +60,9 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
             key={tab.id}
             type="button"
             onClick={() => onTabChange(tab.id)}
+            // Its word, where the word is not drawn (TAB_LABEL in an app).
+            title={tab.label}
+            aria-label={tab.label}
             data-robot-target="sidebar_tab"
             data-robot-id={tab.id}
             className={classNames(

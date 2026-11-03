@@ -70,6 +70,8 @@ export function FormTabBar({
             key={tab}
             type="button"
             onClick={() => onTabChange(tab)}
+            title={label}
+            aria-label={label}
             data-robot-target="settings_subtab"
             data-robot-id={tab}
             className={classNames(

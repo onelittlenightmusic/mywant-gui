@@ -1,4 +1,5 @@
 import { classNames } from '@/utils/helpers';
+import { nativeHost } from '@/lib/nativeHost';
 
 /**
  * How a strip of tabs looks — the quiet sheet's tabs.
@@ -39,8 +40,15 @@ export function tabIconClass(active: boolean): string {
   return active ? 'text-blue-600 dark:text-blue-400' : '';
 }
 
-/** A tab's word: one size, not shouted. */
-export const TAB_LABEL = 'hidden sm:block text-[11px] font-medium leading-tight truncate w-full text-center';
+/**
+ * A tab's word: one size, not shouted. Not at all inside an app that frames
+ * the page (the Mac app, the iPhone's): there a tab is its icon, as the app's
+ * own strip draws it (mywant-ios TabStrip) — the word stays its title and its
+ * accessible name.
+ */
+export const TAB_LABEL = nativeHost
+  ? 'hidden'
+  : 'hidden sm:block text-[11px] font-medium leading-tight truncate w-full text-center';
 
 /**
  * Where a framing app draws the strip itself (useHostTabs): kept empty for

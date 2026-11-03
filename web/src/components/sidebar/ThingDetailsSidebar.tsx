@@ -305,7 +305,7 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
         tabs={THING_TABS.map(t => (
           t.id === 'settings' ? { id: t.id, label: 'Settings', icon: Settings }
           : t.id === 'labels' ? { id: t.id, label: 'Labels', icon: TagSideways, badge: Object.keys(ownLabels).length || null }
-          : t.id === 'constellation' ? { id: t.id, label: 'Themes', icon: Folder, badge: recordGroups.length || null }
+          : t.id === 'constellation' ? { id: t.id, label: 'Constellations', icon: Folder, badge: recordGroups.length || null }
           : { id: t.id, label: 'History', icon: Clock, badge: events?.length ?? null }
         ))}
         activeTab={activeTab}

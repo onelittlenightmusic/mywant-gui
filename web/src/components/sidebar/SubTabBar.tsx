@@ -43,6 +43,8 @@ export function SubTabBar<T extends string>({
             key={id}
             type="button"
             onClick={() => onChange(id)}
+            title={label}
+            aria-label={label}
             // A stop like the controls below it, so the arrows can walk up into
             // the tabs and the stick can land on them. A tab bar you can see but
             // not reach is a tab bar that needs a finger.

@@ -1,6 +1,8 @@
 /** The Wiring tab — how this want is joined to the others. */
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { LucideIcon, ArrowUpFromLine, ArrowDownToLine, Radio } from 'lucide-react';
+import { LucideIcon, ArrowUpFromLine, ArrowDownToLine, Radio, Folder } from 'lucide-react';
+import { ThemeOrderSection } from '@/components/sidebar/ThemeOrderSection';
+import { useConstellationStore } from '@/stores/constellationStore';
 import { Want } from '@/types/want';
 import { classNames } from '@/utils/helpers';
 import { WantCard } from '@/components/dashboard/WantCard/WantCard';
@@ -158,6 +160,10 @@ export const WiringTab: React.FC<{
   useEffect(() => { if (initialExposeKey) setHalf('expose'); }, [initialExposeKey]);
   useEffect(() => { if (initialImportKey) setHalf('import'); }, [initialImportKey]);
 
+  const wantId = want?.metadata?.id ?? want?.id;
+  const constellationCount = useConstellationStore(s =>
+    new Set(s.constellations.filter(c => !!wantId && c.members.includes(wantId)).map(c => c.name)).size);
+
   return (
     <div className="h-full overflow-y-auto pt-1 px-3 sm:px-4 pb-3 space-y-4">
       <div>
@@ -203,6 +209,17 @@ export const WiringTab: React.FC<{
           onExitTop={() => { setHalf('subscribe'); setSubscribeArrival(t => t + 1); }}
         />
       </div>
+      {/* The constellations it is in — the thing panel's Constellations tab,
+          about a want: joined, left, ordered here. A tie to other wants and
+          things by name, so it is wiring too. Mouse and touch only for now:
+          the arrow walk of the halves above does not go on into it. */}
+      {wantId && (
+        <div>
+          <WiringHeading icon={Folder} label="Constellations" count={constellationCount}
+            className="text-sky-500 dark:text-sky-400" />
+          <ThemeOrderSection wantId={wantId} isActive={false} />
+        </div>
+      )}
     </div>
   );
 };

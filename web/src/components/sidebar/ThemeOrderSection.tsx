@@ -6,7 +6,7 @@ import { labelsById, useThingStore } from '@/stores/thingStore';
 import { membersById, useConstellationStore } from '@/stores/constellationStore';
 import { CONSTELLATION_COLORS } from '@/types/constellation';
 import { useThingTileStore } from '@/stores/thingTileStore';
-import { reorderIds, sortThings, stepIds } from '@/utils/thingOrder';
+import { assignThemeRanks, reorderIds, sortThings, stepIds } from '@/utils/thingOrder';
 import { lineUp, type LayoutAxis } from '@/utils/thingLayout';
 import { playSound } from '@/utils/sounds';
 import { classNames } from '@/utils/helpers';
@@ -26,9 +26,45 @@ import { useCardOverlaySound } from '@/stores/cardOverlaySounds';
 import { Slot } from '@/extensions/Slot';
 import type { ThingPlacementSnapshot } from '@/stores/thingTileStore';
 import { CharacterFace } from '@/components/characters/CharacterFace';
+import { useWantStore } from '@/stores/wantStore';
+import { apiClient } from '@/api/client';
+import { themeLabelKey, themeLabelKeys } from '@/utils/thingOrder';
+import type { Want } from '@/types/want';
+import type { Mark } from '@/components/common/MarkButton';
+
+/**
+ * A want in a constellation, drawn as a member card like a thing: its name for
+ * the value, its type's icon and tone. Told apart by this catalog key, which
+ * no thing.yaml section has.
+ */
+const WANT_MEMBER = '@want';
+
+function wantAsMember(w: Want): ThingRecord | null {
+  const id = w.metadata?.id ?? w.id;
+  if (!id) return null;
+  const labels = w.metadata?.labels ?? {};
+  return {
+    id, catalogKey: WANT_MEMBER, value: w.metadata?.name ?? id, typeName: w.metadata?.type ?? '',
+    icon: labels['type-icon'] ?? 'Circle', color: labels['type-tone-color'] ?? '#64748b',
+    count: 0, lastUsed: '', labels,
+  } as ThingRecord;
+}
+
+/** The mark a member card wears: the way out to the thing or the want it is. */
+function memberMark(m: ThingRecord): Mark {
+  return m.catalogKey === WANT_MEMBER
+    ? { kind: 'want', id: m.id, name: m.value, wantType: m.typeName }
+    : { kind: 'thing', id: m.id, name: m.value, color: m.color, icon: m.icon };
+}
 
 interface ThemeOrderSectionProps {
-  record: ThingRecord;
+  /** The thing whose panel this is — or, with `wantId`, none. */
+  record?: ThingRecord;
+  /**
+   * The want whose panel this is (its Wiring tab): the same constellations,
+   * read from the whole sky, its membership written on its own labels.
+   */
+  wantId?: string;
   /**
    * The cell a themed line should start from — where the character is standing.
    *
@@ -71,15 +107,65 @@ interface ThemeOrderSectionProps {
  * is a thing you operate on, which is what a card is for — and it means the two
  * panels are worked the same way rather than each having its own manners.
  */
-export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, getOrigin, onArranged, isActive = true }) => {
-  const records = useThingStore((s) => s.records);
+export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, wantId, getOrigin, onArranged, isActive = true }) => {
+  const selfId = record?.id ?? wantId ?? '';
+  const forWant = !record && !!wantId;
+  const thingRecords = useThingStore((s) => s.records);
+  const wants = useWantStore((s) => s.wants);
+  const fetchWants = useWantStore((s) => s.fetchWants);
+  // Things and wants alike, as members: a constellation can hold both.
+  const wantRecords = useMemo(
+    () => wants.map(wantAsMember).filter((r): r is ThingRecord => !!r),
+    [wants],
+  );
+  const records = useMemo(() => [...thingRecords, ...wantRecords], [thingRecords, wantRecords]);
+  const wantIds = useMemo(() => new Set(wantRecords.map((r) => r.id)), [wantRecords]);
   const ensureThings = useThingStore((s) => s.ensureThings);
   const setThemeOrder = useThingStore((s) => s.setThemeOrder);
   const manualOrder = useThingStore((s) => s.manualOrder);
-  const removeFromTheme = useThingStore((s) => s.removeFromTheme);
-  const addToTheme = useThingStore((s) => s.addToTheme);
+  const removeThingsFromTheme = useThingStore((s) => s.removeFromTheme);
+  const addThingsToTheme = useThingStore((s) => s.addToTheme);
+  const setThingThemeOrder = setThemeOrder;
   const constellations = useConstellationStore((s) => s.constellations);
-  const fetchConstellations = useConstellationStore((s) => s.fetchConstellations);
+  const fetchKind = useConstellationStore((s) => s.fetchConstellations);
+  // A thing's panel reads the thing constellations, a want's the whole sky
+  // (a want's are 'want' or 'mixed').
+  const fetchConstellations = useCallback(
+    () => (forWant ? fetchKind() : fetchKind('thing')),
+    [fetchKind, forWant],
+  );
+
+  // Membership and order, written on each member's own labels — a thing's
+  // through the thing store, a want's in one PATCH of its labels.
+  const patchWants = useCallback(async (ids: string[], labels: (id: string) => Record<string, string | null>) => {
+    await Promise.all(ids.map((id) => apiClient.patchWant(id, { labels: labels(id) }).catch(() => {})));
+    await fetchWants();
+  }, [fetchWants]);
+  const addToTheme = useCallback(async (theme: string, ids: string[]) => {
+    const w = ids.filter((id) => wantIds.has(id));
+    const t = ids.filter((id) => !wantIds.has(id));
+    await Promise.all([
+      t.length ? addThingsToTheme(theme, t) : null,
+      w.length ? patchWants(w, () => ({ [themeLabelKey(theme)]: 'true' })) : null,
+    ]);
+  }, [addThingsToTheme, patchWants, wantIds]);
+  const removeFromTheme = useCallback(async (theme: string, ids: string[]) => {
+    const w = ids.filter((id) => wantIds.has(id));
+    const t = ids.filter((id) => !wantIds.has(id));
+    await Promise.all([
+      t.length ? removeThingsFromTheme(theme, t) : null,
+      w.length ? patchWants(w, () => Object.fromEntries(themeLabelKeys(theme).map((k) => [k, null]))) : null,
+    ]);
+  }, [removeThingsFromTheme, patchWants, wantIds]);
+  const setOrder = useCallback(async (theme: string, orderedIds: string[]) => {
+    await setThingThemeOrder(theme, orderedIds);
+    // A want's place is the same rank, on its own label of the same name.
+    const ranks = assignThemeRanks(orderedIds);
+    const key = themeLabelKey(theme);
+    const w = orderedIds.filter((id) => wantIds.has(id) && byIdRef.current.get(id)?.labels?.[key] !== ranks.get(id));
+    if (w.length) await patchWants(w, (id) => ({ [key]: ranks.get(id) as string }));
+  }, [setThingThemeOrder, patchWants, wantIds]);
+  const byIdRef = useRef(new Map<string, ThingRecord>());
   // What each theme has turned out to BE. Looked up once for the panel rather
   // than per row: it is one index of every standing form, and the rows only
   // read their own name out of it.
@@ -102,13 +188,16 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
   useEffect(() => {
     ensureThings();
     ensureTiles();
-    void fetchConstellations('thing');
+    void fetchConstellations();
   }, [ensureThings, ensureTiles, fetchConstellations]);
 
-  const myThemes = useMemo(
-    () => membersById(constellations, 'thing').get(record.id) ?? [],
-    [constellations, record.id],
-  );
+  // Every constellation this one is in, once by name (the store can hold one
+  // twice: a per-kind fetch beside the whole sky).
+  const myThemes = useMemo(() => {
+    if (!forWant) return membersById(constellations, 'thing').get(selfId) ?? [];
+    const seen = new Set<string>();
+    return constellations.filter((c) => c.members.includes(selfId) && !seen.has(c.name) && !!seen.add(c.name));
+  }, [constellations, selfId, forWant]);
 
   /** Which row holds the keys, and where in it they landed. Starts at the top. */
   const [entry, setEntry] = useState<{ row: number; at: 'first' | 'last'; nonce: number }>(
@@ -116,6 +205,7 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
   );
 
   const byId = useMemo(() => new Map(records.map((r) => [r.id, r])), [records]);
+  byIdRef.current = byId;
   const ctx = useMemo(() => ({ manualOrder, labels: labelsById(records) }), [manualOrder, records]);
 
   /** A theme's members, in its own order, as records we can draw. */
@@ -129,7 +219,8 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
 
   const arrange = useCallback(
     async (theme: string, members: string[], axis: LayoutAxis) => {
-      const ids = orderedMembers(theme, members).map((r) => r.id);
+      // Things only: a want's tile is placed by its own labels, not lined up here.
+      const ids = orderedMembers(theme, members).filter((r) => !wantIds.has(r.id)).map((r) => r.id);
       if (!ids.length) return;
       // Where the line starts. The character's cell when there is one; failing
       // that, wherever the theme already sits, so re-arranging from a surface
@@ -149,7 +240,7 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
       // and the review is asked and answered beside that character.
       onArranged?.({ theme, axis, before });
     },
-    [arrangeMany, getOrigin, onArranged, orderedMembers],
+    [arrangeMany, getOrigin, onArranged, orderedMembers, wantIds],
   );
 
   /** One place earlier or later — the card overlay's two move actions. */
@@ -159,10 +250,10 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
       const next = stepIds(ids, index, delta);
       if (next === ids) return;
       setBusy(theme);
-      await setThemeOrder(theme, next);
+      await setOrder(theme, next);
       setBusy(null);
     },
-    [orderedMembers, setThemeOrder],
+    [orderedMembers, setOrder],
   );
 
   /**
@@ -176,10 +267,10 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
       const next = reorderIds(ids, id, previousId, nextId);
       if (next.join(' ') === ids.join(' ')) return;
       setBusy(theme);
-      await setThemeOrder(theme, next);
+      await setOrder(theme, next);
       setBusy(null);
     },
-    [orderedMembers, setThemeOrder],
+    [orderedMembers, setOrder],
   );
 
   /** Enter or leave the remove mode. Leaving always drops the marks unwritten. */
@@ -221,7 +312,7 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
       await removeFromTheme(theme, going);
       // Membership is derived from the labels, so the list of themes is stale
       // the moment they change.
-      await fetchConstellations('thing');
+      await fetchConstellations();
       setMarked(new Set());
       setRemovingFrom(null);
       setBusy(null);
@@ -234,7 +325,7 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
       if (!ids.length) return;
       setBusy(theme);
       await addToTheme(theme, ids);
-      await fetchConstellations('thing');
+      await fetchConstellations();
       setBusy(null);
     },
     [addToTheme, fetchConstellations],
@@ -244,7 +335,11 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
   // whether or not it belongs to others. (A brand-new theme is still the Thing
   // page's job: pick a few values and name them together.)
   const myThemeNames = new Set(myThemes.map((t) => t.name));
-  const joinable = constellations.filter((c) => c.kind === 'thing' && !myThemeNames.has(c.name));
+  const joinable = (() => {
+    if (!forWant) return constellations.filter((c) => c.kind === 'thing' && !myThemeNames.has(c.name));
+    const seen = new Set(myThemeNames);
+    return constellations.filter((c) => !seen.has(c.name) && !!seen.add(c.name));
+  })();
 
   const joinSection = (heading: string) =>
     joinable.length > 0 && (
@@ -256,7 +351,7 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
               key={c.id}
               type="button"
               disabled={!!busy}
-              onClick={() => void addMembers(c.name, [record.id])}
+              onClick={() => void addMembers(c.name, [selfId])}
               title={`${c.name} に参加`}
               className={classNames(
                 'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
@@ -277,11 +372,13 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
   if (myThemes.length === 0) {
     return (
       <div className="space-y-2">
-        <p className="text-xs text-gray-500 dark:text-gray-400">まだどのテーマにも入っていません。</p>
-        {joinSection('既存のテーマに参加')}
-        <p className="text-[11px] text-gray-400 dark:text-gray-500">
-          Thing ページで複数選び、まとめて名前を付けると新しいテーマになります。
-        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">まだどの星座にも入っていません。</p>
+        {joinSection('既存の星座に参加')}
+        {!forWant && (
+          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+            Thing ページで複数選び、まとめて名前を付けると新しい星座になります。
+          </p>
+        )}
       </div>
     );
   }
@@ -310,7 +407,7 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
           members={orderedMembers(theme.name, theme.members)}
           allRecords={records}
           onAdd={(ids) => void addMembers(theme.name, ids)}
-          selfId={record.id}
+          selfId={selfId}
           removing={removingFrom === theme.name}
           marked={marked}
           busy={busy === theme.name}
@@ -322,7 +419,7 @@ export const ThemeOrderSection: React.FC<ThemeOrderSectionProps> = ({ record, ge
           onCommitRemoval={() => void commitRemoval(theme.name)}
         />
       ))}
-      {joinSection('他のテーマに参加')}
+      {joinSection('他の星座に参加')}
     </div>
   );
 };
@@ -491,7 +588,7 @@ const ThemeRow: React.FC<{
     // handed to while one of its cards is focused.
     onYButton: (i) => {
       const m = members[i];
-      if (m) jumpToMark({ kind: 'thing', id: m.id, name: m.value, color: m.color, icon: m.icon });
+      if (m) jumpToMark(memberMark(m));
     },
     // So the software D-pad prints "Jump" under Y while a member card here has
     // the ring.
@@ -1022,7 +1119,7 @@ const ThemeMemberCard: React.FC<{
             parameter cards wear, in the same corner. Those cards hold a value
             and have to work out whether it is a thing; this card IS one, so it
             says so directly. */}
-        <MarkBadges marks={[{ kind: 'thing', id: member.id, name: member.value, color: member.color, icon: member.icon }]} />
+        <MarkBadges marks={[memberMark(member)]} />
       </DisplayCard>
 
       {/* A wash of the character's colour over the whole card — self only.
