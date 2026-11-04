@@ -913,10 +913,11 @@ class MyWantApiClient {
   }
 
   // Webhook messaging
-  async sendWebhookMessage(wantName: string, text: string, sender?: string): Promise<{ status: string }> {
+  async sendWebhookMessage(wantName: string, text: string, sender?: string, character?: string | null): Promise<{ status: string }> {
+    // `character`: who said it, when known — a turn it opens is theirs (story.go).
     const response = await this.client.post<{ status: string }>(
       `/api/v1/webhooks/${wantName}`,
-      { text, sender: sender ?? 'user' }
+      character ? { text, sender: sender ?? 'user', character } : { text, sender: sender ?? 'user' }
     );
     return response.data;
   }

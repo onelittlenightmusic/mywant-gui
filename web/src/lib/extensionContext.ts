@@ -108,9 +108,10 @@ export function getBrowserFMStatus(): Promise<BrowserFMStatus | null> {
  *  and tools, the turn written into the robot's chat as a phone's is. */
 export interface BrowserFMAnswer { text?: string; cards?: unknown[]; error?: string }
 
-export function askBrowserFM(question: string): Promise<BrowserFMAnswer | null> {
+export function askBrowserFM(question: string, character?: string | null): Promise<BrowserFMAnswer | null> {
   // A model answering with tool calls takes seconds, sometimes tens of them.
-  return ask<BrowserFMAnswer>('MYWANT_FM_ASK', { question }, 180_000);
+  // `character`: who asks — the turn is theirs, in their story (story.go).
+  return ask<BrowserFMAnswer>('MYWANT_FM_ASK', character ? { question, character } : { question }, 180_000);
 }
 
 /** A picture's words by this Mac's model, asked as the page's server put the

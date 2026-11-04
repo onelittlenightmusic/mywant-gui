@@ -1,5 +1,11 @@
 import { apiClient } from '@/api/client';
 import { askBrowserFM, getBrowserFMStatus } from '@/lib/extensionContext';
+import { useCharacterStore } from '@/stores/characterStore';
+
+/** The character this page plays: who asks, so the turn is theirs (story.go). */
+function asker(): string | null {
+  return useCharacterStore.getState().myCharacterId;
+}
 
 /** The robot want's name: its id too. */
 const ROBOT = 'robot';
@@ -46,10 +52,10 @@ async function decide(): Promise<boolean> {
  * here. A host that cannot answer hands the question to the server's robot.
  */
 export function askRobotHere(text: string): void {
-  void askBrowserFM(text).then((reply) => {
+  void askBrowserFM(text, asker()).then((reply) => {
     if (!reply || reply.error) {
       console.warn('[robot] this browser could not answer; asking the server', reply?.error ?? 'no reply');
-      void apiClient.sendWebhookMessage(ROBOT, text, 'user');
+      void apiClient.sendWebhookMessage(ROBOT, text, 'user', asker());
     }
   });
 }
@@ -61,7 +67,7 @@ export async function sayToWant(wantName: string, text: string): Promise<void> {
     askRobotHere(text);
     return;
   }
-  await apiClient.sendWebhookMessage(wantName, text, 'user');
+  await apiClient.sendWebhookMessage(wantName, text, 'user', wantName === ROBOT ? asker() : undefined);
 }
 
 // The server's rule for a message addressed to the robot (speech_log.go's
