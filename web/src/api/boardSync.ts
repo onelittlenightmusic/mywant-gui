@@ -28,10 +28,47 @@ type Listener = (change: BoardChange) => void;
 const listeners = new Set<Listener>();
 let attached = false;
 
-function tell(change: BoardChange) {
+/**
+ * At most one telling every TELL_EVERY_MS. A change after a quiet spell is
+ * told at once; those that follow within it are gathered — their wants and
+ * things together — and told as one when it is up.
+ *
+ * Every telling sets the page asking again (the want list's hashes, the
+ * labels, what needs a person, the thing records), and changes come in
+ * bursts: the board's own view written back (a zoom, a step, a panel opened)
+ * is a change to the gui_state want, and each one sent the page asking for
+ * all of it again — in the frames a zoom was being drawn in.
+ */
+const TELL_EVERY_MS = 500;
+let lastTold = 0;
+let gathered: BoardChange | null = null;
+let gatherTimer: ReturnType<typeof setTimeout> | null = null;
+
+function tellNow(change: BoardChange) {
+  lastTold = Date.now();
   listeners.forEach((fn) => {
     try { fn(change); } catch (e) { console.error('[boardSync]', e); }
   });
+}
+
+function tell(change: BoardChange) {
+  const since = Date.now() - lastTold;
+  if (!gatherTimer && since >= TELL_EVERY_MS) { tellNow(change); return; }
+  gathered = gathered
+    ? {
+        wants: [...new Set([...gathered.wants, ...change.wants])],
+        things: [...new Set([...gathered.things, ...change.things])],
+        all: gathered.all || change.all,
+      }
+    : change;
+  if (!gatherTimer) {
+    gatherTimer = setTimeout(() => {
+      gatherTimer = null;
+      const c = gathered;
+      gathered = null;
+      if (c) tellNow(c);
+    }, Math.max(0, TELL_EVERY_MS - since));
+  }
 }
 
 function attach() {
