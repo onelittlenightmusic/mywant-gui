@@ -6,7 +6,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { HEADER_TRAY, HEADER_CELL, HEADER_CELL_UNLIT, HEADER_LABEL } from '@/design/header';
 import { classNames } from '@/utils/helpers';
-import { InteractBubble } from '@/components/interact/InteractBubble';
+import { RobotChatIcon } from '@/components/common/RobotChatIcon';
 import { useConfigStore } from '@/stores/configStore';
 import { NAV_CARD_FIT, SYSTEM_FONT_SIZE_DEFAULT } from '@/hooks/useSystemFontSize';
 import { NavCard } from './NavCard';
@@ -454,40 +454,6 @@ export const Header: React.FC<HeaderProps> = ({
    */
   const cellTick = () => playHapticClick();
 
-  const handleRobotClick = () => {
-    // "Is anything of mine on screen?" — not "is the flag I happen to consult
-    // set?".
-    //
-    // Two booleans stand for one visible state: the bubble on a narrow screen,
-    // the provider list on a wide one. Asking only the one that matches the
-    // current width meant that whenever the OTHER was the thing showing, a
-    // press read the panel as closed and opened it again. It took two presses
-    // to shut, or never shut, depending on which flag had drifted — and the
-    // flags drift easily, because six places set them and the width can change
-    // under a phone while they are set (a keyboard opening is a resize).
-    //
-    // Asking both removes the question of which one is authoritative. Anything
-    // open closes; nothing open opens.
-    const isOpen = showBubbleOnMobile || showProviderSelect;
-
-    if (isOpen) {
-      setShowBubbleOnMobile(false);
-      setShowProviderSelect(false);
-      return;
-    }
-
-    if (window.innerWidth < 1024) setShowBubbleOnMobile(true);
-    setShowProviderSelect(true);
-    if (hasUnreadReply) onViewReply?.();
-  };
-
-  const handleInteractSubmitInternal = (message: string) => {
-    onInteractSubmit?.(message);
-    if (window.innerWidth < 1024) {
-      setShowBubbleOnMobile(false);
-    }
-  };
-
   const closeMenu = useCallback(() => {
     menuJustClosedRef.current = true;
     setTimeout(() => { menuJustClosedRef.current = false; }, 400);
@@ -843,47 +809,43 @@ export const Header: React.FC<HeaderProps> = ({
     </div>
   );
 
-  // The control pill's talking cell. Wide: the bubble itself, inline. Narrow:
-  // the character, which opens the bubble as an overlay (the old Ask cell).
-  const bubbleCell = !onInteractSubmit ? undefined : wide ? (
-    <div
-      ref={selectRef}
-      className="flex items-center gap-1.5 px-2"
-      onMouseLeave={() => setShowProviderSelect(false)}
-    >
+  // The control pill's talking cell: the robot's chat, opened beside the board
+  // and closed again by the same button — the one conversation with the robot
+  // (the phone's chat shows the same), written in the chat's own box rather
+  // than a second one up here. Held (or right-clicked): who answers it
+  // (interactProviderSelect), slid out beside it.
+  const holdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heldRef = useRef(false);
+  const bubbleCell = !onViewReply ? undefined : (
+    <div ref={selectRef} className="flex items-center h-full" onMouseLeave={() => setShowProviderSelect(false)}>
       {providerSelect}
-      <InteractBubble
-        inline
-        onSubmit={handleInteractSubmitInternal}
-        isThinking={isInteractThinking}
-        onRobotClick={handleRobotClick}
-        // Held, not hovered: passing the pointer over the character on the way
-        // somewhere else opened the model list every time.
-        onRobotLongPress={() => setShowProviderSelect(true)}
-        hasUnreadReply={hasUnreadReply}
-      />
+      <Tooltip label="Chat with the robot" below={!isBottom}>
+        <button
+          ref={robotBtnRef}
+          onPointerDown={() => {
+            cellTick();
+            heldRef.current = false;
+            holdRef.current = setTimeout(() => { heldRef.current = true; setShowProviderSelect(true); }, 550);
+          }}
+          onPointerUp={() => { if (holdRef.current) clearTimeout(holdRef.current); }}
+          onPointerLeave={() => { if (holdRef.current) clearTimeout(holdRef.current); }}
+          onContextMenu={(e) => { e.preventDefault(); setShowProviderSelect(true); }}
+          onClick={() => {
+            if (heldRef.current) { heldRef.current = false; return; }
+            setShowProviderSelect(false);
+            onViewReply();
+          }}
+          aria-label="Chat with the robot"
+          className="relative flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-2 h-full transition-colors duration-150 focus:outline-none text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          <RobotChatIcon size={wide ? 26 : 22} />
+          <span className={HEADER_LABEL}>Chat</span>
+          {hasUnreadReply && (
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse" />
+          )}
+        </button>
+      </Tooltip>
     </div>
-  ) : (
-    <Tooltip label="Speak to Agent" below={!isBottom}>
-      <button
-        ref={robotBtnRef}
-        onPointerDown={cellTick}
-        onClick={handleRobotClick}
-        aria-label="Speak to Agent"
-        className={classNames(
-          'relative flex flex-col items-center justify-center gap-0.5 min-w-[40px] sm:min-w-[52px] px-1 sm:px-2 h-full transition-colors duration-150 focus:outline-none',
-          showBubbleOnMobile
-            ? 'bg-blue-600/90 text-white hover:brightness-110'
-            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-        )}
-      >
-        {myCharacter ? <CursorManIcon size={22} /> : <Bot className="h-5 w-5 sm:h-6 sm:w-6" />}
-        <span className={HEADER_LABEL}>Ask</span>
-        {hasUnreadReply && (
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse" />
-        )}
-      </button>
-    </Tooltip>
   );
 
   return (
@@ -1068,25 +1030,6 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
         </div>
-
-        {/* InteractBubble on a narrow screen: an overlay along the header,
-            opened from the character in the control pill. On a wide one it
-            lives in the pill itself — see bubbleCell. */}
-        {onInteractSubmit && !wide && showBubbleOnMobile && (
-          <div className={classNames(
-            "flex items-center justify-center gap-2 absolute inset-x-0 bg-white dark:bg-gray-900 p-4 border-gray-200 dark:border-gray-700 shadow-lg z-50 animate-slide-in",
-            isBottom ? "bottom-full mb-px border-t" : "top-full border-b"
-          )} ref={selectRef}>
-            {providerSelect}
-            <InteractBubble
-              onSubmit={handleInteractSubmitInternal}
-              isThinking={isInteractThinking}
-              onRobotClick={handleRobotClick}
-              autoFocus
-              hasUnreadReply={hasUnreadReply}
-            />
-          </div>
-        )}
 
         {/* Right: the buttons as cards in a tray, as the control pill's are */}
         <div className={HEADER_TRAY}>

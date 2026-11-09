@@ -225,6 +225,8 @@ export function useWantView(api: WantViewApi) {
   const handleViewAgents  = useCallback((want: Want) => openWantSidebar(want, 'history'), [openWantSidebar]);
   const handleViewResults = useCallback((want: Want) => openWantSidebar(want, 'results', { bumpVersion: true }), [openWantSidebar]);
   const handleViewChat    = useCallback((want: Want) => openWantSidebar(want, 'chat', { toggle: false, bumpVersion: true }), [openWantSidebar]);
+  // Open, or closed when it is the one open (the header's chat button).
+  const handleToggleChat  = useCallback((want: Want) => openWantSidebar(want, 'chat', { toggle: true, bumpVersion: true }), [openWantSidebar]);
 
   const handleDraftClick = useCallback((want: Want) => {
     const a = apiRef.current;
@@ -304,6 +306,7 @@ export function useWantView(api: WantViewApi) {
     handleViewAgents,
     handleViewResults,
     handleViewChat,
+    handleToggleChat,
     handleDraftClick,
     handleMinimapClick,
     handleMinimapDoubleClick,

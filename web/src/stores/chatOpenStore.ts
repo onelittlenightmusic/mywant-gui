@@ -11,12 +11,16 @@ import { create } from 'zustand';
 interface ChatOpenState {
   /** metadata.name of the want whose chat to open, or null. */
   pending: string | null;
-  requestChat: (wantName: string) => void;
+  /** Closed instead when it is the one open already (the header's chat
+   *  button, pressed again). */
+  toggle: boolean;
+  requestChat: (wantName: string, opts?: { toggle?: boolean }) => void;
   consume: () => void;
 }
 
 export const useChatOpenStore = create<ChatOpenState>(set => ({
   pending: null,
-  requestChat: (wantName) => set({ pending: wantName }),
-  consume: () => set({ pending: null }),
+  toggle: false,
+  requestChat: (wantName, opts) => set({ pending: wantName, toggle: !!opts?.toggle }),
+  consume: () => set({ pending: null, toggle: false }),
 }));

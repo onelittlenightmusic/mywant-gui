@@ -25,11 +25,16 @@ export interface CCMessage {
   sender: string;
   text: string;
   timestamp?: string;
+  /** Where the line falls in the conversation the two lists make (the
+   *  engine's chat_seq.go) — see conversationOf. */
+  seq?: number;
 }
 
 export interface CCResponse {
   text: string;
   timestamp?: string;
+  /** As CCMessage.seq. */
+  seq?: number;
   subtype?: string;
   /**
    * Set when the reply is an answer about a picture: the picture want it read,
@@ -174,6 +179,11 @@ export function replyChoices(want: Want): string[] {
   const { messages, responses } = readChat(want);
   const last = responses[responses.length - 1];
   if (!last?.choices?.length || isChatBusy(want)) return [];
+  if (inSeq(messages, responses)) {
+    // Ordered: the last line of the conversation is the one asking.
+    const said = messages[messages.length - 1];
+    return said && (said.seq ?? 0) > (last.seq ?? 0) ? [] : last.choices;
+  }
   const said = messages[messages.length - 1];
   const at = (v?: string) => (v ? Date.parse(v) : NaN);
   if (messages.length > responses.length || at(said?.timestamp) > at(last.timestamp)) return [];
@@ -192,11 +202,48 @@ export function isChatBusy(want: Want): boolean {
   return phase === 'requesting' || phase === 'awaiting_response';
 }
 
+/** Every line carries its seq: the conversation can be read in order. */
+function inSeq(messages: CCMessage[], responses: CCResponse[]): boolean {
+  return [...messages, ...responses].every(m => typeof m.seq === 'number');
+}
+
+type ConversationLine = { role: 'user' | 'assistant'; text: string; timestamp?: string; about?: AnswerRef; cards?: ChatCardRef[] };
+
+/**
+ * The messages and the replies as one conversation.
+ *
+ * In the order they were said (seq) when every line has one — a reply said
+ * unasked (the robot's offer, its news) is not an answer to anything, and
+ * paired by index it put every answer after it beside the wrong question.
+ * Otherwise (a history from before seq) they pair up by index:
+ * [you[0], it[0], you[1], it[1], …].
+ */
+function conversationOf(messages: CCMessage[], responses: CCResponse[]): ConversationLine[] {
+  const said = (msg: CCMessage): ConversationLine => ({ role: 'user', text: msg.text, timestamp: msg.timestamp });
+  const answered = (res: CCResponse): ConversationLine => ({
+    role: 'assistant', text: res.text, timestamp: res.timestamp,
+    about: res.picture_id && res.answer_id ? { pictureId: res.picture_id, answerId: res.answer_id } : undefined,
+    cards: res.cards?.length ? res.cards : undefined,
+  });
+  if (inSeq(messages, responses)) {
+    return [
+      ...messages.filter(m => m.text).map(m => ({ seq: m.seq ?? 0, order: 0, line: said(m) })),
+      ...responses.filter(r => r.text).map(r => ({ seq: r.seq ?? 0, order: 1, line: answered(r) })),
+    ].sort((a, b) => a.seq - b.seq || a.order - b.order).map(x => x.line);
+  }
+  const out: ConversationLine[] = [];
+  const len = Math.max(messages.length, responses.length);
+  for (let i = 0; i < len; i++) {
+    if (messages[i]?.text) out.push(said(messages[i]));
+    if (responses[i]?.text) out.push(answered(responses[i]));
+  }
+  return out;
+}
+
 /**
  * Interleave the messages, the replies and the working log.
  *
- * Messages and replies pair up by index: [you[0], it[0], you[1], it[1], …].
- * The log is slotted into the gaps by timestamp, and the messages keep the
+ * Messages and replies make one conversation (conversationOf). The log is slotted into the gaps by timestamp, and the messages keep the
  * order they already had and are never re-sorted — a bad timestamp can put a
  * status line in the wrong gap, but cannot scramble the conversation.
  */
@@ -204,18 +251,7 @@ export function buildChatItems(want: Want, showActivity: boolean): ChatItem[] {
   const { messages, responses, activities: all } = readChat(want);
   const activities = showActivity ? all : [];
 
-  const conversation: Array<{ role: 'user' | 'assistant'; text: string; timestamp?: string; about?: AnswerRef; cards?: ChatCardRef[] }> = [];
-  const len = Math.max(messages.length, responses.length);
-  for (let i = 0; i < len; i++) {
-    const msg = messages[i];
-    const res = responses[i];
-    if (msg?.text) conversation.push({ role: 'user', text: msg.text, timestamp: msg.timestamp });
-    if (res?.text) conversation.push({
-      role: 'assistant', text: res.text, timestamp: res.timestamp,
-      about: res.picture_id && res.answer_id ? { pictureId: res.picture_id, answerId: res.answer_id } : undefined,
-      cards: res.cards?.length ? res.cards : undefined,
-    });
-  }
+  const conversation = conversationOf(messages, responses);
 
   const items: ChatItem[] = [];
   const at = (v?: string) => (v ? Date.parse(v) : NaN);

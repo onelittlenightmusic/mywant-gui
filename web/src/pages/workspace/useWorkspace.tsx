@@ -606,6 +606,7 @@ export function useWorkspace({ board }: { board: BoardLink }) {
     handleViewAgents,
     handleViewResults,
     handleViewChat,
+    handleToggleChat,
     handleDraftClick,
     handleMinimapClick,
     handleMinimapDoubleClick,
@@ -645,7 +646,7 @@ export function useWorkspace({ board }: { board: BoardLink }) {
   useEffect(() => {
     if (!pendingChatOpen) return;
     const chatWant = useWantStore.getState().wants.find(w => w.metadata?.name === pendingChatOpen);
-    if (chatWant) handleViewChat(chatWant);
+    if (chatWant) (useChatOpenStore.getState().toggle ? handleToggleChat : handleViewChat)(chatWant);
     consumeChatOpenRequest();
   }, [pendingChatOpen]);
 
