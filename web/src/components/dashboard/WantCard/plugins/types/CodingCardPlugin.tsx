@@ -132,7 +132,8 @@ export const CodingContentSection: React.FC<WantCardPluginProps> = ({
     <WantCardLayout
       // The box you write in sits under the thread, where the next message will
       // appear — the way every chat reads, and the way the Chat tab already is.
-      bottom={
+      // In an app that draws the talk, it draws the box to write in too, under it.
+      bottom={hostDrawsChats ? undefined :
         <div
           className={`flex flex-col gap-1 pr-1 ${pillAtBottom ? 'pl-[4.75rem]' : 'pl-1'} ${compact ? 'pb-1' : 'pb-1.5'}`}
           onMouseDown={(e) => e.stopPropagation()}
