@@ -12,6 +12,7 @@ import { apiClient } from '@/api/client';
 import { ChatThread, readChat, isChatBusy, type CCMessage } from '@/components/common/ChatThread';
 import { sayToWant } from '@/utils/robotAsk';
 import { ReplyChoices } from '@/components/common/ReplyChoices';
+import { hostDrawsChats, useHostChatThread } from '@/lib/nativeHost';
 
 export const CodingContentSection: React.FC<WantCardPluginProps> = ({
   want, isChild, isControl, isFocused,
@@ -49,6 +50,9 @@ export const CodingContentSection: React.FC<WantCardPluginProps> = ({
   const { phase, messages: ccMessages } = readChat(want);
   const wantName = want.metadata?.name;
   const wantId = want.metadata?.id ?? wantName;
+
+  // In an app that draws the talk itself (the iPhone's), only its room.
+  const chatRoom = useHostChatThread(hostDrawsChats ? wantId : undefined);
 
   const lastMessage = ccMessages[ccMessages.length - 1];
   const isAwaiting = isChatBusy(want);
@@ -261,7 +265,7 @@ export const CodingContentSection: React.FC<WantCardPluginProps> = ({
           {/* compact follows the card's own size, so a maximized card reads
               like the Chat tab — timestamps and all — and a tile on the grid
               stays a tile. */}
-          <ChatThread
+          {hostDrawsChats ? <div ref={chatRoom} className="flex-1 min-h-0" /> : <ChatThread
             want={want}
             compact={compact}
             className="flex-1 px-0.5"
@@ -272,7 +276,7 @@ export const CodingContentSection: React.FC<WantCardPluginProps> = ({
                   : yielded ? 'Your turn' : 'No response yet'}
               </span>
             )}
-          />
+          />}
         </div>
       }
     />

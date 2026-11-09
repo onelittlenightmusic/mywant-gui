@@ -90,6 +90,9 @@ interface HostBridge {
   /** A panel page: the keys are now yours (true), or the board's again
    *  (false) — the app has moved them between its web views (focusOwner). */
   focusPanel?: (on: boolean) => void;
+  /** The app draws a chat want's conversation itself, in its chat window's
+   *  own lines, where the page leaves room for it (useHostChatThread). */
+  chatThreads?: boolean;
 }
 
 declare global {
@@ -766,7 +769,7 @@ export function hostDragShape(rect: DOMRect, shape: 'circle'): void {
 // phase: 'press' for a button pressed once; 'down' and 'up' for what is held
 // (the pad's arrows and face buttons).
 
-export type HostControlKind = 'pill' | 'pad' | 'ring' | 'frame' | 'tabs';
+export type HostControlKind = 'pill' | 'pad' | 'ring' | 'frame' | 'tabs' | 'chat';
 export type HostInputPhase = 'press' | 'down' | 'up';
 
 export interface HostControlItem {
@@ -809,6 +812,9 @@ export interface HostControl {
   color?: string;
   /** A frame with a tail, pointing down at what it is about. */
   tail?: boolean;
+  /** What of `at` is on screen — the box it scrolls in, in the page's px:
+   *  the app draws it cut to this (a chat's room, half scrolled away). */
+  clip?: { x: number; y: number; w: number; h: number };
 }
 
 export interface HostControls { type: 'controls'; list: HostControl[] }
@@ -918,4 +924,59 @@ export function useHostTabs(
       detail: t.count, tone: t.alert ? 'alert' : undefined })),
   } : null, (item, phase) => { if (phase === 'press') onChange(item); });
   return native ? box : null;
+}
+
+// ── A chat want's conversation, drawn by the app ────────────────────────────
+//
+// An app that says so (chatThreads) draws a chat want's talk — the robot's, a
+// character's, a coding agent's — in its own chat window's lines, as it does
+// the want's corner card. A card on the page then leaves the room where its
+// thread would be and tells the app where it is, as a native control of kind
+// 'chat' (its one item the want's id), followed every frame as the list
+// scrolls; and where it is cut by the box it scrolls in (clip).
+
+/** The app draws chat wants' conversations (see above). */
+export const hostDrawsChats: boolean = nativeHost && !!window.__mywantHost?.chatThreads;
+
+function scrollBoxOf(el: HTMLElement): DOMRect | null {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const s = getComputedStyle(p);
+    if (/(auto|scroll|hidden)/.test(s.overflowY + s.overflowX)) return p.getBoundingClientRect();
+  }
+  return null;
+}
+
+/** Room for a chat want's conversation, for the app to draw it in: the ref goes on the room. */
+export function useHostChatThread(wantId: string | undefined): RefCallback<HTMLElement> {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  const id = useRef(`chat-${Math.random().toString(36).slice(2)}`).current;
+  useEffect(() => {
+    if (!hostDrawsChats || !el || !wantId) return;
+    let last = '';
+    let raf = 0;
+    const look = () => {
+      const r = el.getBoundingClientRect();
+      let left = 0, top = 0, right = window.innerWidth, bottom = window.innerHeight;
+      const box = scrollBoxOf(el);
+      if (box) {
+        left = Math.max(left, box.left); top = Math.max(top, box.top);
+        right = Math.min(right, box.right); bottom = Math.min(bottom, box.bottom);
+      }
+      const seen = r.width > 0 && r.height > 0 && r.right > left && r.left < right && r.bottom > top && r.top < bottom;
+      const control: HostControl | null = seen ? {
+        id, kind: 'chat', items: [{ id: wantId }],
+        at: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) },
+        clip: { x: Math.round(left), y: Math.round(top), w: Math.round(right - left), h: Math.round(bottom - top) },
+      } : null;
+      const key = JSON.stringify(control);
+      if (key !== last) {
+        last = key;
+        if (control) setHostControl(id, control); else removeHostControl(id);
+      }
+      raf = requestAnimationFrame(look);
+    };
+    raf = requestAnimationFrame(look);
+    return () => { cancelAnimationFrame(raf); removeHostControl(id); };
+  }, [el, wantId, id]);
+  return setEl;
 }
