@@ -31,7 +31,8 @@ import {
   TabConfig
 } from '../DetailsSidebar';
 import { useCardGridNavigation } from '@/hooks/useCardGridNavigation';
-import { FormTab, FormTabBar, SETTINGS_FORM_TABS } from '@/components/forms/FormTabBar';
+import { FORM_TAB_META, FormTab, SETTINGS_FORM_TABS } from '@/components/forms/FormTabBar';
+import { CountBadge } from '@/components/common/CountBadge';
 import { ArtMaker } from '@/components/sidebar/ArtMaker';
 import { artOf, artContextOf } from '@/lib/art';
 
@@ -336,6 +337,56 @@ export const SettingsTab: React.FC<{
     setEditedName(want.metadata?.name || '');
   }, [want.metadata?.id]);
 
+  // The section with the keys, brought into view when it is moved to (B +
+  // L1/R1, the robot) — not when a press inside it made it so, which would
+  // jump the scroll under the pointer.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pressedRef = useRef(false);
+  useEffect(() => {
+    if (pressedRef.current) { pressedRef.current = false; return; }
+    const box = scrollRef.current;
+    const el = box?.querySelector<HTMLElement>(`[data-settings-section="${activeSettingsTab}"]`);
+    if (!box || !el) return;
+    box.scrollTo({ top: el.offsetTop - box.offsetTop - 4, behavior: 'smooth' });
+  }, [activeSettingsTab]);
+
+  const counts: Partial<Record<FormTab, number>> = {
+    params: Object.keys(params).length,
+    labels: Object.keys(labels).length,
+    schedule: when.length,
+    deps: using.length,
+  };
+  const section = (tab: FormTab, body: React.ReactNode) => {
+    const { label, icon: Icon } = FORM_TAB_META[tab];
+    const active = activeSettingsTab === tab && sidebarDetailFocused;
+    const count = counts[tab];
+    return (
+      <section
+        key={tab}
+        data-settings-section={tab}
+        onPointerDownCapture={() => {
+          if (activeSettingsTab !== tab) { pressedRef.current = true; setActiveSettingsTab(tab); }
+        }}
+        // In the sub-tabs' order (what B + L1/R1 walks), whatever the order here.
+        style={{ order: SETTINGS_FORM_TABS.indexOf(tab) }}
+        className={classNames('rounded-xl transition-shadow', active && 'ring-2 ring-blue-400/60 ring-offset-2 ring-offset-transparent')}
+      >
+        <h3
+          // The robot presses a section's heading as it pressed its sub-tab.
+          data-robot-target="settings_subtab"
+          data-robot-id={tab}
+          onClick={() => setActiveSettingsTab(tab)}
+          className="sticky top-0 z-10 -mx-1 px-1 py-1.5 mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 bg-white/90 dark:bg-gray-900/90 backdrop-blur cursor-default"
+        >
+          <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+          <span>{label}</span>
+          {!!count && <CountBadge tone="info" size={14}>{count}</CountBadge>}
+        </h3>
+        {body}
+      </section>
+    );
+  };
+
   return (
     <div className="h-full flex flex-col relative">
       {/* G: Saved indicator — absolute overlay, takes no layout space */}
@@ -346,31 +397,15 @@ export const SettingsTab: React.FC<{
         </div>
       )}
 
-      {/* Sub-tab bar at TOP when !isBottom */}
-      {!isBottom && (
-        <FormTabBar
-          activeTab={activeSettingsTab}
-          onTabChange={setActiveSettingsTab}
-          tabs={SETTINGS_FORM_TABS}
-          badges={{
-            name:     null,
-            params:   Object.keys(params).length || null,
-            labels:   Object.keys(labels).length || null,
-            schedule: when.length || null,
-            deps:     using.length || null,
-            yaml:     null,
-          }}
-          isBottom={false}
-        />
-      )}
-
-      {/* Form content area (all non-yaml tabs) */}
-      {activeSettingsTab !== 'yaml' && (
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 focusable-container">
+      {/* Every section in one scroll, in the sub-tabs' old order — no tabs to
+          go through to see what is set. activeSettingsTab is now which
+          section has the keys (B + L1/R1, the robot's settings-subtab): it is
+          scrolled to and marked; a press in a section hands the keys to it. */}
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 pb-6 focusable-container flex flex-col gap-5">
           <>
-            {/* NAME / METADATA tab: metadata + timeline */}
-            {activeSettingsTab === 'name' && (
-          <div className="space-y-3 pt-1">
+            {/* NAME / METADATA: metadata + timeline */}
+            {section('name',
+          <div className="space-y-3">
             {/* Metadata: each value a card of its own, as the fields are
                 (design/cards.ts) — no box around them. */}
             <div className="grid grid-cols-2 gap-2">
@@ -484,9 +519,9 @@ export const SettingsTab: React.FC<{
           </div>
             )}
 
-            {/* PARAMS tab */}
-            {activeSettingsTab === 'params' && (
-              <div className="pt-1">
+            {/* PARAMS */}
+            {section('params',
+              <div>
                 <ParameterGridSection
                   parameters={params}
                   parameterDefinitions={wantTypeDef?.parameters}
@@ -508,8 +543,8 @@ export const SettingsTab: React.FC<{
               </div>
             )}
 
-            {/* LABELS tab */}
-            {activeSettingsTab === 'labels' && (
+            {/* LABELS */}
+            {section('labels',
               <LabelsSection
                 ref={labelsSectionRef}
                 labels={labels}
@@ -525,8 +560,8 @@ export const SettingsTab: React.FC<{
               />
             )}
 
-            {/* SCHEDULE tab */}
-            {activeSettingsTab === 'schedule' && (
+            {/* SCHEDULE */}
+            {section('schedule',
               <SchedulingSection
                 ref={schedulingSectionRef}
                 schedules={when}
@@ -541,8 +576,8 @@ export const SettingsTab: React.FC<{
               />
             )}
 
-            {/* DEPS tab */}
-            {activeSettingsTab === 'deps' && (
+            {/* DEPS */}
+            {section('deps',
               <DependenciesSection
                 ref={dependenciesSectionRef}
                 dependencies={using}
@@ -557,14 +592,9 @@ export const SettingsTab: React.FC<{
               />
             )}
 
-          </>
-      </div>
-      )}
-
-      {/* YAML sub-tab content */}
-      {activeSettingsTab === 'yaml' && (
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4">
-          <div className="flex flex-col h-full">
+            {/* YAML: last, a fixed height in the scroll */}
+            {section('yaml',
+          <div className="flex flex-col h-80">
             {!isEditing ? (
               <div className="flex flex-col flex-1">
                 <div className="flex items-center justify-between mb-4">
@@ -633,26 +663,10 @@ export const SettingsTab: React.FC<{
               </div>
             )}
           </div>
-        </div>
-      )}
+            )}
+          </>
+      </div>
 
-      {/* Sub-tab bar at BOTTOM when isBottom */}
-      {isBottom && (
-        <FormTabBar
-          activeTab={activeSettingsTab}
-          onTabChange={setActiveSettingsTab}
-          tabs={SETTINGS_FORM_TABS}
-          badges={{
-            name:     null,
-            params:   Object.keys(params).length || null,
-            labels:   Object.keys(labels).length || null,
-            schedule: when.length || null,
-            deps:     using.length || null,
-            yaml:     null,
-          }}
-          isBottom={true}
-        />
-      )}
     </div>
   );
 };
