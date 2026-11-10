@@ -66,7 +66,7 @@ export interface CCActivity {
 
 /** A message bubble or a working-log line, in the order they are shown. */
 export type ChatItem =
-  | { kind: 'message'; role: 'user' | 'assistant'; text: string; timestamp?: string; about?: AnswerRef; cards?: ChatCardRef[] }
+  | { kind: 'message'; role: 'user' | 'assistant' | 'trace'; text: string; timestamp?: string; about?: AnswerRef; cards?: ChatCardRef[] }
   | { kind: 'activity'; activity: CCActivity }
   | { kind: 'reset'; timestamp: string };
 
@@ -164,6 +164,8 @@ export function readChat(want: Want) {
     phase: current?.phase as string | undefined,
     messages: (current?.cc_messages as CCMessage[] | undefined) ?? [],
     responses: (current?.cc_responses as CCResponse[] | undefined) ?? [],
+    /** What it did inside (the robot's cc_traces): processing lines, not words. */
+    traces: (current?.cc_traces as CCResponse[] | undefined) ?? [],
     streamingText: (current?.cc_streaming_text as string | undefined) ?? '',
     activities: (current?.cc_activity as CCActivity[] | undefined) ?? [],
     sessionState: current?.current_session_state as string | undefined,
@@ -207,7 +209,7 @@ function inSeq(messages: CCMessage[], responses: CCResponse[]): boolean {
   return [...messages, ...responses].every(m => typeof m.seq === 'number');
 }
 
-type ConversationLine = { role: 'user' | 'assistant'; text: string; timestamp?: string; about?: AnswerRef; cards?: ChatCardRef[] };
+type ConversationLine = { role: 'user' | 'assistant' | 'trace'; text: string; timestamp?: string; about?: AnswerRef; cards?: ChatCardRef[] };
 
 /**
  * The messages and the replies as one conversation.
@@ -218,7 +220,7 @@ type ConversationLine = { role: 'user' | 'assistant'; text: string; timestamp?: 
  * Otherwise (a history from before seq) they pair up by index:
  * [you[0], it[0], you[1], it[1], …].
  */
-function conversationOf(messages: CCMessage[], responses: CCResponse[]): ConversationLine[] {
+function conversationOf(messages: CCMessage[], responses: CCResponse[], traces: CCResponse[] = []): ConversationLine[] {
   const said = (msg: CCMessage): ConversationLine => ({ role: 'user', text: msg.text, timestamp: msg.timestamp });
   const answered = (res: CCResponse): ConversationLine => ({
     role: 'assistant', text: res.text, timestamp: res.timestamp,
@@ -229,6 +231,8 @@ function conversationOf(messages: CCMessage[], responses: CCResponse[]): Convers
     return [
       ...messages.filter(m => m.text).map(m => ({ seq: m.seq ?? 0, order: 0, line: said(m) })),
       ...responses.filter(r => r.text).map(r => ({ seq: r.seq ?? 0, order: 1, line: answered(r) })),
+      // Its processing lines where they fell (each has its seq).
+      ...traces.filter(t => t.text).map(t => ({ seq: t.seq ?? 0, order: 2, line: { role: 'trace' as const, text: t.text, timestamp: t.timestamp } })),
     ].sort((a, b) => a.seq - b.seq || a.order - b.order).map(x => x.line);
   }
   const out: ConversationLine[] = [];
@@ -248,10 +252,10 @@ function conversationOf(messages: CCMessage[], responses: CCResponse[]): Convers
  * status line in the wrong gap, but cannot scramble the conversation.
  */
 export function buildChatItems(want: Want, showActivity: boolean): ChatItem[] {
-  const { messages, responses, activities: all } = readChat(want);
+  const { messages, responses, traces, activities: all } = readChat(want);
   const activities = showActivity ? all : [];
 
-  const conversation = conversationOf(messages, responses);
+  const conversation = conversationOf(messages, responses, traces);
 
   const items: ChatItem[] = [];
   const at = (v?: string) => (v ? Date.parse(v) : NaN);
@@ -453,6 +457,19 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
         <ActivityLine key={i} activity={entry.activity} compact={compact} />
       ) : entry.kind === 'reset' ? (
         <SessionResetLine key={i} timestamp={entry.timestamp} compact={compact} />
+      ) : entry.role === 'trace' ? (
+        // What was done inside, as it was logged — not something said.
+        <div
+          key={i}
+          title={entry.timestamp ? formatRelativeTime(entry.timestamp) : undefined}
+          className={classNames(
+            'flex items-start gap-1.5 font-mono text-gray-400 dark:text-gray-500 border-l-2 border-gray-300 dark:border-gray-600 pl-2',
+            compact ? 'text-[10px]' : 'text-[11px]',
+          )}
+        >
+          <span aria-hidden>⚙</span>
+          <span className="break-all">{entry.text}</span>
+        </div>
       ) : (
         <div key={i} className={classNames('flex', entry.role === 'user' ? 'justify-end' : 'justify-start')}>
           <div className={bubble(entry.role)}>
