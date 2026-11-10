@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useBoardChanged } from '@/api/boardSync';
 import { useOutputFocusStore } from '@/stores/outputFocusStore';
-import { HostMaximizesCard, hostSideSheets, nativePanelPage, postToHost, useHostCardSlot } from '@/lib/nativeHost';
+import { HostMaximizesCard, hostSideSheets, nativePanelPage, postToHost, useHostCardButtons, useHostCardSlot } from '@/lib/nativeHost';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { Settings, Eye, StickyNote, Check, History, MessageSquare, ArrowDownUp } from 'lucide-react';
 import { Want, WantExecutionStatus } from '@/types/want';
@@ -673,6 +673,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
             <HostCardSlot id={wantDetails.metadata?.id || wantDetails.id || ''} />
           ) : (
           <HostMaximizesCard.Provider value={nativePanelPage}>
+          <HostCardButtonsAt id={nativePanelPage ? (wantDetails.metadata?.id || wantDetails.id || '') : ''}>
           <WantCard
             want={wantDetails}
             // NOT selected: the quick-action overlay opens on right-click (or
@@ -713,6 +714,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
             index={0}
             className="h-full w-full"
           />
+          </HostCardButtonsAt>
           </HostMaximizesCard.Provider>
           )}
 
@@ -936,6 +938,12 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
 
     </>
   );
+};
+
+/** A Mac drawer's card, drawn here: where the app puts its maximize button (useHostCardButtons). */
+const HostCardButtonsAt: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => {
+  const ref = useHostCardButtons('want', id);
+  return <div ref={ref} className="h-full w-full">{children}</div>;
 };
 
 /** The room an app's native card frame is put over (see useHostCardSlot). */

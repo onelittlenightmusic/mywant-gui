@@ -578,6 +578,33 @@ export function useHostCardSlot(kind: HostFloatCard['kind'], id: string): RefCal
   return setEl;
 }
 
+/**
+ * Tell a framing app where a card the page draws itself is — a Mac's drawer
+ * draws its subject's card as a browser does — so it wears the app's native
+ * maximize button there, as a phone's native card frame does (sent as the
+ * list's focused card is, focus-card). Read once a frame, sent on a change.
+ */
+export function useHostCardButtons(kind: HostFloatCard['kind'], id: string): RefCallback<HTMLElement> {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!el || !nativeHost || !id) return;
+    let last = '';
+    let raf = 0;
+    const look = () => {
+      const r = el.getBoundingClientRect();
+      const card = r.width > 0 && r.height > 0
+        ? { kind, id, x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) }
+        : null;
+      const key = JSON.stringify(card);
+      if (key !== last) { last = key; postToHost({ type: 'focus-card', card }); }
+      raf = requestAnimationFrame(look);
+    };
+    raf = requestAnimationFrame(look);
+    return () => { cancelAnimationFrame(raf); postToHost({ type: 'focus-card', card: null }); };
+  }, [el, kind, id]);
+  return setEl;
+}
+
 // ── The software pad, drawn by the app ──────────────────────────────────────
 //
 // Framed by an app, the board's software pad (CanvasDPad) is not drawn: the
