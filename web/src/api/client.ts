@@ -161,6 +161,36 @@ interface RawFieldMatchRec {
   param_change: { param_name: string; value: unknown };
 }
 
+
+/** How long a type's definition read is kept (getWantType). */
+const WANT_TYPE_TTL_MS = 5 * 60_000;
+
+/** How recent a want's copy in the app's store may be for a first read of it
+ *  (a panel opening on it); a poll for changes always asks the server. */
+const STORE_FIRST_READ_MS = 30_000;
+
+/**
+ * The app's store (an app framing this page — iOS NativeStore): the wants and
+ * types every page of the app shows, read once and kept by the app, not by
+ * each page. A read through it returns what another page (or the character
+ * landing on the want) already read, when recent enough; else the app asks
+ * the server and keeps the answer for the others. Absent in a browser.
+ */
+interface StoreReply { status: number; body?: string; etag?: string }
+type AppStore = { postMessage: (ask: unknown) => Promise<StoreReply> };
+const appStore = (): AppStore | undefined =>
+  (typeof window !== 'undefined' ? window.webkit?.messageHandlers?.mywantStore as unknown as AppStore | undefined : undefined);
+
+/** The character landing on a want, in an app: its store reads ahead what the
+ *  want's panel and card will show. False in a browser (the page reads ahead
+ *  itself — wantStore.prefetchWant). */
+export function appStorePrefetch(wantId: string, wantType?: string): boolean {
+  const store = appStore();
+  if (!store) return false;
+  store.postMessage({ op: 'prefetch', wantId, ...(wantType ? { wantType } : {}) }).catch(() => {});
+  return true;
+}
+
 class MyWantApiClient {
   private client: AxiosInstance;
   private pendingRequests: Map<string, Promise<any>> = new Map();
@@ -274,6 +304,25 @@ class MyWantApiClient {
     const etag = opts.rawETag ? rawEtag : rawEtag?.replace(/^"|"$/g, '');
     if (response.status === 304) return { data: null, etag };
     return { data: response.data ?? null, etag };
+  }
+
+  /** A read through the app's store (appStore): undefined in a browser, or
+   *  when the app could not answer (the page then asks the server itself). */
+  private async storeGet<T>(path: string, maxAgeMs: number): Promise<{ data: T; etag: string | undefined } | undefined> {
+    const store = appStore();
+    if (!store) return undefined;
+    let r: StoreReply;
+    try {
+      r = await store.postMessage({ op: 'get', path, maxAge: maxAgeMs });
+    } catch {
+      return undefined;
+    }
+    if (r?.status === 200 && typeof r.body === 'string') {
+      return { data: JSON.parse(r.body) as T, etag: r.etag?.replace(/^"|"$/g, '') };
+    }
+    // The server's answer was an error: the same as asking it directly.
+    if (r?.status && r.status >= 400) throw Object.assign(new Error(`HTTP ${r.status}`), { status: r.status });
+    return undefined;
   }
 
   private async deduplicatedGet<T>(url: string): Promise<T> {
@@ -431,7 +480,13 @@ class MyWantApiClient {
   // answersOnly asks for the want's answers without its other histories
   // (?history=results) — what the board reads; the details panel asks whole.
   async getWantConditional(id: string, ifNoneMatch?: string, answersOnly = false): Promise<{ data: Want | null; etag: string | undefined }> {
-    return this.conditionalGet<Want>(`/api/v1/wants/${id}${answersOnly ? '?history=results' : ''}`, ifNoneMatch);
+    // A panel's first read of the want: with its answers and its type, in one ask.
+    if (!ifNoneMatch && !answersOnly) return this.readWantBundle(id);
+    const path = `/api/v1/wants/${id}${answersOnly ? '?history=results' : ''}`;
+    // A first read (no ETag held) may take the app's recent copy; a poll asks.
+    const kept = await this.storeGet<Want>(path, ifNoneMatch ? 0 : STORE_FIRST_READ_MS);
+    if (kept) return ifNoneMatch && kept.etag === ifNoneMatch ? { data: null, etag: kept.etag } : kept;
+    return this.conditionalGet<Want>(path, ifNoneMatch);
   }
 
   async getWant(id: string): Promise<WantDetails> {
@@ -539,8 +594,49 @@ class MyWantApiClient {
     return this.deduplicatedGet<WantStatusResponse>(`/api/v1/wants/${id}/status`);
   }
 
-  async getWantResults(id: string): Promise<WantResults> {
-    return this.deduplicatedGet<WantResults>(`/api/v1/wants/${id}/results`);
+  /**
+   * A want, its answers and its type in one ask (?include=results,type): what
+   * its panel opens on, read as one round trip where it was three. The want is
+   * returned; its answers are kept for the panel's own read of them that
+   * follows (getWantResults, firstRead), its type with the types read
+   * (getWantType). The ETag given is the want's own hash — what a poll of the
+   * want alone (getWantConditional with it) is answered by.
+   */
+  private readWantBundle(id: string): Promise<{ data: Want | null; etag: string | undefined }> {
+    const path = `/api/v1/wants/${id}?include=results,type`;
+    type Bundled = Want & { included?: { results?: WantResults; type?: WantTypeDetailResponse } };
+    const read = (async () => {
+      const got = (await this.storeGet<Bundled>(path, STORE_FIRST_READ_MS)) ?? await this.conditionalGet<Bundled>(path);
+      const want = got.data;
+      if (!want) return { data: null, etag: got.etag };
+      const { included, ...rest } = want;
+      if (included?.results) this.bundledResults.set(id, { at: Date.now(), results: included.results });
+      if (included?.type?.metadata?.name) this.wantTypeCache.set(included.type.metadata.name, { at: Date.now(), def: included.type });
+      return { data: rest as Want, etag: want.hash ?? got.etag?.replace(/-t[0-9a-f]+$/, '') };
+    })();
+    this.bundleReads.set(id, read);
+    const done = () => { if (this.bundleReads.get(id) === read) this.bundleReads.delete(id); };
+    read.then(done, done);
+    return read;
+  }
+
+  /** Answers that came with a want (readWantBundle), for the read that follows. */
+  private bundledResults = new Map<string, { at: number; results: WantResults }>();
+  private bundleReads = new Map<string, Promise<unknown>>();
+
+  /** `firstRead`: the page has none of its answers yet — those that came with
+   *  the want (readWantBundle), or the app's recent copy, will do; otherwise
+   *  they are asked of the server. */
+  async getWantResults(id: string, opts: { firstRead?: boolean } = {}): Promise<WantResults> {
+    if (opts.firstRead) {
+      await this.bundleReads.get(id)?.catch(() => {});
+      const came = this.bundledResults.get(id);
+      if (came && Date.now() - came.at < STORE_FIRST_READ_MS) return came.results;
+    }
+    const path = `/api/v1/wants/${id}/results`;
+    const kept = await this.storeGet<WantResults>(path, opts.firstRead ? STORE_FIRST_READ_MS : 0);
+    if (kept) return kept.data;
+    return this.deduplicatedGet<WantResults>(path);
   }
 
   // Suspend/Resume/Stop/Start operations
@@ -782,9 +878,39 @@ class MyWantApiClient {
     return this.deduplicatedGet<WantTypeListResponse>(url);
   }
 
-  async getWantType(name: string): Promise<WantTypeDetailResponse> {
-    return this.deduplicatedGet<WantTypeDetailResponse>(`/api/v1/want-types/${name}`);
+  /**
+   * A type's definition, kept for the session (WANT_TYPE_TTL_MS): the
+   * sidebar's tabs (Settings, Results, Wiring) each read it as they mount, so
+   * without this every switch between them fetched it again, and landing on a
+   * want reads it ahead of the panel (wantStore.prefetchWant). `fresh` reads
+   * it from the server all the same — for the type's own page, where it may
+   * just have been changed — and keeps what came.
+   */
+  async getWantType(name: string, opts: { fresh?: boolean } = {}): Promise<WantTypeDetailResponse> {
+    if (!opts.fresh && !this.cachedWantType(name)) {
+      // A want's panel opening reads its type with it (readWantBundle): its
+      // tab asking at the same moment waits for that rather than asking too.
+      // A tick first — the tab's effect runs before the panel's own, which
+      // starts that read.
+      await new Promise(resolve => setTimeout(resolve, 0));
+      if (this.bundleReads.size > 0) await Promise.allSettled([...this.bundleReads.values()]);
+    }
+    const hit = this.wantTypeCache.get(name);
+    if (!opts.fresh && hit && Date.now() - hit.at < WANT_TYPE_TTL_MS) return hit.def;
+    const path = `/api/v1/want-types/${name}`;
+    const def = (await this.storeGet<WantTypeDetailResponse>(path, opts.fresh ? 0 : WANT_TYPE_TTL_MS))?.data
+      ?? await this.deduplicatedGet<WantTypeDetailResponse>(path);
+    this.wantTypeCache.set(name, { at: Date.now(), def });
+    return def;
   }
+
+  /** A type's definition already read, if it is still kept (no fetch). */
+  cachedWantType(name: string): WantTypeDetailResponse | undefined {
+    const hit = this.wantTypeCache.get(name);
+    return hit && Date.now() - hit.at < WANT_TYPE_TTL_MS ? hit.def : undefined;
+  }
+
+  private wantTypeCache = new Map<string, { at: number; def: WantTypeDetailResponse }>();
 
   async getWantTypeExamples(name: string): Promise<WantTypeExamplesResponse> {
     return this.deduplicatedGet<WantTypeExamplesResponse>(`/api/v1/want-types/${name}/examples`);

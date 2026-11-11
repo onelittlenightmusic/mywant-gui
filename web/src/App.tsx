@@ -50,6 +50,18 @@ function DashboardPage() {
   return <WantListPage key={panelId ?? ''} />;
 }
 
+/**
+ * A panel page an app keeps loaded with no panel asked for (`?__panel=__warm`,
+ * KeptPanel in the iOS app): covered, plain. What it would show — a panel
+ * page's own map, the board under it — is no panel, and it was seen for a
+ * moment as a sheet came up, before the page moved to the panel asked for.
+ */
+function WarmPanelCover() {
+  const { search } = useLocation();
+  if (!nativePanelPage || new URLSearchParams(search).get('__panel') !== '__warm') return null;
+  return <div aria-hidden className="fixed inset-0 z-[2147483000] bg-white dark:bg-gray-950" />;
+}
+
 function DeviceManager() {
   useDeviceSession();
   usePendingDeviceActionsWatcher();
@@ -199,6 +211,7 @@ function App() {
         {/* Single app-wide free-roaming cursor for list/grid pages (want list,
             sidebars, agents/want-types/recipes, ...) — see useGlobalFreeCursor. */}
         <GlobalFreeCursor />
+        <WarmPanelCover />
         <div className="App">
           <Routes>
             {/* One want, on its own — the address a home-screen icon points at.

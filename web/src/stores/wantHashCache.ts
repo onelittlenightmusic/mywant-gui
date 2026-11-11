@@ -22,6 +22,7 @@
  */
 
 import { apiClient } from '@/api/client';
+import { subscribeSSE } from '@/api/sseClient';
 import type { Want } from '@/types/want';
 import { useReflectingStore } from '@/stores/reflectingStore';
 
@@ -43,6 +44,33 @@ export function registerWantCacheActions(
   _patchWant = patchWant;
   _removeWantById = removeWantById;
   _patchWants = patchWants;
+  // The changed wants, as the server sends them with its board_changed.
+  subscribeSSE<{ data?: Want[]; hashes?: Record<string, string> }>('board_changed', (d) => {
+    if (d?.data?.length && d.hashes) applyPushedWants(d.data, d.hashes);
+  });
+}
+
+/**
+ * The changed wants the server sent with `board_changed` (engine
+ * board_changed.go: each as the board reads it, ?history=results, with its
+ * hash): kept as they come — the board changes when the event does, not two
+ * round trips later (the hashes, then the want). Kept by `hashes`, the hash
+ * the hashes list gives each (a body's own hash folds in its correlations, so
+ * is not the one a poll compares): the poll the event also sets off then finds
+ * them as they are and reads nothing more.
+ *
+ * Not while a mutation is in flight (suspendWantPolling): what was sent may
+ * predate it; the poll after it reads them then.
+ */
+export function applyPushedWants(pushed: Want[], hashes: Record<string, string>) {
+  if (!_patchWants || suspendDepth > 0) return;
+  const changed = pushed.filter(w => {
+    const id = w.metadata?.id;
+    return !!id && !!hashes[id] && wantETags.get(id) !== hashes[id];
+  });
+  if (changed.length === 0) return;
+  _patchWants(changed);
+  changed.forEach(w => wantETags.set(w.metadata!.id!, hashes[w.metadata!.id!]));
 }
 
 // Module-level ETag state

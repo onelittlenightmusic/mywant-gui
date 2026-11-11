@@ -25,7 +25,8 @@ interface WantTypeStore {
 
   // Actions
   fetchWantTypes: () => Promise<void>;
-  getWantType: (name: string) => Promise<void>;
+  /** `fresh`: read from the server, not the session's copy (apiClient.getWantType). */
+  getWantType: (name: string, opts?: { fresh?: boolean }) => Promise<void>;
   setSelectedWantType: (wantType: WantTypeDefinition | null) => void;
   setFilters: (filters: Partial<WantTypeFilters>) => void;
   clearFilters: () => void;
@@ -125,7 +126,7 @@ export const useWantTypeStore = create<WantTypeStore>((set, get) => ({
   },
 
   // Fetch detailed want type - prevent duplicate concurrent requests
-  getWantType: async (name: string) => {
+  getWantType: async (name: string, opts?: { fresh?: boolean }) => {
     const current = get();
 
     // Skip if there's already a pending request for this want type
@@ -135,7 +136,7 @@ export const useWantTypeStore = create<WantTypeStore>((set, get) => ({
 
     set({ pendingRequest: name, error: null });
     try {
-      const response = await apiClient.getWantType(name);
+      const response = await apiClient.getWantType(name, opts);
       set({
         selectedWantType: response,
         pendingRequest: undefined,

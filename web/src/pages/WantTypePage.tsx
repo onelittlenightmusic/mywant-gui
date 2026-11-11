@@ -91,7 +91,7 @@ export default function WantTypePage() {
   // Handle view details
   const handleViewDetails = async (wantType: WantTypeListItem) => {
     sidebar.selectItem(wantType);
-    await getWantType(wantType.name);
+    await getWantType(wantType.name, { fresh: true });
   };
 
   // Card overlay "Add Want" — open the Dashboard's Add Want form with this type
@@ -105,7 +105,7 @@ export default function WantTypePage() {
   // Card overlay "Download" — same JSON dump the sidebar button used to do.
   const handleDownloadFromCard = async (wantType: WantTypeListItem) => {
     try {
-      const detail = await apiClient.getWantType(wantType.name);
+      const detail = await apiClient.getWantType(wantType.name, { fresh: true });
       downloadJSON(`${wantType.name}.json`, detail);
     } catch (error) {
       setNotification({

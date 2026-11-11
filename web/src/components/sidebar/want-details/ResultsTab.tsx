@@ -128,7 +128,8 @@ export const ResultsTab: React.FC<{
   const exposes: ExposeEntry[] = want.spec?.exposes ?? [];
   const imports: Record<string, string> = want.spec?.imports ?? {};
 
-  const [fetchedStateDefs, setFetchedStateDefs] = useState<StateDef[] | undefined>(undefined);
+  const [fetchedStateDefs, setFetchedStateDefs] = useState<StateDef[] | undefined>(
+    () => (want.metadata?.type ? apiClient.cachedWantType(want.metadata.type)?.state : undefined));
   useEffect(() => {
     const typeName = want.metadata?.type;
     if (!typeName) { setFetchedStateDefs(undefined); return; }

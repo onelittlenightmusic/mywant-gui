@@ -3,7 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { Want, WantDetails, WantResults, CreateWantRequest, UpdateWantRequest, WantExecutionStatus, WantPatch } from '@/types/want';
 import { ApiError } from '@/types/api';
 import { ARCHIVE_LABEL } from '@/utils/wantUtils';
-import { apiClient } from '@/api/client';
+import { apiClient, appStorePrefetch } from '@/api/client';
 import { send } from '@/api/outbox';
 import { useReflectingStore } from '@/stores/reflectingStore';
 import { loadWantSnapshot, saveWantSnapshot } from '@/lib/wantSnapshot';
@@ -40,6 +40,12 @@ interface WantStore {
   selectWant: (want: Want | null) => void;
   fetchWantDetails: (id: string) => Promise<{ updated: boolean }>;
   fetchWantResults: (id: string) => Promise<void>;
+  /** Read a want's details, answers and type ahead of its panel — the board
+   *  does as the character lands on its tile — so the panel opens on them at
+   *  once (fetchWantDetails / fetchWantResults), checking only that they
+   *  still hold. Nothing on screen changes. In an app, its store reads them,
+   *  for whichever of its pages will show them (appStorePrefetch). */
+  prefetchWant: (id: string, wantType?: string) => void;
   clearError: () => void;
   refreshWant: (id: string) => Promise<void>;
   /** The one control. The four below are its names at the call sites. */
@@ -88,6 +94,22 @@ function overDetails(details: WantDetails | null, updated: Want | undefined): Wa
   if (!updated) return details;
   if (updated.history_scope !== 'results' || !details?.history) return updated as WantDetails;
   return { ...updated, history_scope: undefined, history: { ...details.history, resultHistory: updated.history?.resultHistory ?? [] } } as WantDetails;
+}
+
+// A want's details and answers read ahead of its panel (prefetchWant), kept
+// PREFETCH_FRESH_MS: long enough to stand there and then open it, short enough
+// that what opens is near enough to now — and it is checked against the
+// server (its ETag) the moment it is shown.
+interface Prefetched { at: number; details?: WantDetails; etag?: string; results?: WantResults }
+const prefetched = new Map<string, Prefetched>();
+const PREFETCH_FRESH_MS = 30_000;
+const PREFETCH_KEPT = 16;
+
+function freshPrefetch(id: string): Prefetched | undefined {
+  const p = prefetched.get(id);
+  if (!p) return undefined;
+  if (Date.now() - p.at >= PREFETCH_FRESH_MS) { prefetched.delete(id); return undefined; }
+  return p;
 }
 
 export const useWantStore = create<WantStore>()(
@@ -463,13 +485,18 @@ export const useWantStore = create<WantStore>()(
       // control-button flash visible on slow networks even when 304 is returned.
       const cachedDetails = useWantStore.getState().selectedWantDetails;
       const isInitialLoad = !cachedDetails || cachedDetails.metadata?.id !== id;
-      if (isInitialLoad) {
+      // Read ahead (prefetchWant): shown at once, then checked against its ETag.
+      const ahead = isInitialLoad ? freshPrefetch(id) : undefined;
+      if (ahead?.details) {
+        if (ahead.etag) setDetailETag(id, ahead.etag);
+        set({ selectedWantDetails: ahead.details, loading: false, error: null });
+      } else if (isInitialLoad) {
         set({ loading: true, error: null });
       }
       try {
         // Only send ETag on re-fetches (polling). On initial load the detail data
         // is not in memory yet, so a 304 would leave selectedWantDetails null.
-        const result = await apiClient.getWantConditional(id, isInitialLoad ? undefined : getDetailETag(id));
+        const result = await apiClient.getWantConditional(id, isInitialLoad && !ahead?.details ? undefined : getDetailETag(id));
         if (result.data === null) {
           // 304: cached detail is still valid — no state change needed
           return { updated: false };
@@ -507,11 +534,14 @@ export const useWantStore = create<WantStore>()(
     fetchWantResults: async (id: string) => {
       // Don't set loading:true on re-fetches to avoid flashing on slow networks.
       const hasResults = !!useWantStore.getState().selectedWantResults;
-      if (!hasResults) {
+      const ahead = hasResults ? undefined : freshPrefetch(id)?.results;
+      if (ahead) {
+        set({ selectedWantResults: ahead });
+      } else if (!hasResults) {
         set({ loading: true, error: null });
       }
       try {
-        const results = await apiClient.getWantResults(id);
+        const results = await apiClient.getWantResults(id, { firstRead: !hasResults });
         set({
           selectedWantResults: results,
           loading: false
@@ -527,6 +557,21 @@ export const useWantStore = create<WantStore>()(
           loading: false
         });
       }
+    },
+
+    prefetchWant: (id: string, wantType?: string) => {
+      if (appStorePrefetch(id, wantType)) return;
+      if (freshPrefetch(id)) return; // read (or being read) just now
+      prefetched.set(id, { at: Date.now() });
+      while (prefetched.size > PREFETCH_KEPT) prefetched.delete(prefetched.keys().next().value!);
+      // One ask: the want with its answers and its type (readWantBundle).
+      apiClient.getWantConditional(id)
+        .then(async d => [d, await apiClient.getWantResults(id, { firstRead: true })] as const)
+        .then(([d, results]) => {
+          if (!d.data) { prefetched.delete(id); return; }
+          prefetched.set(id, { at: Date.now(), details: d.data as WantDetails, etag: d.etag, results });
+        })
+        .catch(() => { prefetched.delete(id); });
     },
 
     refreshWant: async (id: string) => {

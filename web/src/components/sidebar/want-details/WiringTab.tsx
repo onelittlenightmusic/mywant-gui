@@ -78,7 +78,8 @@ export const WiringTab: React.FC<{
 }) => {
   const [imports, setImports] = useState<Record<string, string>>(want.spec?.imports ?? {});
   const [exposes, setExposes] = useState<ExposeEntry[]>(want.spec?.exposes ?? []);
-  const [wantTypeDef, setWantTypeDef] = useState<import('@/types/wantType').WantTypeDetailResponse | null>(null);
+  const [wantTypeDef, setWantTypeDef] = useState<import('@/types/wantType').WantTypeDetailResponse | null>(
+    () => (want.metadata?.type && apiClient.cachedWantType(want.metadata.type)) || null);
 
   useEffect(() => { setImports(want.spec?.imports ?? {}); }, [want.spec?.imports]);
   useEffect(() => { setExposes(want.spec?.exposes ?? []); }, [want.spec?.exposes]);
