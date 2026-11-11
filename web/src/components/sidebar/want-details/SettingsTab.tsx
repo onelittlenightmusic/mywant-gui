@@ -33,6 +33,7 @@ import {
 import { useCardGridNavigation } from '@/hooks/useCardGridNavigation';
 import { FORM_TAB_META, FormTab, SETTINGS_FORM_TABS } from '@/components/forms/FormTabBar';
 import { CountBadge } from '@/components/common/CountBadge';
+import { TimingsSection } from './TimingsSection';
 import { ArtMaker } from '@/components/sidebar/ArtMaker';
 import { artOf, artContextOf } from '@/lib/art';
 
@@ -116,7 +117,9 @@ export const SettingsTab: React.FC<{
   const [isEditingScheduling, setIsEditingScheduling] = useState(false);
 
   // Want type full definition for ParameterGridSection
-  const [wantTypeDef, setWantTypeDef] = useState<import('@/types/wantType').WantTypeDetailResponse | null>(null);
+  const [wantTypeDef, setWantTypeDef] = useState<import('@/types/wantType').WantTypeDetailResponse | null>(
+    // Already read (landing on the want reads it), so the first draw has it.
+    () => (want.metadata?.type && apiClient.cachedWantType(want.metadata.type)) || null);
   useEffect(() => {
     const typeName = want.metadata?.type;
     if (!typeName) { setWantTypeDef(null); return; }
@@ -541,6 +544,11 @@ export const SettingsTab: React.FC<{
                   onExitTop={onBackToCard}
                 />
               </div>
+            )}
+
+            {/* TIMING: when it murmurs and notifies — only for a type that names its timings */}
+            {!!wantTypeDef?.timings?.length && section('timing',
+              <TimingsSection timings={wantTypeDef.timings} labels={labels} onChange={handleLabelsChange} />
             )}
 
             {/* LABELS */}

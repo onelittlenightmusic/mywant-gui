@@ -831,6 +831,7 @@ export const WantForm = forwardRef<WantFormHandle, WantFormProps>(function WantF
       deps: using.length > 0 ? using.length : null,
       expose: exposes.length > 0 ? exposes.length : null,
       import: Object.keys(imports).length > 0 ? Object.keys(imports).length : null,
+      timing: null,
       yaml: null,
     };
   }, [selectedWantType, params, name, selectedTypeId, labels, when, using, imports]);

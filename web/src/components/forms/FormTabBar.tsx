@@ -1,15 +1,15 @@
 import { TagSideways } from '@/components/common/TagSideways';
 import React from 'react';
-import { SlidersHorizontal, Clock, Tag, Link2, BadgeInfo, ArrowUpFromLine, ArrowDownToLine, Code } from 'lucide-react';
+import { SlidersHorizontal, Clock, Tag, Link2, BadgeInfo, ArrowUpFromLine, ArrowDownToLine, Code, BellRing } from 'lucide-react';
 import { classNames } from '@/utils/helpers';
 import { CountBadge } from '@/components/common/CountBadge';
 import { CONTROL_TAB, CONTROL_ICON_CLASS } from '@/design/controls';
 import { tabTrayClass, tabClass, tabIconClass, TAB_LABEL, TAB_HOST_ROOM } from '@/design/tabs';
 import { useHostTabs, iconName } from '@/lib/nativeHost';
 
-export type FormTab = 'name' | 'params' | 'labels' | 'schedule' | 'deps' | 'expose' | 'import' | 'yaml';
+export type FormTab = 'name' | 'params' | 'labels' | 'timing' | 'schedule' | 'deps' | 'expose' | 'import' | 'yaml';
 export const FORM_TABS: FormTab[] = ['params', 'labels', 'schedule', 'deps', 'expose', 'import', 'name'];
-export const SETTINGS_FORM_TABS: FormTab[] = ['params', 'labels', 'schedule', 'deps', 'name', 'yaml'];
+export const SETTINGS_FORM_TABS: FormTab[] = ['params', 'timing', 'labels', 'schedule', 'deps', 'name', 'yaml'];
 
 const TagLinkIcon: React.FC<{ className?: string }> = ({ className }) => (
   <span className="relative inline-flex items-center justify-center" style={{ width: '1em', height: '1em' }}>
@@ -22,6 +22,7 @@ export const FORM_TAB_META: Record<FormTab, { label: string; icon: React.Element
   name:     { label: 'Metadata', icon: BadgeInfo },
   params:   { label: 'Params',   icon: SlidersHorizontal },
   labels:   { label: 'Labels',   icon: TagSideways },
+  timing:   { label: 'Timing',   icon: BellRing },
   schedule: { label: 'Schedule', icon: Clock    },
   deps:     { label: 'Deps',     icon: TagLinkIcon },
   expose:   { label: 'Expose',   icon: ArrowUpFromLine },

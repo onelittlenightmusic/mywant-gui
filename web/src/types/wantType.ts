@@ -171,7 +171,18 @@ export interface WantTypeListResponse {
   wantTypes: WantTypeListItem[];
 }
 
+/** A moment of a type's answer worth telling of (engine core/result_timings.go). */
+export interface TimingDef {
+  name: string;
+  description?: string;
+  if?: string;
+  onChange?: string;
+  murmur?: boolean;
+  notify?: boolean;
+}
+
 export interface WantTypeDetailResponse {
+  timings?: TimingDef[];
   metadata: WantTypeMetadata;
   parameters: ParameterDef[];
   state: StateDef[];
