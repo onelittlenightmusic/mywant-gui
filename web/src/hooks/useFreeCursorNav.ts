@@ -135,7 +135,7 @@ function isSameSpot(from: HTMLElement | null, to: HTMLElement): boolean {
  * mid-walk (see stickOwner). While the board owns the keys this returns null and
  * nothing is confined at all.
  */
-const SURFACE_SELECTOR: Record<Exclude<FocusOwner, 'board'>, string> = {
+const SURFACE_SELECTOR: Record<Exclude<FocusOwner, 'board' | 'pick'>, string> = {
   // Drilling into a card is a deliberate narrowing — from "the panel" to "this
   // control" — and the cursor narrows with it rather than roaming the whole
   // panel and landing on a neighbouring card's button.
@@ -150,7 +150,8 @@ function keyHoldingSurface(): HTMLElement | null {
   // asking the card first — so the two could drift apart. See readCursorOwner
   // for why the cursor asks about the stick where the keys ask about focus.
   const owner = readCursorOwner();
-  if (owner === 'board') return null;
+  // Picking, the cursor is out over the board or the list, as on the board.
+  if (owner === 'board' || owner === 'pick') return null;
   const el = document.querySelector<HTMLElement>(SURFACE_SELECTOR[owner]);
   if (el) return el;
   // A claim with nothing on screen to confine to. Only a card really gets here

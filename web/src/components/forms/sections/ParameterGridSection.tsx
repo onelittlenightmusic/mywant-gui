@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useIconFont } from '@/hooks/useDisplaySettings';
-import { Type, Hash, ToggleLeft, Link, Plus, X, Zap, List, LucideIcon, Globe, Rows3, Braces, Edit3, RotateCcw, Trash2, Star, ChevronDown } from 'lucide-react';
+import { Type, Hash, ToggleLeft, Link, Plus, X, Zap, List, LucideIcon, Globe, Rows3, Braces, Edit3, RotateCcw, Trash2, Star, ChevronDown, Pipette } from 'lucide-react';
+import { startPick, usePickStore, type PickChoice } from '@/stores/pickStore';
 import { OverlayActionGrid, OverlayItem } from '@/components/overlay';
 import { resolveLucideIcon } from '@/utils/subtypeIcons';
 import { ParameterDef, StateDef } from '@/types/wantType';
@@ -194,6 +195,37 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
 
   // Stable refs so onConfirm closures always see the latest values
   const parametersRef = useRef(parameters);
+  // The parameter now asking the board for its value (pick mode), lit on its card.
+  const pickingParam = usePickStore(s => s.request?.paramName ?? null);
+  const recommendationsRef = useRef(recommendations);
+  recommendationsRef.current = recommendations;
+  /**
+   * Ask the board (or the thing list) for this parameter's value: pick mode
+   * (stores/pickStore). What can answer is what the parameter accepts — the
+   * things of its subtypes, the wants the server offers a value of it from.
+   * A thing picked is its value, written in (added, on a list); a want picked
+   * is its recommendation, applied as the form applies one (wired).
+   */
+  const pickFor = useCallback((param: ParameterDef) => {
+    const recs = recommendationsRef.current[param.name] ?? [];
+    startPick({
+      paramName: param.name,
+      label: param.title || param.name,
+      subtypes: acceptedSubTypes(param),
+      wantIds: recs.filter(r => r.sourceId).map(r => r.sourceId!),
+    }, (choice: PickChoice) => {
+      if (choice.kind === 'want') {
+        const rec = (recommendationsRef.current[param.name] ?? []).find(r => r.sourceId === choice.id);
+        if (rec) onApplyRecommendation?.(rec);
+        return;
+      }
+      const cur = parametersRef.current[param.name];
+      const next = Array.isArray(cur)
+        ? (cur.includes(choice.value) ? cur : [...cur, choice.value])
+        : choice.value;
+      onChangeRef.current({ ...parametersRef.current, [param.name]: next });
+    });
+  }, [onApplyRecommendation]);
   parametersRef.current = parameters;
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -880,6 +912,23 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                 }
                 headerRight={
                   <>
+                    {(acceptedSubTypes(param).length > 0 || (recommendations[param.name] ?? []).some(r => r.sourceId)) && (
+                      <button
+                        type="button"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={e => { e.stopPropagation(); exitEditMode(); pickFor(param); }}
+                        title="キャンバスや一覧から選ぶ"
+                        aria-label={`Pick ${param.title || param.name}`}
+                        className={classNames(
+                          'w-4 h-4 flex items-center justify-center rounded transition-colors',
+                          pickingParam === param.name
+                            ? 'bg-sky-500 text-white'
+                            : 'text-sky-600/80 dark:text-sky-400/80 hover:text-sky-700 dark:hover:text-sky-300 hover:bg-sky-100/60 dark:hover:bg-sky-900/30',
+                        )}
+                      >
+                        <Pipette className="w-2.5 h-2.5" />
+                      </button>
+                    )}
                     {hasGlobal && (
                       <button
                         type="button"

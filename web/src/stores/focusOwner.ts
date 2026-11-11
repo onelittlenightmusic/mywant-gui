@@ -1,4 +1,5 @@
 import { useCardInnerFocusStore, isAnyCardInnerFocused } from './cardInnerFocusStore';
+import { usePickStore } from './pickStore';
 import { useMinimapFocusStore } from './minimapFocusStore';
 import {
   useSidebarFocusStore,
@@ -38,7 +39,7 @@ import { hostSheetsOn, nativePanelPage, postToHost, useHostSheetStore } from '@/
  * and those two calls in RightSidebar are deliberately not routed through
  * here.
  */
-export type FocusOwner = 'board' | 'panel' | 'card' | 'minimap';
+export type FocusOwner = 'board' | 'panel' | 'card' | 'minimap' | 'pick';
 
 /**
  * Where the keys can be SENT.
@@ -82,6 +83,9 @@ interface MoveOptions {
  * arbitration is the same fact asked twice, and was written out twice before.
  */
 function ownerWhere(panelHolds: () => boolean): FocusOwner {
+  // A parameter asking the board for its value (pickStore): the keys are the
+  // board's, and a press there answers it rather than doing what it would.
+  if (usePickStore.getState().request) return 'pick';
   if (isAnyCardInnerFocused()) return 'card';
   if (useMinimapFocusStore.getState().focused) return 'minimap';
   if (panelHolds()) return 'panel';
@@ -131,9 +135,11 @@ export function readCursorOwner(): FocusOwner {
 
 /** The same answer, for anything that renders from it. */
 export function useFocusOwner(): FocusOwner {
+  const pick = usePickStore(s => s.request !== null);
   const card = useCardInnerFocusStore(s => s.activeWantId !== null);
   const minimap = useMinimapFocusStore(s => s.focused);
   const panel = useSidebarFocusStore(s => s.focused);
+  if (pick) return 'pick';
   if (card) return 'card';
   if (minimap) return 'minimap';
   if (panel) return 'panel';
@@ -149,7 +155,11 @@ export function useFocusOwner(): FocusOwner {
  * and from the board's point of view the three are the same fact: not here.
  */
 export function useInputHandedOver(): boolean {
-  return useFocusOwner() !== 'board';
+  // Picking, the keys are out on the board — it is the board that answers.
+  // Its darkening is pick mode's own (only what can answer stands in front),
+  // not this one's (the one tile the panel is about).
+  const owner = useFocusOwner();
+  return owner !== 'board' && owner !== 'pick';
 }
 
 /**
@@ -215,7 +225,9 @@ if (nativePanelPage && typeof window !== 'undefined' && window.__mywantHost) {
     if (focused || !prev.focused) { window.clearTimeout(letGo); return; }
     window.clearTimeout(letGo);
     letGo = window.setTimeout(() => {
-      if (!keysTakenByHost && readFocusOwner() === 'board') postToHost({ type: 'panel-focus', on: false });
+      // Out to the board, or out to pick on it (pickStore): the board's either way.
+      const owner = readFocusOwner();
+      if (!keysTakenByHost && (owner === 'board' || owner === 'pick')) postToHost({ type: 'panel-focus', on: false });
     }, 150);
   });
 }
@@ -269,7 +281,7 @@ export function moveFocusTo(to: FocusDestination, opts: MoveOptions = {}): boole
 
   leave(to, deliberate);
 
-  if (to === 'board') {
+  if (to === 'board' || to === 'pick') {
     giveStickToBoard();
     // Nothing on the board holds DOM focus — it is driven by the roaming cursor
     // and the character, not by a focused element — so any focus still sitting
@@ -316,7 +328,7 @@ export function moveFocusTo(to: FocusDestination, opts: MoveOptions = {}): boole
 
   // One note per direction, said here so the move has one voice wherever it is
   // triggered from — and so it cannot sound for a move that did not happen.
-  if (deliberate && from !== to) playSound(to === 'board' ? 'handoverOut' : 'handoverIn');
+  if (deliberate && from !== to) playSound(to === 'board' || to === 'pick' ? 'handoverOut' : 'handoverIn');
   return true;
 }
 

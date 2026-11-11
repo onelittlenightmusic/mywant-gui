@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { PickBanner } from '@/components/common/PickBanner';
 import { useBoardChanged, touchesThings } from '@/api/boardSync';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
@@ -212,6 +213,8 @@ function App() {
             sidebars, agents/want-types/recipes, ...) — see useGlobalFreeCursor. */}
         <GlobalFreeCursor />
         <WarmPanelCover />
+        {/* A parameter picking its value: what, and the way out. */}
+        <PickBanner />
         <div className="App">
           <Routes>
             {/* One want, on its own — the address a home-screen icon points at.

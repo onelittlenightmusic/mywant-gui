@@ -17,6 +17,8 @@ import { useCharacterStore, getDefaultCursorColor } from '@/stores/characterStor
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { resolveLucideIcon } from '@/utils/subtypeIcons';
 import { useGridMotion } from '@/hooks/useGridMotion';
+import { usePickStore, pickTakesThing, choosePick } from '@/stores/pickStore';
+import { useDataTypes } from '@/hooks/useDataTypes';
 
 /**
  * When a thing last changed: the later of when a want last named it and when
@@ -135,7 +137,14 @@ export const ThingGrid: React.FC<MemoGridProps> = ({
 
   const ghostRecord = reorder.ghost ? filtered.find((r) => r.id === reorder.ghost?.id) : undefined;
 
+  // A parameter picking its value (stores/pickStore): what can answer it is
+  // lit and a press on it is the answer; the rest is dimmed and does nothing.
+  const pickRequest = usePickStore(s => s.request);
+  const { getTypeInfo } = useDataTypes();
+
   const renderCard = (r: ThingRecord, index: number) => {
+    const picking = !!pickRequest;
+    const answers = picking && pickTakesThing(pickRequest, r.typeName || r.catalogKey, getTypeInfo);
     const itemProps = reorderEnabled ? reorder.getItemProps(r, index) : null;
     const isDragSource = itemProps?.isDragSource || reorder.isKbDragSource(r.id);
     const handlers = itemProps
@@ -154,8 +163,17 @@ export const ThingGrid: React.FC<MemoGridProps> = ({
         data-reorder-id={r.id}
         data-flip-key={r.id}
         data-keyboard-nav-selected={selectedId === r.id}
-        className={isDragSource ? 'opacity-40' : ''}
+        className={classNames(
+          isDragSource && 'opacity-40',
+          picking && !answers && 'opacity-25 pointer-events-none',
+          answers && 'relative z-10 ring-2 ring-sky-400 rounded-xl',
+        )}
         {...handlers}
+        onClickCapture={answers ? (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          choosePick({ kind: 'thing', id: r.id, value: r.value });
+        } : undefined}
       >
         <ThingCard
           record={r}

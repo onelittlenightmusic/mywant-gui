@@ -1170,11 +1170,14 @@ class MyWantApiClient {
   async updateGUIState(
     updates: Record<string, unknown>,
     ifMatchSeq?: number,
+    /** Not what is on screen but something asked of the whole GUI (a
+     *  parameter picking its value — pickStore): written from any page. */
+    opts: { request?: boolean } = {},
   ): Promise<{ seq: number; state: Record<string, unknown> }> {
     // A page shown inside an app's sheet or card frame is a view of this
     // person's GUI, not another one of it: it must not write back what is on
     // screen, or it and the page it was opened from correct each other forever.
-    if (hostViewOnly) return { seq: ifMatchSeq ?? 0, state: {} };
+    if (hostViewOnly && !opts.request) return { seq: ifMatchSeq ?? 0, state: {} };
     const headers: Record<string, string> = {};
     if (ifMatchSeq !== undefined) headers['If-Match'] = `"${ifMatchSeq}"`;
     const response = await this.client.put<{ seq: number; state: Record<string, unknown> }>(

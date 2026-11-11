@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react';
+import { usePickStore } from '@/stores/pickStore';
 import { Want } from '@/types/want';
 import type { ThingRecord } from '@/types/thing';
 import { useInputActions } from '@/hooks/useInputActions';
@@ -72,7 +73,10 @@ export function useDetailTarget(api: DetailTargetApi) {
   const apiRef = useRef(api);
   apiRef.current = api;
 
-  const cursorThingRecord = (!selectedWant && !sidebar.showGlobal && cursorFocusedThingId
+  // Picking a parameter's value (pickStore), the thing underfoot is an answer
+  // to choose, not a panel to show over the card that asked.
+  const picking = usePickStore(s => s.request !== null);
+  const cursorThingRecord = (!picking && !selectedWant && !sidebar.showGlobal && cursorFocusedThingId
                              && !detailsDismissed
                              && (!isMobileLayout || detailsAskedFor(cursorFocusedThingId)))
     ? thingRecords.find(r => r.id === cursorFocusedThingId) ?? null
