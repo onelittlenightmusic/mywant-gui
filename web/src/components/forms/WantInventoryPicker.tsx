@@ -1,4 +1,5 @@
 import { BadgeNameLayout } from '@/components/common/BadgeNameLayout';
+import { recentWantTypes, noteWantTypePicked, pickerSortMode, notePickerSortMode } from '@/lib/recentWantTypes';
 import React, { useState, useMemo, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { useIconFont } from '@/hooks/useDisplaySettings';
 import { Search, Package, HelpCircle, X } from 'lucide-react';
@@ -146,7 +147,10 @@ interface SlotItem {
   category?: string;
 }
 
-type SortMode = 'name' | 'category';
+/** How the types are laid out: by name, under their categories, or the ones
+ *  this person last picked first (lib/recentWantTypes). */
+const SORT_MODES = ['recent', 'name', 'category'] as const;
+type SortMode = typeof SORT_MODES[number];
 
 interface WantInventoryPickerProps {
   wantTypes: WantTypeListItem[];
@@ -191,7 +195,10 @@ function WantInventoryPicker({
   const startFlight = useSeedFlightStore((st) => st.startFlight);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortMode, setSortMode] = useState<SortMode>('category');
+  const [sortMode, setSortModeState] = useState<SortMode>(() => pickerSortMode(SORT_MODES, 'category'));
+  const setSortMode = (mode: SortMode) => { setSortModeState(mode); notePickerSortMode(mode); };
+  // Read once as the picker opens: picking one closes it.
+  const recent = useMemo(() => recentWantTypes(), []);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const [overlay, setOverlay] = useState<OverlayState | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -249,12 +256,17 @@ function WantInventoryPicker({
   const groups = useMemo(() => {
     const sorted = [...filteredItems].sort((a, b) => {
       if (sortMode === 'name') return a.title.localeCompare(b.title);
+      if (sortMode === 'recent') {
+        // The last picked first; those never picked after, by name.
+        const ra = recent[a.id] ?? 0, rb = recent[b.id] ?? 0;
+        return ra !== rb ? rb - ra : a.title.localeCompare(b.title);
+      }
       if (a.type !== b.type) return a.type === 'want-type' ? -1 : 1;
       const catCmp = (a.category || '').localeCompare(b.category || '');
       return catCmp !== 0 ? catCmp : a.title.localeCompare(b.title);
     });
 
-    if (sortMode === 'name') {
+    if (sortMode === 'name' || sortMode === 'recent') {
       return [{ label: null as string | null, items: sorted }];
     }
 
@@ -265,7 +277,7 @@ function WantInventoryPicker({
       map.get(key)!.push(item);
     });
     return Array.from(map.entries()).map(([label, groupItems]) => ({ label, items: groupItems }));
-  }, [filteredItems, sortMode]);
+  }, [filteredItems, sortMode, recent]);
 
   // Flat list in rendered order (row-major across groups) — used for D-pad navigation
   const renderedItems = useMemo(() => groups.flatMap(g => g.items), [groups]);
@@ -355,6 +367,7 @@ function WantInventoryPicker({
         const item = renderedItemsRef.current[idx];
         if (item) {
           playSound('cardOpen');
+          noteWantTypePicked(item.id);
           onSelectRef.current(item.id, item.type);
         }
       }
@@ -402,6 +415,7 @@ function WantInventoryPicker({
               value: item.title,
               subtype: item.category ?? '',
             });
+            noteWantTypePicked(item.id);
             onSelect(item.id, item.type);
           }}
           data-robot-target="want_type_card"
@@ -525,6 +539,18 @@ function WantInventoryPicker({
           />
         </div>
         <div className="flex rounded border sm:rounded-md border-gray-300 dark:border-gray-600 overflow-hidden text-[10px] sm:text-xs flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setSortMode('recent')}
+            title="最近使った順"
+            className={`px-1.5 sm:px-2.5 py-1 sm:py-1.5 transition-colors border-r border-gray-300 dark:border-gray-600 ${
+              sortMode === 'recent'
+                ? 'bg-sky-500 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            Recent
+          </button>
           <button
             type="button"
             onClick={() => setSortMode('name')}
