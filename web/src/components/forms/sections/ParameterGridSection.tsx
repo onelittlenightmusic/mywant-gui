@@ -82,6 +82,9 @@ export interface ParameterGridSectionProps {
   /** Takes one. The form owns this because a want-sourced suggestion is wired
    *  (expose + import), not copied, and imports live on the form. */
   onApplyRecommendation?: (rec: ParamRecommendation) => void;
+  /** The want these parameters are of (or the type Add Want is making):
+   *  shown in the pick banner while one of them picks its value. */
+  pickAsker?: { wantId?: string; wantType?: string; wantName?: string };
 }
 
 export interface TypeStyle {
@@ -168,6 +171,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
   onExitTop,
   recommendations = {},
   onApplyRecommendation,
+  pickAsker,
 }) => {
   const characters = useCharacterStore(s => s.characters);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -199,6 +203,8 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
   const pickingParam = usePickStore(s => s.request?.paramName ?? null);
   const recommendationsRef = useRef(recommendations);
   recommendationsRef.current = recommendations;
+  const pickAskerRef = useRef(pickAsker);
+  pickAskerRef.current = pickAsker;
   /**
    * Ask the board (or the thing list) for this parameter's value: pick mode
    * (stores/pickStore). What can answer is what the parameter accepts — the
@@ -213,6 +219,13 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
       label: param.title || param.name,
       subtypes: acceptedSubTypes(param),
       wantIds: recs.filter(r => r.sourceId).map(r => r.sourceId!),
+      asker: pickAskerRef.current,
+      param: {
+        type: param.type,
+        hasEnum: !!(param.validation?.enum?.length),
+        subType: param.subType,
+        required: param.required,
+      },
     }, (choice: PickChoice) => {
       if (choice.kind === 'want') {
         const rec = (recommendationsRef.current[param.name] ?? []).find(r => r.sourceId === choice.id);

@@ -529,6 +529,7 @@ export const SettingsTab: React.FC<{
                   parameters={params}
                   parameterDefinitions={wantTypeDef?.parameters}
                   stateDefs={wantTypeDef?.state}
+                  pickAsker={{ wantId: want.metadata.id, wantType: want.metadata.type, wantName: want.metadata.name }}
                   onChange={handleParametersChange}
                   // Showing is not the same as being handed the keys, which is
                   // the condition every other section here uses (see LABELS

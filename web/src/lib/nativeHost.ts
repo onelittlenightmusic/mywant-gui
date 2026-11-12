@@ -93,6 +93,8 @@ interface HostBridge {
   /** The app draws a chat want's conversation itself, in its chat window's
    *  own lines, where the page leaves room for it (useHostChatThread). */
   chatThreads?: boolean;
+  /** The app draws pick mode's banner itself (a control of kind 'pick'). */
+  pickBanner?: boolean;
 }
 
 declare global {
@@ -796,7 +798,7 @@ export function hostDragShape(rect: DOMRect, shape: 'circle'): void {
 // phase: 'press' for a button pressed once; 'down' and 'up' for what is held
 // (the pad's arrows and face buttons).
 
-export type HostControlKind = 'pill' | 'pad' | 'ring' | 'frame' | 'tabs' | 'chat';
+export type HostControlKind = 'pill' | 'pad' | 'ring' | 'frame' | 'tabs' | 'chat' | 'pick';
 export type HostInputPhase = 'press' | 'down' | 'up';
 
 export interface HostControlItem {
@@ -825,6 +827,11 @@ export interface HostControlItem {
   badge?: boolean;
   /** A tab with nothing in it yet, drawn faint (still pressable). */
   dim?: boolean;
+  /** Its own colour (a CSS colour): a pick's want tile, its parameter card. */
+  color?: string;
+  /** A card's colours, as the page computed them (rgb()): a pick's parameter
+   *  card, drawn by the app as the page draws it. */
+  colors?: { fill: string; badge: string; ink: string; icon: string; value: string };
 }
 
 export interface HostControl {

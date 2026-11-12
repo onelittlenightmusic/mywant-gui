@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
+import { usePickStore } from '@/stores/pickStore';
 import { nativeHost, nativePanelPage, postToHost, HOST_PANEL_BAR, HostFramedPanel, useHostPanelStore, iconName, useHostSheet, hostSheetsOn, hostPanelId } from '@/lib/nativeHost';
 import { useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
@@ -120,6 +121,14 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   const [isAnyDragging, setIsAnyDragging] = useState(false);
   const [isMobileSheet, setIsMobileSheet] = useState(() => window.innerWidth < 640);
   const containerRef = useRef<HTMLDivElement>(null);
+  const picking = usePickStore(s => !!s.request);
+  // Put away while picking: the keys must not stay in it, out of sight (its
+  // own Escape would take the banner's way out).
+  useEffect(() => {
+    if (!picking) return;
+    const a = document.activeElement as HTMLElement | null;
+    if (a && containerRef.current?.contains(a)) a.blur();
+  }, [picking]);
 
   // The contents are drawn only while the panel is open, and for as long as
   // it takes to slide away after — not the whole time it is shut.
@@ -710,6 +719,10 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         className={classNames(
           'fixed bg-white dark:bg-gray-900 z-40 flex flex-col overflow-hidden',
           isMobileSheet ? 'w-full' : 'w-full sm:w-[480px]',
+          // A parameter picking its value (pickStore): the panel out of the
+          // way, kept — it holds the form and takes the answer; the pick
+          // banner shows the want and the parameter asking.
+          picking && 'opacity-0 pointer-events-none transition-opacity duration-150',
           className || ''
         )}
         onKeyDown={isOpen ? (e) => {

@@ -1397,6 +1397,7 @@ export const WantForm = forwardRef<WantFormHandle, WantFormProps>(function WantF
                             isActive={activeFormTab === 'params'}
                             recommendations={paramRecs}
                             onApplyRecommendation={applyRecommendation}
+                            pickAsker={{ wantType: type || undefined, wantName: name || undefined }}
                             sidebarDetailFocused={sidebarDetailFocused}
                             focusRequest={sidebarFocusRequest}
                             onDetailFocusEnter={claimKeys}

@@ -34,6 +34,11 @@ export interface PickRequest {
   /** Wants offering a value for it (the server's recommendations): picking
    *  one wires the two. By want id. */
   wantIds: string[];
+  /** Who is asking, to show it: the want (or, in Add Want, the type being
+   *  made) whose parameter it is. */
+  asker?: { wantId?: string; wantType?: string; wantName?: string };
+  /** The parameter's card, to show it empty: its kind and subtype. */
+  param?: { type: string; hasEnum: boolean; subType?: string; required?: boolean };
   /** When it was asked (ms). One left on the server by a page that went
    *  away mid-pick is not taken up again past PICK_STALE_MS. */
   at: number;
