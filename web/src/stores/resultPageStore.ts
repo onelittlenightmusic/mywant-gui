@@ -5,15 +5,14 @@ import { create } from 'zustand';
  *
  * Every way of moving through a want's answers writes here, and only here: a
  * card turned by hand (a swipe on the float card, the pager, ← → in the card),
- * an answer ball tapped on the board, the keys walking a want's column. And
- * everything that shows a want's answers reads here, and only here: every
- * card of the want — the float card, the panel's, the one on its tile — turns
- * to the answer in focus (useResultPages), and the board lights its ball and
- * makes it what Y is about (AnswerBallsLayer). So no two of them can show two
- * different answers of one want.
+ * an answer asked to be shown (the want's history). And everything that shows
+ * a want's answers reads here, and only here: every card of the want — the
+ * float card, the panel's, the one on its tile — turns to the answer in focus
+ * (useResultPages). So no two of them can show two different answers of one
+ * want.
  *
- * `focus` is per want: the past answer it is turned to (its outputEntryKey, as
- * the board's balls name it), or none for the front — the answer it gives now.
+ * `focus` is per want: the past answer it is turned to (its outputEntryKey),
+ * or none for the front — the answer it gives now.
  * `active` is the answer last brought into focus on purpose, which the board's
  * gestures are about (Y ties it, captures into it) until it is let go —
  * walking off, a press elsewhere — while the cards stay where they are.
@@ -26,7 +25,7 @@ import { create } from 'zustand';
  */
 export interface AnswerFocus {
   wantId: string;
-  /** The answer's key — outputEntryKey, as the board's balls name it. */
+  /** The answer's key — outputEntryKey. */
   key: string;
 }
 
