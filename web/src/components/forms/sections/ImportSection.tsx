@@ -66,7 +66,7 @@ export const ImportSection: React.FC<ImportSectionProps> = ({
 
   const { gridProps: navGridProps } = useCardGridNavigation({
     count: navCount,
-    cols: 2,
+    cols: 3,
     isActive,
     focusedIndex: navFocused,
     setFocusedIndex: setNavFocused,

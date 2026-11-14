@@ -1,4 +1,4 @@
-import { createContext, useEffect, useId, useRef, useState } from 'react';
+import { createContext, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import type { RefCallback, RefObject } from 'react';
 import { create } from 'zustand';
 
@@ -77,6 +77,13 @@ interface HostBridge {
   sideSheets?: boolean;
   /** How wide those drawers are, in px. */
   sideSheetWidth?: number;
+  /** A card page is shown as the corner card ('corner'), embedded in a
+   *  panel ('embed') or maximized ('max'): the same page moved between them,
+   *  told so rather than sent to another address (useHostCardMode). */
+  cardMode?: (mode: 'corner' | 'embed' | 'max') => void;
+  /** The app says how it draws panels now, as it changes (a Mac's window
+   *  narrowed to a phone's, or widened again): see hostSideSheetsNow. */
+  layout?: (layout: { sideSheets: boolean }) => void;
   /** A and B the other way round — the one setting, MyWantPad's 「A と B を
    *  入れ替える」, which the app reads and keeps current here (controllerHub). */
   swapAB?: boolean;
@@ -444,7 +451,7 @@ export function useHostSheet(route: string | null, title: string, icon: string, 
   const closeRef = useRef(close);
   closeRef.current = close;
   // From the side wherever the app draws its panels that way (a Mac's window).
-  const from = hostSideSheets ? 'right' : edge;
+  const from = useHostSideSheets() ? 'right' : edge;
   useEffect(() => {
     if (!route) { useHostSheetStore.getState().clear(owner); return; }
     useHostSheetStore.getState().set(owner, { route, title, icon, edge: from }, () => closeRef.current());
@@ -452,10 +459,35 @@ export function useHostSheet(route: string | null, title: string, icon: string, 
   useEffect(() => () => useHostSheetStore.getState().clear(owner), [owner]);
 }
 
-/** The app draws panels as drawers from the side, at any width (a Mac). */
-export const hostSideSheets: boolean = nativeHost && !!window.__mywantHost?.sideSheets;
-// For the stylesheet: no page keeps the panels' column (styles/index.css).
-if (hostSideSheets && typeof document !== 'undefined') document.documentElement.classList.add('host-side-sheets');
+/**
+ * The app draws panels as drawers from the side (a Mac's window) rather than
+ * as sheets from below (a phone's). Said at load, and again whenever it
+ * changes — a Mac's window narrowed to a phone's width draws them as a phone
+ * does, and widened, as a Mac does (HostBridge.layout).
+ */
+let sideSheetsNow: boolean = nativeHost && !!window.__mywantHost?.sideSheets;
+const sideSheetsHeard = new Set<() => void>();
+export function hostSideSheetsNow(): boolean { return sideSheetsNow; }
+/** hostSideSheetsNow, for a component drawn by it. */
+export function useHostSideSheets(): boolean {
+  return useSyncExternalStore(
+    (f) => { sideSheetsHeard.add(f); return () => { sideSheetsHeard.delete(f); }; },
+    hostSideSheetsNow, hostSideSheetsNow);
+}
+function applySideSheets(on: boolean): void {
+  if (on === sideSheetsNow) return;
+  sideSheetsNow = on;
+  // For the stylesheet: no page keeps the panels' column (styles/index.css).
+  if (typeof document !== 'undefined') document.documentElement.classList.toggle('host-side-sheets', on);
+  // The drawer's cover goes with it (none as sheets from below).
+  drawerHold = null;
+  drawerWanted = on ? coverFor(useHostSheetStore.getState().sheet) : 0;
+  sideSheetsHeard.forEach((f) => f());
+}
+if (sideSheetsNow && typeof document !== 'undefined') document.documentElement.classList.add('host-side-sheets');
+if (nativeHost && typeof window !== 'undefined' && window.__mywantHost) {
+  window.__mywantHost.layout = (l) => applySideSheets(!!l?.sideSheets);
+}
 
 // ── How much of the board a side drawer covers, eased ───────────────────────
 //
@@ -553,11 +585,12 @@ export function hostDrawerInset(): number {
   return drawerAt(now);
 }
 
-if (hostSideSheets) {
-  useHostSheetStore.subscribe(({ sheet }) => {
-    // The map is no drawer: a small one in the corner, over the board.
-    drawerWanted = sheet && !sheet.route.includes('__panel=__minimap') ? drawerWidth : 0;
-  });
+/** How much a sheet covers as a drawer: the map is no drawer — a small one in the corner, over the board. */
+function coverFor(sheet: HostSheet | null): number {
+  return sheet && !sheet.route.includes('__panel=__minimap') ? drawerWidth : 0;
+}
+if (nativeHost) {
+  useHostSheetStore.subscribe(({ sheet }) => { drawerWanted = sideSheetsNow ? coverFor(sheet) : 0; });
 }
 
 /**
@@ -569,18 +602,36 @@ if (hostSideSheets) {
  * late, as the next one opens.
  */
 export function expectDrawer(open: boolean, ms: number): void {
-  if (!hostSideSheets) return;
+  if (!sideSheetsNow) return;
   const to = open ? drawerWidth : 0;
   const now = performance.now();
   drawerHold = { to, endAt: now + ms, until: now + ms + DRAWER_HOLD_GRACE_MS };
   drawerTo = to; drawerPos = to; drawerVel = 0; drawerT = now;
 }
 
+// ── Where a card page is shown ──────────────────────────────────────────────
+let cardModeNow: 'corner' | 'embed' | 'max' =
+  (typeof window !== 'undefined' && (window as unknown as { __mywantCardMode?: 'corner' | 'embed' | 'max' }).__mywantCardMode) || 'corner';
+const cardModeHeard = new Set<() => void>();
+if (nativeHost && typeof window !== 'undefined' && window.__mywantHost) {
+  window.__mywantHost.cardMode = (mode) => {
+    if (mode === cardModeNow) return;
+    cardModeNow = mode;
+    cardModeHeard.forEach((f) => f());
+  };
+}
+/** Where the app shows this card page now (HostBridge.cardMode). */
+export function useHostCardMode(): 'corner' | 'embed' | 'max' {
+  return useSyncExternalStore(
+    (f) => { cardModeHeard.add(f); return () => { cardModeHeard.delete(f); }; },
+    () => cardModeNow, () => cardModeNow);
+}
+
 /** Framed by an app on a phone, where panels are the app's sheets — or by the
  *  app on a Mac, where they are its drawers from the side. */
 export function hostSheetsOn(): boolean {
   return nativeHost && !nativePanelPage && typeof window !== 'undefined'
-    && (hostSideSheets || window.innerWidth < 640);
+    && (sideSheetsNow || window.innerWidth < 640);
 }
 
 // ── The corner card, drawn by the app ───────────────────────────────────────

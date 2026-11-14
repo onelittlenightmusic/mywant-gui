@@ -405,7 +405,7 @@ export const SettingsTab: React.FC<{
           go through to see what is set. activeSettingsTab is now which
           section has the keys (B + L1/R1, the robot's settings-subtab): it is
           scrolled to and marked; a press in a section hands the keys to it. */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 pb-6 focusable-container flex flex-col gap-5">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 sm:px-4 pb-6 focusable-container flex flex-col gap-5">
           <>
             {/* NAME / METADATA: metadata + timeline */}
             {section('name',

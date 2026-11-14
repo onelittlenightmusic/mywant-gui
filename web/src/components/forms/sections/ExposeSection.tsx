@@ -86,7 +86,7 @@ export const ExposeSection: React.FC<ExposeSectionProps> = ({
 
   const { gridProps: navGridProps } = useCardGridNavigation({
     count: navCount,
-    cols: 2,
+    cols: 3,
     isActive,
     focusedIndex: navFocused,
     setFocusedIndex: setNavFocused,

@@ -649,7 +649,7 @@ const GlobalStateFieldGrid: React.FC<{
 
   const { gridProps } = useCardGridNavigation({
     count: entries.length,
-    cols: 2,
+    cols: 3,
     isActive,
     focusedIndex: navFocused,
     setFocusedIndex: setNavFocused,
@@ -663,7 +663,7 @@ const GlobalStateFieldGrid: React.FC<{
   }, [isActive]);
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-2 gap-2 sm:gap-3 outline-none" {...gridProps}>
+    <div className="grid grid-cols-3 gap-2 sm:gap-3 outline-none" {...gridProps}>
       {entries.map(([k, v], i) => {
         const shared = {
           name: k,

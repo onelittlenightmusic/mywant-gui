@@ -29,7 +29,8 @@ import { useCharacterStore } from '@/stores/characterStore';
 import { useParamSpotlightStore } from '@/stores/paramSpotlightStore';
 import { acceptedSubTypes } from '@/utils/wantSeed';
 
-const COLS = typeof window !== 'undefined' && window.innerWidth < 640 ? 3 : 2;
+/** Three to a row, on a phone and in a browser alike (as the app draws them). */
+const COLS = 3;
 
 /** Serialize an array item for display in a text input */
 function serializeItem(item: any): string {
@@ -635,7 +636,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
           zIndex: -1,
         }}
       />
-      <div {...gridProps} className="grid grid-cols-3 sm:grid-cols-2 gap-1 sm:gap-2 outline-none">
+      <div {...gridProps} data-card-grid className="grid grid-cols-3 gap-1 sm:gap-2 outline-none">
         {filteredParams.map((param, index) => {
             const hasEnum = !!(param.validation?.enum?.length);
             const isArray = param.type === 'array';

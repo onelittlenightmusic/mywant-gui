@@ -66,7 +66,7 @@ export const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({
 
   const { gridProps: navGridProps } = useCardGridNavigation({
     count: subscriptions.length + (editing === null ? 1 : 0),
-    cols: 2,
+    cols: 3,
     isActive,
     focusedIndex: navFocused,
     setFocusedIndex: setNavFocused,

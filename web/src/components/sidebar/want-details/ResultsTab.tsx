@@ -64,7 +64,7 @@ const UserCustomSection: React.FC<{
 
   const { gridProps: navGridProps } = useCardGridNavigation({
     count: entries.length,
-    cols: 2,
+    cols: 3,
     isActive,
     focusedIndex: navFocused,
     setFocusedIndex: setNavFocused,
@@ -84,7 +84,7 @@ const UserCustomSection: React.FC<{
       <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">User Custom</span>
       <span className="text-[10px] text-gray-400 dark:text-gray-500">({entries.length})</span>
     </div>
-    <div className="grid grid-cols-3 sm:grid-cols-2 gap-2 sm:gap-3 outline-none" {...navGridProps}>
+    <div data-card-grid className="grid grid-cols-3 gap-2 sm:gap-3 outline-none" {...navGridProps}>
       {entries.map(([k, v], i) => (
         isPlainObject(v)
           ? <JsonFieldCard key={k} name={k} value={v as Record<string, unknown>} declaredSubType={subTypes?.get(k)} exposes={exposes} onGoToExpose={onGoToExpose} onDelete={onDeleteField ? () => onDeleteField(k) : undefined} onEdit={onEditField ? () => onEditField(k) : undefined}

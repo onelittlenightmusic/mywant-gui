@@ -6,7 +6,7 @@ import { useListOrderStore } from '@/stores/listOrderStore';
 import { useParams } from 'react-router-dom';
 import { Waypoints } from 'lucide-react';
 import { useConstellationFilter } from '@/components/sidebar/ConstellationFilterPanel';
-import { HostCardPageButtons, postToHost, HostFramedPanel, useHostFocusedCard, hostPanelId, useHostPanel } from '@/lib/nativeHost';
+import { HostCardPageButtons, postToHost, HostFramedPanel, useHostFocusedCard, hostPanelId, useHostPanel, useHostCardMode } from '@/lib/nativeHost';
 import { usePageMinimap } from '@/components/dashboard/ItemMinimap';
 import { useThingStore } from '@/stores/thingStore';
 import { requestThingEdit } from '@/stores/thingEditStore';
@@ -408,6 +408,8 @@ export const WantListPage: React.FC<{
 
   // The list's focused card wears the app's native buttons (lib/nativeHost).
   useHostFocusedCard(!panel && !card);
+  // A card page: where the app shows it now — the corner, a panel, maximized.
+  const hostCardMode = useHostCardMode();
 
   // The map: in the page, or in an app on a phone the app's own sheet, whose
   // presses come back here (usePageMinimap — every page's map works so).
@@ -486,14 +488,20 @@ export const WantListPage: React.FC<{
     // view — goes to the app, which hands it to the board's page.
     const act = (a: string) => postToHost({ type: 'card-act', act: a, kind, id });
     const maximizedCard = new URLSearchParams(location.search).has('max');
-    // The card an app embeds in a panel's sheet (?embed=1), or maximized — not
-    // the one floating over the board: only there a tap on its content acts
-    // (CardEmbeddedContext).
-    const embeddedCard = maximizedCard || new URLSearchParams(location.search).has('embed');
+    // The card an app embeds in a panel's sheet, or maximized — not the one
+    // floating over the board: only there a tap on its content acts
+    // (CardEmbeddedContext). Told by the app as it moves the page there
+    // (useHostCardMode; ?embed=1 from an app that sends it to another address).
+    const embeddedCard = maximizedCard || hostCardMode === 'embed' || new URLSearchParams(location.search).has('embed');
+    // The head row (the tile, what it is saying) on the card wherever it is
+    // the corner card's shape — over the board and in a panel's sheet alike,
+    // so moving between them changes nothing in it. Not on one sent to
+    // ?embed=1 (an app whose panel draws the head itself).
+    const withHead = !maximizedCard && !new URLSearchParams(location.search).has('embed');
     if (kind === 'thing') {
       const t = thingRecords.find(r => r.id === id);
       return (
-        <HostCardFrame head={t && !embeddedCard ? { kind: 'thing', record: t } : undefined} onHeadTap={() => act('open')}>
+        <HostCardFrame head={t && withHead ? { kind: 'thing', record: t } : undefined} onHeadTap={() => act('open')}>
           {t && (
             <ThingCard
               record={t}
@@ -514,7 +522,7 @@ export const WantListPage: React.FC<{
     // children), so it gets the page as it is.
     const Frame = maximizedCard ? HostCardPage : HostCardFrame;
     return (
-      <Frame head={w && !embeddedCard ? { kind: 'want', want: w } : undefined} onHeadTap={() => act('open')}>
+      <Frame head={w && withHead ? { kind: 'want', want: w } : undefined} onHeadTap={() => act('open')}>
         <HostCardPageButtons />
         {w && (
           <CardEmbeddedContext.Provider value={embeddedCard}>

@@ -26,6 +26,7 @@ import { useSpatialFocusNav } from '@/hooks/useSpatialFocusNav';
 import { artOf } from '@/lib/art';
 import { kindBackgroundSrc } from '@/utils/thingBackground';
 import { LabelsSection } from '@/components/forms/sections/LabelsSection';
+import { useCardsEnter } from '@/hooks/useCardsEnter';
 import { apiClient } from '@/api/client';
 
 
@@ -131,6 +132,9 @@ type ThingTab = 'settings' | 'labels' | 'constellation' | 'history';
 
 export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record, onAddWant, onDelete, getOrigin, onArranged }) => {
   const [activeTab, setActiveTab] = useState<ThingTab>('settings');
+  // Its cards come in one after another, on each thing and each tab (useCardsEnter).
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useCardsEnter(bodyRef, `${record.id}:${activeTab}`);
   /**
    * Whether this panel has the keys — the same flag the want panel uses, and
    * the same rule: it is set by focus arriving anywhere inside (the root's
@@ -319,14 +323,14 @@ export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record,
           scrolling. scroll-pt so a programmatic scroll-into-view (the History
           grid taking focus) stops short of the top edge and never tucks its
           first card under the pinned card above. */}
-      <div className={classNames('flex-1 min-h-0 overflow-y-auto scroll-pt-6', isBottom ? 'order-first' : '')}>
+      <div ref={bodyRef} className={classNames('flex-1 min-h-0 overflow-y-auto overflow-x-hidden scroll-pt-6', isBottom ? 'order-first' : '')}>
       <TabContent>
         {activeTab === 'settings' && (
           <>
             {pillItems.length > 0 && <CardStatusRow items={pillItems} />}
             {/* No "Details" box: three rows under a heading in a tab already
                 named Settings is a compartment around nothing. */}
-            <div className="grid grid-cols-2 gap-2">
+            <div data-card-grid className="grid grid-cols-2 gap-2">
               <ThingNameField record={record} />
               <InfoRow label="Type" value={record.typeName} />
               <InfoRow label="Catalog" value={<span className="font-mono">{record.catalogKey}</span>} />

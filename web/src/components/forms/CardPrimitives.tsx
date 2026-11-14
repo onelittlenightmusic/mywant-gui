@@ -345,6 +345,9 @@ export const FormCard: React.FC<{
 // Handles: 2-col grid, display cards with hover-delete, add card, inline form card.
 
 export interface CardGridShellProps {
+  /** Which way its cards come in as a panel opens (useCardsEnter): up from
+   *  below (the default) or in from the right. */
+  enterFrom?: 'below' | 'right';
   scheme: CardScheme;
   BgIcon: LucideIcon;
   /** Total number of existing items */
@@ -397,6 +400,7 @@ export interface CardGridShellProps {
 }
 
 export const CardGridShell: React.FC<CardGridShellProps> = ({
+  enterFrom,
   scheme,
   BgIcon,
   count,
@@ -426,7 +430,7 @@ export const CardGridShell: React.FC<CardGridShellProps> = ({
     <div className="space-y-2 sm:space-y-3">
       {emptyState && count === 0 && editingIndex === null && emptyState}
 
-      <div className="grid grid-cols-3 sm:grid-cols-2 gap-1 sm:gap-2 outline-none" {...(navGridProps ?? {})}>
+      <div data-card-grid={enterFrom ?? ''} className="grid grid-cols-3 gap-1 sm:gap-2 outline-none" {...(navGridProps ?? {})}>
         {Array.from({ length: count }, (_, i) => {
           if (editingIndex === i) {
             return (

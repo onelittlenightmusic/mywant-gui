@@ -1,8 +1,9 @@
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef, startTransition } from 'react';
 import { useBoardChanged } from '@/api/boardSync';
 import { useOutputFocusStore } from '@/stores/outputFocusStore';
-import { HostMaximizesCard, hostSideSheets, nativePanelPage, postToHost, useHostCardButtons, useHostCardSlot } from '@/lib/nativeHost';
+import { HostMaximizesCard, hostSideSheetsNow, nativePanelPage, postToHost, useHostCardButtons, useHostCardSlot } from '@/lib/nativeHost';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
+import { useCardsEnter } from '@/hooks/useCardsEnter';
 import { Settings, Eye, StickyNote, Check, History, MessageSquare, ArrowDownUp } from 'lucide-react';
 import { Want, WantExecutionStatus } from '@/types/want';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -149,8 +150,17 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
   // for a fifth of a second just as the character came down. Now the card
   // and the tab bar come with the landing, and what is under them follows.
   const tabsReady = useAfterFirstPaint(wantId);
+  // A phone app's sheet (a Mac's laid out as one too): the card is the app's
+  // own card frame, the very corner card with its head row (useHostCardSlot).
+  const appCardHead = nativePanelPage && !hostSideSheetsNow();
+  // Its parameters, then its labels, come in one after another (useCardsEnter).
+  const tabsBodyRef = useRef<HTMLDivElement>(null);
 
   const [activeTab, setActiveTab] = useState<TabType>('settings');
+  // Once this want's own details are in: until then the previous want's are
+  // still drawn, and they would be the ones played.
+  const detailsAreThis = (selectedWantDetails?.metadata?.id || selectedWantDetails?.id) === wantId;
+  useCardsEnter(tabsBodyRef, `${wantId}:${activeTab}`, tabsReady && detailsAreThis);
   const [prevTabIndex, setPrevTabIndex] = useState(0);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -626,15 +636,20 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
         */}
       <div className={classNames('flex-shrink-0 px-3 pt-3', isBottom ? 'order-first' : '')}>
         {/* Who this is, on the card that is already showing it — see
-            PanelIdentityRow, which the thing panel wears too. */}
-        {wantDetails && (
+            PanelIdentityRow, which the thing panel wears too. In an app's
+            sheet the card below wears it (the corner card itself: its tile
+            and what it is saying over it), so it is not said twice. */}
+        {wantDetails && !appCardHead && (
           <PanelIdentityRow
             title={wantDetails.metadata?.name || wantDetails.metadata?.id || ''}
             subject={{ kind: 'want', want: wantDetails }}
             onClose={onClose}
           />
         )}
-        <div className="h-40 sm:h-44">
+        {/* In an app's sheet: the corner card's own shape (420×316 — its head
+            row over the card), so the one card page moves between the corner
+            and here as it is, only scaled (useHostCardSlot). */}
+        <div className={appCardHead ? undefined : 'h-40 sm:h-44'} style={appCardHead ? { aspectRatio: `420 / ${316}` } : undefined}>
         {/* Where focus lands when the sidebar is handed the keys, and the step
             the arrows leave from. tabIndex -1 so it can be focused
             programmatically without joining the Tab order. The ring is the
@@ -676,7 +691,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
               drawer has the card here, as a browser does — its keys are this
               page's, so the card's own Enter/A, double press and all, are what
               answer them; only its maximized self is the app's (below). */}
-          {nativePanelPage && !hostSideSheets ? (
+          {appCardHead ? (
             <HostCardSlot id={wantDetails.metadata?.id || wantDetails.id || ''} />
           ) : (
           <HostMaximizesCard.Provider value={nativePanelPage}>
@@ -767,6 +782,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
           with no walk of its own — goes back to the card above, so the card
           is always one press away from wherever the arrows have gone. */}
       <div
+        ref={tabsBodyRef}
         className={classNames('flex-1 min-h-0 overflow-hidden relative', isBottom ? 'order-first' : '')}
         onKeyDown={(e) => {
           if (e.key !== 'ArrowUp' || e.defaultPrevented || detailRegion !== 'fields') return;
@@ -785,7 +801,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
           <>
             {/* Previous tab - animate out */}
             {showPrevTab && prevTabId === 'settings' && (
-              <div className={classNames('absolute inset-0 overflow-y-auto pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')}>
+              <div className={classNames('absolute inset-0 overflow-y-auto pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')} data-leaving>
                 <SettingsTab
                   want={wantDetails}
                   isEditing={isEditing}
@@ -813,27 +829,27 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
               </div>
             )}
             {showPrevTab && prevTabId === 'results' && (
-              <div className={classNames('absolute inset-0 overflow-y-auto pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')}>
+              <div className={classNames('absolute inset-0 overflow-y-auto pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')} data-leaving>
                 <ResultsTab want={wantDetails} onRecommendationSelect={onRecommendationSelect} onClearState={() => setShowClearStateConfirmation(true)} sidebarDetailFocused={false} />
               </div>
             )}
             {showPrevTab && prevTabId === 'wiring' && (
-              <div className={classNames('absolute inset-0 pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')}>
+              <div className={classNames('absolute inset-0 pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')} data-leaving>
                 <WiringTab want={wantDetails} updateWant={updateWant} onWantUpdate={onWantUpdate} sidebarDetailFocused={false} />
               </div>
             )}
             {showPrevTab && prevTabId === 'history' && (
-              <div className={classNames('absolute inset-0 overflow-hidden pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')}>
+              <div className={classNames('absolute inset-0 overflow-hidden pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')} data-leaving>
                 <HistoryTab want={wantDetails} results={selectedWantResults} historySubTab={historySubTab} setHistorySubTab={setHistorySubTab} highlightOutput={highlightOutput} />
               </div>
             )}
             {showPrevTab && prevTabId === 'versions' && (
-              <div className={classNames('absolute inset-0 overflow-y-auto pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')}>
+              <div className={classNames('absolute inset-0 overflow-y-auto pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')} data-leaving>
                 <VersionsTab seriesWants={seriesWants} currentWantId={wantId} />
               </div>
             )}
             {showPrevTab && prevTabId === 'chat' && (
-              <div className={classNames('absolute inset-0 overflow-hidden pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')}>
+              <div className={classNames('absolute inset-0 overflow-hidden pointer-events-none', isMovingRight ? 'animate-slide-out-left' : 'animate-slide-out-right')} data-leaving>
                 <ChatTab want={wantDetails} />
               </div>
             )}
@@ -842,6 +858,10 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
             {activeTab === 'settings' && (
               <div className={classNames('relative z-10 h-full', isMovingRight ? 'animate-slide-in-right' : 'animate-slide-in-left')}>
                 <SettingsTab
+                  // One per want: its fields are kept in state of its own,
+                  // and carried from the last want they were drawn with its
+                  // values for a render before taking this one's.
+                  key={wantDetails?.metadata?.id || wantDetails?.id}
                   want={wantDetails}
                   isEditing={isEditing}
                   editedConfig={editedConfig}

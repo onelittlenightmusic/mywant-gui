@@ -55,7 +55,7 @@ export const LabelsSection = forwardRef<HTMLButtonElement, LabelsSectionProps>((
 
   const { gridProps: navGridProps } = useCardGridNavigation({
     count: navCount,
-    cols: 2,
+    cols: 3,
     isActive,
     focusedIndex: navFocused,
     setFocusedIndex: setNavFocused,
@@ -93,6 +93,8 @@ export const LabelsSection = forwardRef<HTMLButtonElement, LabelsSectionProps>((
   return (
     <div ref={ref as any}>
       <CardGridShell
+        // Hang tags, slid in from the side they hang from.
+        enterFrom="right"
         scheme={GREEN_SCHEME}
         BgIcon={Tag}
         count={entries.length}
