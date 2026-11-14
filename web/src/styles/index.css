@@ -75,24 +75,17 @@
 .mw-hover-ring::after {
   content: '';
   position: absolute;
-  /* Starts slightly inside and settles flush, so the frame reads as landing
-     on the card the way the extension's box flies onto its target. */
-  inset: 3px;
+  inset: 0;
   border-radius: inherit;
-  /* A blur, not a bordered frame: the card is lit from its edge rather than
-     fenced. Bleeds INWARD — an outward glow on an embedded card escapes
-     whatever clips it and reads as a coloured bar laid on top; an inset one
-     stays on the card. */
-  border: none;
-  box-shadow:
-    inset 0 0 4px var(--mw-ring, transparent),
-    inset 0 0 12px var(--mw-ring-soft, transparent),
-    inset 0 0 24px var(--mw-ring-faint, transparent);
+  /* Hovered: a faint wash of the character's colour, no more — the card in
+     focus is the one lifted (see the focus block below). No line and no blur
+     at its edge: a line reads as a connection on this board, and a glow bled
+     inward read as a stain. */
+  background: color-mix(in srgb, var(--mw-focus-color, #38bdf8) 8%, transparent);
   opacity: 0;
   pointer-events: none;
   z-index: 20;
-  transition: opacity var(--motion-fast) ease-out,
-              inset var(--motion-fast) var(--ease-settle);
+  transition: opacity var(--motion-fast) ease-out;
 }
 /* Two ways to be the card in question, one way to look it.
  *
@@ -227,21 +220,7 @@
   .inventory-slot-focus {
     position: relative;
   }
-  .inventory-slot-focus:focus::after,
-  .inventory-slot-focus:focus-visible::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    z-index: 20;
-    /* One ::after per element, shared with .mw-hover-ring — see .mw-card-focus. */
-    opacity: 1;
-    box-shadow:
-      inset 0 0 4px var(--mw-ring, var(--mw-focus-color, #38bdf8)),
-      inset 0 0 12px var(--mw-ring-soft, color-mix(in srgb, var(--mw-focus-color, #38bdf8) 60%, transparent)),
-      inset 0 0 24px var(--mw-ring-faint, color-mix(in srgb, var(--mw-focus-color, #38bdf8) 33%, transparent));
-  }
+  /* Its look is the shared focus's (the focus block below). */
 
   /* Section header buttons: light blue background on keyboard focus */
   .sidebar-section-btn:focus,
@@ -887,44 +866,98 @@ body::-webkit-scrollbar,
  *
  * Colour: the card's own --mw-ring when it publishes one (every card that
  * carries the hover ring does), else the focus colour these cards were using. */
-.mw-card-focus {
-  position: relative;
+/* ── Focus: lifted, washed in the character's colour, and its dot ─────────────
+ *
+ * The card the keys are on (or the character stands on) comes up off the
+ * others — a little bigger, its shadow deeper, as a tile is picked up on the
+ * board — washed in the character's colour, which comes and goes, and wears
+ * the character's dot on its top-left corner, blinking on the same beat.
+ *
+ * No line round it and no blur at its edge: a line is how this board draws a
+ * connection between a want and a thing, and an inward glow read as a stain
+ * on the card rather than the card being picked.
+ */
+:root {
+  --mw-focus-lift: 1.08;
+  --mw-focus-wash: 0.35;
+  --mw-focus-beat: 1.4s;
 }
-.mw-card-focus::after {
+.mw-card-focus,
+.mw-card-lift,
+.mw-hover-ring.mw-ring-on,
+.inventory-slot-focus:focus,
+.inventory-slot-focus:focus-visible {
+  position: relative;
+  z-index: 5;
+  transform: scale(var(--mw-focus-lift)) translateY(-2px);
+  box-shadow: 0 10px 22px -6px rgba(15, 23, 42, 0.35), 0 3px 6px rgba(15, 23, 42, 0.12) !important;
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 180ms ease-out;
+}
+/* The embedded card is a bigger surface: half the lift. */
+.mw-card-lift-half {
+  position: relative;
+  z-index: 5;
+  transform: scale(calc(1 + (var(--mw-focus-lift) - 1) * 0.5)) translateY(-2px);
+  box-shadow: 0 10px 22px -6px rgba(15, 23, 42, 0.35), 0 3px 6px rgba(15, 23, 42, 0.12) !important;
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 180ms ease-out;
+}
+/* The wash. An element has ONE ::after, and these cards also carry
+   .mw-hover-ring — same pseudo-element, so this one says everything. */
+.mw-card-focus::after,
+.mw-card-focus-strong::after,
+.mw-hover-ring.mw-ring-on::after,
+.inventory-slot-focus:focus::after,
+.inventory-slot-focus:focus-visible::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
   z-index: 20;
-  /* An element has ONE ::after, and these cards also carry .mw-hover-ring —
-     whose ::after is hidden until hover. Same pseudo-element, so the two rule
-     sets merge and the hidden state carries over unless this one says
-     otherwise. Which is why the glow was there, correct, and invisible. */
   opacity: 1;
-  box-shadow:
-    inset 0 0 4px var(--mw-ring, var(--mw-focus-color, #38bdf8)),
-    inset 0 0 12px var(--mw-ring-soft, color-mix(in srgb, var(--mw-focus-color, #38bdf8) 60%, transparent)),
-    inset 0 0 24px var(--mw-ring-faint, color-mix(in srgb, var(--mw-focus-color, #38bdf8) 33%, transparent));
+  box-shadow: none;
+  background: color-mix(in srgb, var(--mw-focus-color, #38bdf8) calc(var(--mw-focus-wash) * 100%), transparent);
+  animation: mw-focus-wash var(--mw-focus-beat) ease-in-out infinite;
 }
-
-/* The embedded card is a bigger surface and the first thing focus lands on, so
-   it states it a little harder. */
-.mw-card-focus-strong {
-  position: relative;
-}
-.mw-card-focus-strong::after {
+/* The character's dot: a lit bead on the top-left corner, its glow around it. */
+.mw-card-focus::before,
+.mw-card-focus-strong::before,
+.mw-hover-ring.mw-ring-on::before,
+.inventory-slot-focus:focus::before,
+.inventory-slot-focus:focus-visible::before {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  top: -6px;
+  left: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
   pointer-events: none;
-  z-index: 20;
-  opacity: 1;
-  box-shadow:
-    inset 0 0 6px var(--mw-ring, var(--mw-focus-color, #38bdf8)),
-    inset 0 0 18px var(--mw-ring-soft, color-mix(in srgb, var(--mw-focus-color, #38bdf8) 60%, transparent)),
-    inset 0 0 34px var(--mw-ring-faint, color-mix(in srgb, var(--mw-focus-color, #38bdf8) 33%, transparent));
+  z-index: 21;
+  background: radial-gradient(circle at 35% 35%,
+    color-mix(in srgb, var(--mw-focus-color, #38bdf8), white 45%) 0%,
+    var(--mw-focus-color, #38bdf8) 55%,
+    color-mix(in srgb, var(--mw-focus-color, #38bdf8), black 12%) 100%);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--mw-focus-color, #38bdf8), black 25%),
+              0 0 10px 3px color-mix(in srgb, var(--mw-focus-color, #38bdf8) 75%, transparent),
+              0 0 22px 6px color-mix(in srgb, var(--mw-focus-color, #38bdf8) 40%, transparent);
+  animation: mw-focus-dot var(--mw-focus-beat) ease-in-out infinite;
+}
+/* A card that clips what is outside it would cut the dot in four: it sits
+   just inside the corner there. */
+.overflow-hidden.mw-card-focus::before,
+.overflow-hidden.mw-hover-ring.mw-ring-on::before { top: 4px; left: 4px; }
+@keyframes mw-focus-wash { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes mw-focus-dot {
+  0%, 100% { opacity: 1; filter: blur(0px); }
+  50% { opacity: 0.6; filter: blur(0.6px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mw-card-focus::after, .mw-card-focus-strong::after, .mw-hover-ring.mw-ring-on::after,
+  .inventory-slot-focus:focus::after, .inventory-slot-focus:focus-visible::after,
+  .mw-card-focus::before, .mw-card-focus-strong::before, .mw-hover-ring.mw-ring-on::before,
+  .inventory-slot-focus:focus::before, .inventory-slot-focus:focus-visible::before { animation: none; }
+  .mw-card-focus, .mw-card-lift, .mw-card-lift-half, .mw-hover-ring.mw-ring-on { transition: none; }
 }
 
 /* ── Hamburger menu cards ───────────────────────────────────────────────────

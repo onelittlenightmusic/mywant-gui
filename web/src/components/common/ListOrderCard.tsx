@@ -1,3 +1,4 @@
+import { nativeHost } from '@/lib/nativeHost';
 import React from 'react';
 import { Clock, Heart } from 'lucide-react';
 import { useListOrderStore, type ListOrder, type OrderedList } from '@/stores/listOrderStore';
@@ -75,6 +76,7 @@ export const ListOrderCard: React.FC<{
         CARD_SHELL_BASE, CARD_HOVER_RING, CARD_BORDER_BASE, CARD_FOCUS_BASE,
         'relative w-full text-left select-none group hover:shadow-md transition-[box-shadow,transform] duration-300 active:scale-[0.98]',
         sizeClass,
+        focused && !nativeHost && 'mw-card-focus',
         className,
       )}
       style={{ ...hoverRingVars(ring, isDark), ...(focused ? focusGlowVars(ring, isDark) : null) }}

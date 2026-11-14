@@ -121,6 +121,15 @@ function readFocusOwner(): FocusOwner {
 }
 
 /**
+ * Who holds the keys — for an input handler deciding whether a press is its
+ * own (the board's pad directions, its arrows). The focus state machine's
+ * answer, not a reading of where the DOM focus happens to be.
+ */
+export function readKeysOwner(): FocusOwner {
+  return readFocusOwner();
+}
+
+/**
  * The same question, asked on behalf of the roaming cursor.
  *
  * One clause differs, and it is not an inconsistency: the cursor is driven by

@@ -684,7 +684,9 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
             setDetailRegion('fields');
             setSidebarFocusRequest();
           }}
-          className="relative h-full rounded-xl outline-none"
+          // The keys on the card: it comes up (half the lift — a big
+          // surface), its wash and dot on the layer over it (below).
+          className={classNames('relative h-full rounded-xl outline-none', cardFocused && 'mw-card-lift-half')}
         >
           {/* In a phone app's sheet the card is the app's native card frame,
               put over the room left here for it (useHostCardSlot). A Mac's
@@ -824,7 +826,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
                   setActiveSettingsTab={setActiveSettingsTab}
                   sidebarDetailFocused={fieldsFocused}
                   focusRequest={sidebarFocusRequest}
-                  onDetailFocusEnter={() => setSidebarDetailFocused(true)}
+                  onDetailFocusEnter={() => { setSidebarDetailFocused(true); setDetailRegion('fields'); }}
                 />
               </div>
             )}
@@ -883,7 +885,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
                   setActiveSettingsTab={setActiveSettingsTab}
                   sidebarDetailFocused={fieldsFocused}
                   focusRequest={sidebarFocusRequest}
-                  onDetailFocusEnter={() => setSidebarDetailFocused(true)}
+                  onDetailFocusEnter={() => { setSidebarDetailFocused(true); setDetailRegion('fields'); }}
                   onBackToCard={() => { setDetailRegion('card'); focusSidebarCard(); }}
                 />
               </div>

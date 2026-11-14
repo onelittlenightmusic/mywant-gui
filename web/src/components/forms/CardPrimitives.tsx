@@ -294,7 +294,7 @@ export const AddCard: React.FC<{
       'flex flex-col items-center justify-center gap-0.5 sm:gap-1 rounded-lg sm:rounded-xl border-2 border-dashed',
       'transition-colors group min-h-[3rem] sm:min-h-[5rem] bg-transparent',
       borderClass,
-      isFocused ? 'mw-card-focus bg-white/60 dark:bg-gray-800/60' : '',
+      isFocused ? 'mw-card-focus' : '',
     )}
   >
     <Plus className={classNames('w-4 h-4 transition-colors', iconClass)} />
@@ -461,7 +461,7 @@ export const CardGridShell: React.FC<CardGridShellProps> = ({
                 'relative p-1.5 h-14 transition-all duration-150 group',
                 look ? look.className : classNames('rounded-lg sm:rounded-xl shadow-sm', itemScheme.cardBg, itemScheme.cardHover),
                 onClickItem ? 'cursor-pointer' : '',
-                isFocused ? 'mw-card-focus bg-white dark:bg-gray-800' : '',
+                isFocused ? 'mw-card-focus' : '',
               )}
               showFocusBar={isFocused}
               BgIcon={bgOverride?.BgIcon ?? BgIcon}

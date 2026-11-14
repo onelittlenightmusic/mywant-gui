@@ -253,7 +253,14 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
 
   const standalone = !onEnterInnerFocus;
   const live = standalone || !!isInnerFocused;
+  // Where its way out to the site — the new-tab button — is offered: in a
+  // panel too, as on its own page and maximized.
   const opensSite = useContext(CardEmbeddedContext) || standalone || !!isExpanded;
+  // Where the face itself opens the site on a press: only where the card is
+  // the page — on its own (/w/:id) and maximized. Embedded in a panel, and in
+  // the corner, the face is the card's as any card's is: a press selects, a
+  // double press maximizes; the new-tab button is the way to the site.
+  const faceOpensSite = standalone || !!isExpanded;
 
   // On its own (/w/:id) the page has the whole screen, so it is drawn as is.
   // An expanded card is live like that page but still a card on the board —
@@ -545,13 +552,13 @@ const WebFrameContentSection: React.FC<WantCardPluginProps> = ({
 
   if (labels.frameable === 'false') {
     const shot = labels['screenshot-url'];
-    const Face = opensSite ? 'button' : 'div';
+    const Face = faceOpensSite ? 'button' : 'div';
     return (
       <div className="relative w-full h-full min-h-0">
         <Face
-          onClick={opensSite ? openRealSite : undefined}
+          onClick={faceOpensSite ? openRealSite : undefined}
           className="relative w-full h-full min-h-0 overflow-hidden bg-gray-100 dark:bg-gray-800 text-left"
-          title={opensSite ? '実サイトを新しいタブで開く' : undefined}
+          title={faceOpensSite ? '実サイトを新しいタブで開く' : undefined}
         >
           {shot && <img src={shot} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />}
         </Face>

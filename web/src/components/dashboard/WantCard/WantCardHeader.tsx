@@ -4,21 +4,29 @@ import { apiClient } from '@/api/client';
 import { Want } from '@/types/want';
 import { StatusChangeIcon } from './parts/StatusChangeIcon';
 import { resolveIconForFamily, getCategoryHexColor } from '@/components/dashboard/WantTypeVisuals';
-import { getBackgroundToneColor, hexToRgba } from '@/utils/backgroundStyles';
+import { getBackgroundToneColor } from '@/utils/backgroundStyles';
 import { wantTypeIconStyle, cardInkVars } from '@/components/dashboard/WantCardFace';
 import { useWantTypeStore } from '@/stores/wantTypeStore';
 import { useCharacterStore } from '@/stores/characterStore';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { openWantApp } from '@/utils/wantUtils';
+import { SubjectSays } from '@/components/sidebar/PanelIdentityRow';
+import { extensionSlot } from '@/extensions/registry';
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
 /**
  * Header of a *maximized* want card.
  *
+ * The same head the corner card and the card in a panel wear — the want's
+ * tile with its name, and what it is saying beside it (SubjectSays) — on the
+ * card's own colours, with no band of its own; and the maximized card's own
+ * controls (Wide, Max, Close) at its right end, in it rather than a row of
+ * tiles beside it. In an app's frame (hostFramed) the app draws Max and Close
+ * over its corner: the room is left for them.
+ *
  * The compact card has no header any more — its type and status live in the
- * badge pill drawn on the card face — so the second, compact branch this
- * component used to carry was unreachable and is gone.
+ * badge pill drawn on the card face.
  */
 export interface WantCardHeaderProps {
   want: Want;
@@ -33,7 +41,13 @@ export interface WantCardHeaderProps {
   onToggleWide?: () => void;
   /** Offer Max: the want on its own page (/w/:id) in a new tab, as "Open w" does. */
   showMax?: boolean;
+  /** In an app's native card frame: its own Max and Close are drawn over the
+   *  head's right end, so none here, and room left for them. */
+  hostFramed?: boolean;
 }
+
+/** A round control in the head, as the app's own card buttons are. */
+const HEAD_BUTTON = 'flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center bg-white/70 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm backdrop-blur transition-colors duration-150 focus:outline-none';
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -46,6 +60,7 @@ export const WantCardHeader: React.FC<WantCardHeaderProps> = ({
   isWide = false,
   onToggleWide,
   showMax = false,
+  hostFramed = false,
 }) => {
   const hasScheduling = !!(want.spec?.when && want.spec.when.length > 0);
 
@@ -64,7 +79,9 @@ export const WantCardHeader: React.FC<WantCardHeaderProps> = ({
   // card body's tint) rather than a flat selection-only color.
   const isDarkMode = useDarkMode();
   const typeColor = getBackgroundToneColor(want.metadata?.type) ?? getCategoryHexColor(typeCategory, isDarkMode);
-  const expandedHeaderBgColor = hexToRgba(typeColor, isDarkMode ? 0.22 : 0.28);
+  // The tile and its speech, as a corner card's head draws them — when the
+  // edition has them (the canvas extension); else the type and the name.
+  const wearsHead = extensionSlot('panelIdentityMark').length > 0;
 
   // ── Card aura mark: pressing X on a card aura-marks the want's final-result
   // field (see WantCard's onButtonX / cardAuraMark). The server owns which field
@@ -85,12 +102,15 @@ export const WantCardHeader: React.FC<WantCardHeaderProps> = ({
 
   return (
     <div
-      className="flex-shrink-0 flex items-center justify-between pl-4 border-b border-gray-200 dark:border-gray-700"
-      style={{ backgroundColor: expandedHeaderBgColor, ...cardInkVars(typeColor, isDarkMode) }}
+      className="relative z-10 flex-shrink-0 flex items-center justify-between"
+      style={{ ...cardInkVars(typeColor, isDarkMode), paddingRight: hostFramed ? 104 : 8 }}
     >
-      {/* Title: type / name — takes the spare width, so what follows sits
-          together at the right end. */}
-      <div className="flex-1 flex items-center gap-2 min-w-0 py-2.5">
+      {/* The head: the tile, its name, what it is saying — takes the spare
+          width, so what follows sits together at the right end. */}
+      {wearsHead ? (
+        <div className="flex-1 min-w-0"><SubjectSays subject={{ kind: 'want', want }} /></div>
+      ) : (
+      <div className="flex-1 flex items-center gap-2 min-w-0 py-2.5 pl-4">
         <TypeIcon
           className="w-3.5 h-3.5 flex-shrink-0"
           style={wantTypeIconStyle(want.metadata?.type ?? '', typeCategory, isDarkMode)}
@@ -101,6 +121,7 @@ export const WantCardHeader: React.FC<WantCardHeaderProps> = ({
           {want.metadata?.name}
         </span>
       </div>
+      )}
 
       {/* Right-side indicators */}
       <div className="flex items-center gap-2 flex-shrink-0 px-3">
@@ -149,43 +170,32 @@ export const WantCardHeader: React.FC<WantCardHeaderProps> = ({
         )}
       </div>
 
-      {/* Wide — as wide as the screen allows, and back. Same tile as Close;
-          the icons are near YouTube's theatre-mode ones (a wide frame to widen,
-          a narrower one to go back). */}
-      {onToggleWide && (
-        <button
-          onClick={onToggleWide}
-          className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 self-stretch px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 border-r border-gray-200 dark:border-gray-600 transition-colors duration-150 focus:outline-none"
-          title={isWide ? '元の幅に戻す' : '横に広げる'}
-          aria-pressed={isWide}
-        >
-          {isWide ? <Square className="w-3.5 h-3.5" /> : <RectangleHorizontal className="w-3.5 h-3.5" />}
-          <span className="text-[9px] font-bold leading-none uppercase tracking-tighter">{isWide ? 'Narrow' : 'Wide'}</span>
-        </button>
+      {/* The maximized card's own controls, round, in the head: Wide (as
+          wide as the screen allows, and back — near YouTube's theatre-mode
+          icons), Max (this want on its own page, as "Open w"), Close. */}
+      {!hostFramed && (
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {onToggleWide && (
+            <button
+              onClick={onToggleWide}
+              className={HEAD_BUTTON}
+              title={isWide ? '元の幅に戻す' : '横に広げる'}
+              aria-label={isWide ? 'Narrow' : 'Wide'}
+              aria-pressed={isWide}
+            >
+              {isWide ? <Square className="w-4 h-4" /> : <RectangleHorizontal className="w-4 h-4" />}
+            </button>
+          )}
+          {showMax && (
+            <button onClick={() => openWantApp(want)} className={HEAD_BUTTON} title="単独のページで開く（Open w）" aria-label="Max">
+              <Maximize className="w-4 h-4" />
+            </button>
+          )}
+          <button onClick={onCollapse} className={HEAD_BUTTON} title="Close (Esc)" aria-label="Close">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       )}
-
-      {/* Max — the whole screen: this want on its own page, as the card
-          menu's "Open w" opens it. A fullscreen icon, as YouTube's. */}
-      {showMax && (
-        <button
-          onClick={() => openWantApp(want)}
-          className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 self-stretch px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 border-r border-gray-200 dark:border-gray-600 transition-colors duration-150 focus:outline-none"
-          title="単独のページで開く（Open w）"
-        >
-          <Maximize className="w-3.5 h-3.5" />
-          <span className="text-[9px] font-bold leading-none uppercase tracking-tighter">Max</span>
-        </button>
-      )}
-
-      {/* Close button — full-height tile style */}
-      <button
-        onClick={onCollapse}
-        className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 self-stretch px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150 focus:outline-none"
-        title="Close (Esc)"
-      >
-        <X className="w-3.5 h-3.5" />
-        <span className="text-[9px] font-bold leading-none uppercase tracking-tighter">Close</span>
-      </button>
     </div>
   );
 };

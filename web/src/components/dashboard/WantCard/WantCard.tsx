@@ -1174,7 +1174,9 @@ export const WantCard: React.FC<WantCardProps> = ({
           // here — see .mw-ring-on. It used to be an inset shadow on this root
           // element, which the card's own fill layer paints over, so walking
           // onto a card in the list lit nothing at all.
-          showFocusRing && 'mw-ring-on',
+          // Not in an app's card frame (the corner card's page passes `selected`):
+          // the app's frame says what is picked there.
+          showFocusRing && !nativeHost && 'mw-ring-on',
           (isDragOverWant || isDragOver) && !isBeingProcessed && 'border-blue-600 border-2 bg-blue-100 dark:bg-blue-900/30',
           isHighlighted && styles.highlighted,
           isBeingProcessed && 'opacity-50 pointer-events-none cursor-not-allowed',
@@ -1535,9 +1537,10 @@ export const WantCard: React.FC<WantCardProps> = ({
         {/* Type gradient background at 70% opacity (same as the card tile) */}
         <div className="absolute inset-0 z-0 pointer-events-none"
              style={{ ...typeGradientStyle, opacity: 0.7 }} />
-        {/* Header — shared component, expanded mode. Not in an app's native
-            card frame, which draws its own Max and Close (HostFramedPanel). */}
-        {!hostFramed && <WantCardHeader
+        {/* Header — the corner card's head (tile, speech) with the controls
+            in it. In an app's native card frame too, which draws its own Max
+            and Close over its right end (HostFramedPanel). */}
+        <WantCardHeader
           want={want}
           isFullScreen={isFullScreen}
           groupNames={wantGroupNames}
@@ -1545,7 +1548,8 @@ export const WantCard: React.FC<WantCardProps> = ({
           isWide={expandWide}
           onToggleWide={canWiden || expandWide ? () => setExpandWide(w => !w) : undefined}
           showMax
-        />}
+          hostFramed={hostFramed}
+        />
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-hidden relative">
           <CardActionsOutlet actions={expandedActions} />

@@ -1,9 +1,10 @@
-import React, { useState, useCallback, forwardRef, useRef } from 'react';
+import React, { useState, useCallback, forwardRef, useRef, useEffect } from 'react';
 import { GitBranch, ArrowRight, KeyRound, Type } from 'lucide-react';
 import { SectionNavigationCallbacks } from '@/types/formSection';
 import { CommitInputHandle } from '@/components/common/CommitInput';
 import { LabelSelectorAutocomplete } from '@/components/forms/LabelSelectorAutocomplete';
 import { CardGridShell, TEAL_SCHEME } from '@/components/forms/CardPrimitives';
+import { useCardGridNavigation } from '@/hooks/useCardGridNavigation';
 import { classNames } from '@/utils/helpers';
 
 interface DependenciesSectionProps {
@@ -13,6 +14,13 @@ interface DependenciesSectionProps {
   onToggleCollapse: () => void;
   navigationCallbacks: SectionNavigationCallbacks;
   hideHeader?: boolean;
+  /** Whether the keys are on this section (grid keyboard/gamepad nav). */
+  isActive?: boolean;
+  /** Up off the top row / down off the last: to the section above or below. */
+  onExitTop?: () => void;
+  onExitBottom?: () => void;
+  /** Where a card is chosen as it becomes active (useCardGridNavigation's entry). */
+  entry?: 'top' | 'bottom';
 }
 
 interface EditState {
@@ -25,8 +33,13 @@ interface EditState {
 export const DependenciesSection = forwardRef<HTMLButtonElement, DependenciesSectionProps>(({
   dependencies,
   onChange,
+  isActive = false,
+  onExitTop,
+  onExitBottom,
+  entry,
 }, ref) => {
   const [edit, setEdit] = useState<EditState>({ index: null, key: '', value: '' });
+  const [navFocused, setNavFocused] = useState(-1);
   const autocompleteRef = useRef<CommitInputHandle>(null);
 
   const startAdd = useCallback(() =>
@@ -52,6 +65,26 @@ export const DependenciesSection = forwardRef<HTMLButtonElement, DependenciesSec
     setEdit({ index: null, key: '', value: '' });
   }, [edit, dependencies, onChange]);
 
+  // Walked as the labels are: the cards and the trailing Add, three to a row.
+  const navCount = dependencies.length + (edit.index !== null ? 0 : 1);
+  const { gridProps: navGridProps } = useCardGridNavigation({
+    count: navCount,
+    cols: 3,
+    isActive,
+    onExitTop,
+    onExitBottom,
+    entry,
+    focusedIndex: navFocused,
+    setFocusedIndex: setNavFocused,
+    onConfirm: (i) => { if (i === dependencies.length) startAdd(); else startEdit(i); },
+  });
+  useEffect(() => {
+    // Chosen where it was entered (entry); with none said, the first.
+    if (isActive && navFocused < 0 && navCount > 0 && !entry) setNavFocused(0);
+    if (!isActive) setNavFocused(-1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive]);
+
   const handleCancel = useCallback(() =>
     setEdit({ index: null, key: '', value: '' }), []);
 
@@ -67,6 +100,8 @@ export const DependenciesSection = forwardRef<HTMLButtonElement, DependenciesSec
         BgIcon={GitBranch}
         count={dependencies.length}
         editingIndex={edit.index}
+        navFocusedIndex={navFocused}
+        navGridProps={navGridProps}
         addLabel="Add dep"
         onAdd={startAdd}
         onClickItem={startEdit}

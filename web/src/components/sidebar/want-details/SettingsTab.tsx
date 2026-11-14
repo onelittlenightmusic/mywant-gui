@@ -19,6 +19,7 @@ import { ParameterGridSection } from '@/components/forms/sections/ParameterGridS
 import { ExposeEntry } from '@/components/forms/sections/ExposeSection';
 import { ImportSection } from '@/components/forms/sections/ImportSection';
 import { LabelsSection } from '@/components/forms/sections/LabelsSection';
+import { playSound } from '@/utils/sounds';
 import { DependenciesSection } from '@/components/forms/sections/DependenciesSection';
 import { SchedulingSection } from '@/components/forms/sections/SchedulingSection';
 import { apiClient } from '@/api/client';
@@ -269,6 +270,29 @@ export const SettingsTab: React.FC<{
   }, [want, when, updateWant, onWantUpdate]);
 
   // Handle arrow key navigation for form fields based on DOM order
+  /**
+   * Off the bottom (or top) of one section's cards, onto the next (or the one
+   * before), in the order they are drawn — parameters, labels, schedule,
+   * dependencies: the sections whose cards the keys walk (timing, the name and
+   * the YAML have none, and landing there left the keys nowhere) — and off the
+   * top of the first back to the card.
+   * A grid that kept the key at its last row left the keys and the pad on the
+   * parameters with nowhere to go: the labels under them could not be reached.
+   */
+  // Which way the keys came into the section now active: from above (its
+  // first card) or from below (its last row) — see useCardGridNavigation's entry.
+  const [enteredFrom, setEnteredFrom] = useState<'top' | 'bottom' | undefined>(undefined);
+  // The keys gone back to the card (or out of the panel): the next way in is
+  // from the card, at the top, as it always was.
+  useEffect(() => { if (!sidebarDetailFocused) setEnteredFrom(undefined); }, [sidebarDetailFocused]);
+  const goSection = useCallback((from: FormTab, dir: 1 | -1) => {
+    const walked: FormTab[] = ['params', 'labels', 'schedule', 'deps'];
+    const shown = SETTINGS_FORM_TABS.filter(t => walked.includes(t));
+    const to = shown[shown.indexOf(from) + dir];
+    if (to) { playSound('gridMove'); setEnteredFrom(dir > 0 ? 'top' : 'bottom'); setActiveSettingsTab(to); }
+    else if (dir < 0) onBackToCard?.();
+  }, [setActiveSettingsTab, onBackToCard]);
+
   const handleArrowKeyNavigation = useCallback((e: React.KeyboardEvent) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
 
@@ -375,12 +399,15 @@ export const SettingsTab: React.FC<{
         style={{ order: SETTINGS_FORM_TABS.indexOf(tab) }}
         className={classNames('rounded-xl transition-shadow', active && 'ring-2 ring-blue-400/60 ring-offset-2 ring-offset-transparent')}
       >
+        {/* No ground of its own: the panel's colour (the want's, as its card's)
+            shows through, and what scrolls under it is blurred. A white band
+            here stood out of a coloured panel as a strip laid on it. */}
         <h3
           // The robot presses a section's heading as it pressed its sub-tab.
           data-robot-target="settings_subtab"
           data-robot-id={tab}
           onClick={() => setActiveSettingsTab(tab)}
-          className="sticky top-0 z-10 -mx-1 px-1 py-1.5 mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 bg-white/90 dark:bg-gray-900/90 backdrop-blur cursor-default"
+          className="sticky top-0 z-10 -mx-1 px-1 py-1.5 mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 backdrop-blur-md cursor-default"
         >
           <Icon className="w-3.5 h-3.5 flex-shrink-0" />
           <span>{label}</span>
@@ -544,6 +571,8 @@ export const SettingsTab: React.FC<{
                   focusRequest={focusRequest}
                   onDetailFocusEnter={onDetailFocusEnter}
                   onExitTop={onBackToCard}
+                  onExitBottom={() => goSection('params', 1)}
+                  entry={enteredFrom}
                 />
               </div>
             )}
@@ -563,6 +592,9 @@ export const SettingsTab: React.FC<{
                 onToggleCollapse={() => {}}
                 hideHeader={true}
                 isActive={activeSettingsTab === 'labels' && sidebarDetailFocused}
+                onExitTop={() => goSection('labels', -1)}
+                onExitBottom={() => goSection('labels', 1)}
+                entry={enteredFrom}
                 navigationCallbacks={{
                   onNavigateUp: (e) => e && handleArrowKeyNavigation(e),
                   onNavigateDown: (e) => e && handleArrowKeyNavigation(e),
@@ -579,6 +611,10 @@ export const SettingsTab: React.FC<{
                 isCollapsed={false}
                 onToggleCollapse={() => {}}
                 hideHeader={true}
+                isActive={activeSettingsTab === 'schedule' && sidebarDetailFocused}
+                onExitTop={() => goSection('schedule', -1)}
+                onExitBottom={() => goSection('schedule', 1)}
+                entry={enteredFrom}
                 navigationCallbacks={{
                   onNavigateUp: (e) => e && handleArrowKeyNavigation(e),
                   onNavigateDown: (e) => e && handleArrowKeyNavigation(e),
@@ -595,6 +631,9 @@ export const SettingsTab: React.FC<{
                 isCollapsed={false}
                 onToggleCollapse={() => {}}
                 hideHeader={true}
+                isActive={activeSettingsTab === 'deps' && sidebarDetailFocused}
+                onExitTop={() => goSection('deps', -1)}
+                entry={enteredFrom}
                 navigationCallbacks={{
                   onNavigateUp: (e) => e && handleArrowKeyNavigation(e),
                   onNavigateDown: (e) => e && handleArrowKeyNavigation(e),

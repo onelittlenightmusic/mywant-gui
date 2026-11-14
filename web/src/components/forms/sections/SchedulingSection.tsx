@@ -7,6 +7,7 @@ import { DisplayCard, AddCard, FormCard } from '@/components/forms/CardPrimitive
 import { TimerPickerContent, TimerMode, EVERY_PRESETS } from '@/components/forms/TimerPickerContent';
 import { apiClient } from '@/api/client';
 import { SectionNavigationCallbacks } from '@/types/formSection';
+import { useCardGridNavigation } from '@/hooks/useCardGridNavigation';
 
 interface SchedulingSectionProps {
   schedules: WhenSpec[];
@@ -15,6 +16,13 @@ interface SchedulingSectionProps {
   onToggleCollapse?: () => void;
   navigationCallbacks?: SectionNavigationCallbacks;
   hideHeader?: boolean;
+  /** Whether the keys are on this section (grid keyboard/gamepad nav). */
+  isActive?: boolean;
+  /** Up off the top row / down off the last: to the section above or below. */
+  onExitTop?: () => void;
+  onExitBottom?: () => void;
+  /** Where a card is chosen as it becomes active (useCardGridNavigation's entry). */
+  entry?: 'top' | 'bottom';
 }
 
 // ── Color scheme ──────────────────────────────────────────────────────────────
@@ -104,8 +112,13 @@ const scheduleLabel = (s: WhenSpec): string => {
 export const SchedulingSection = forwardRef<HTMLButtonElement, SchedulingSectionProps>(({
   schedules,
   onChange,
+  isActive = false,
+  onExitTop,
+  onExitBottom,
+  entry,
 }, ref) => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [navFocused, setNavFocused] = useState(-1);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [timerParams, setTimerParams] = useState<Record<string, { at?: string; every?: string }>>({});
 
@@ -162,11 +175,31 @@ export const SchedulingSection = forwardRef<HTMLButtonElement, SchedulingSection
 
   const isSaveEnabled = formToSchedule(form) !== null;
 
+  // Walked as the labels are: the cards and the trailing Add, two to a row.
+  const navCount = schedules.length + (editingIndex !== null ? 0 : 1);
+  const { gridProps: navGridProps } = useCardGridNavigation({
+    count: navCount,
+    cols: 2,
+    isActive,
+    onExitTop,
+    onExitBottom,
+    entry,
+    focusedIndex: navFocused,
+    setFocusedIndex: setNavFocused,
+    onConfirm: (i) => { if (i === schedules.length) startAdd(); else startEdit(i); },
+  });
+  useEffect(() => {
+    // Chosen where it was entered (entry); with none said, the first.
+    if (isActive && navFocused < 0 && navCount > 0 && !entry) setNavFocused(0);
+    if (!isActive) setNavFocused(-1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive]);
+
   const isAdding = editingIndex === schedules.length;
 
   return (
-    <div className="space-y-3 pt-1">
-      <div className="grid grid-cols-2 gap-2">
+    <div className="space-y-3 pt-1" ref={ref as any}>
+      <div className="grid grid-cols-2 gap-2 outline-none" {...navGridProps}>
         {schedules.map((s, idx) => {
           if (editingIndex === idx) {
             return (
@@ -200,6 +233,7 @@ export const SchedulingSection = forwardRef<HTMLButtonElement, SchedulingSection
               className={classNames(
                 'relative rounded-xl p-2.5 shadow-sm transition-all duration-150 group cursor-pointer',
                 CARD_BG, CARD_HOVER,
+                navFocused === idx && 'mw-card-focus',
               )}
               BgIcon={s.fromGlobalParam ? Link2 : Clock}
               bgIconColor={BG_ICON_COLOR}
@@ -263,6 +297,7 @@ export const SchedulingSection = forwardRef<HTMLButtonElement, SchedulingSection
             iconClass={ADD_ICON}
             label="Add schedule"
             onClick={startAdd}
+            isFocused={navFocused === schedules.length}
           />
         ) : null}
       </div>

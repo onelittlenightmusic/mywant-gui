@@ -306,7 +306,7 @@ export const StateFieldCard: React.FC<{
           // A sticky note (mw-postit) in its type's colour.
           'relative mw-postit p-1.5 h-14',
           // The type's colour on the card's face, as a parameter's (getTypeStyle).
-          isFocused ? 'mw-card-focus bg-white dark:bg-gray-800' : tint,
+          classNames(tint, isFocused && 'mw-card-focus'),
         )}
         bgIconLarge
         onClick={onFocusRequest}

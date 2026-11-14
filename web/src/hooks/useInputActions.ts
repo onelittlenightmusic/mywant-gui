@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { useSidebarFocusStore } from '@/stores/sidebarFocusStore';
 import { isAnyCardInnerFocused } from '@/stores/cardInnerFocusStore';
 import { heldModeAnswers, CANVAS_ACTIONS } from '@/stores/canvasActorStack';
 import { getControllerState } from '@/lib/controllerHub';
@@ -1627,6 +1628,12 @@ function _isInputFocused(): boolean {
 }
 
 function _isInSidebar(target?: HTMLElement | null): boolean {
+  // The panel holding the keys (the focus state machine — sidebarFocusStore's
+  // `focused`, kept by its moves, not read off the DOM) is the panel's input,
+  // wherever the DOM focus happens to sit: an editor just closed, a section
+  // between cards, can leave it on <body> for a moment, and the board's
+  // handlers then took the pad's directions as theirs.
+  if (useSidebarFocusStore.getState().focused) return true;
   const el = target ?? (document.activeElement as HTMLElement | null);
   // Not every event target is an Element: dispatching a synthetic event
   // directly on window makes event.target === window, and document/Document

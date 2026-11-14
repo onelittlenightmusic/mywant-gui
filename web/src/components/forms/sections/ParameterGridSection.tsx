@@ -77,6 +77,10 @@ export interface ParameterGridSectionProps {
   /** Up on the top row: back to whatever sits above the grid (the panel's
    *  card — see useCardGridNavigation's onExitTop). */
   onExitTop?: () => void;
+  /** Down off the last row: to whatever sits below the grid (the next section). */
+  onExitBottom?: () => void;
+  /** Where a card is chosen as it becomes active (useCardGridNavigation's entry). */
+  entry?: 'top' | 'bottom';
   /** Values the server suggests per parameter, best first. Offered on empty
    *  cards so a want can be filled by tapping rather than typing. */
   recommendations?: Record<string, ParamRecommendation[]>;
@@ -170,6 +174,8 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
   focusRequest,
   onDetailFocusEnter,
   onExitTop,
+  onExitBottom,
+  entry,
   recommendations = {},
   onApplyRecommendation,
   pickAsker,
@@ -240,6 +246,10 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
       onChangeRef.current({ ...parametersRef.current, [param.name]: next });
     });
   }, [onApplyRecommendation]);
+  /** Whether anything can answer this parameter's pick: a thing of a kind it
+   *  accepts, or a want that gives a value of it. */
+  const canPick = useCallback((param: ParameterDef) =>
+    acceptedSubTypes(param).length > 0 || (recommendationsRef.current[param.name] ?? []).some(r => r.sourceId), []);
   parametersRef.current = parameters;
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -377,6 +387,8 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
     cols: COLS,
     isActive,
     onExitTop,
+    onExitBottom,
+    entry,
     focusedIndex,
     setFocusedIndex,
     // X names the focused value, Y goes to what it is. Bound on the grid
@@ -570,6 +582,19 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
         tone: 'primary' as const,
         delay: 0,
       },
+      // Pick mode: its value chosen on the board or the thing list (pickFor) —
+      // the card header's pipette, here too, for the keys and the pad. Offered
+      // where something can answer: a thing it accepts, or a want that gives
+      // a value of it.
+      {
+        icon: <Pipette className="w-4 h-4 text-white" />,
+        label: 'Pick',
+        title: canPick(param) ? 'キャンバスや一覧から選ぶ' : '選べるものがありません',
+        onClick: () => { close(); exitEditMode(); pickFor(param); },
+        tone: 'info' as const,
+        delay: 15,
+        disabled: !canPick(param),
+      },
       {
         icon: <Globe className="w-4 h-4 text-white" />,
         label: ctx.isParamRef ? 'Literal' : 'Ref',
@@ -608,7 +633,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
   // aura/focusedIndex belong here: the builder runs during render, so without
   // them the Aura entry would describe whichever card was focused when this
   // callback was last created.
-  }, [handleToggleParamRef, handleUpdateParam, clearParam, onDetailFocusEnter, aura, focusedIndex]);
+  }, [handleToggleParamRef, handleUpdateParam, clearParam, onDetailFocusEnter, aura, focusedIndex, pickFor, canPick, exitEditMode]);
 
   const hiddenOptionalCount = (parameterDefinitions ?? []).filter(
     p => !p.required && parameters[p.name] === undefined
@@ -706,7 +731,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                   className={classNames(
                     'col-span-full relative rounded-lg sm:rounded-xl p-1.5 sm:p-2.5 transition-all duration-150 cursor-pointer shadow-sm',
                     isFocused
-                      ? 'shadow-md mw-card-focus bg-white dark:bg-gray-800'
+                      ? classNames('mw-card-focus', `${ts.cardBg} ${ts.cardHover}`)
                       : `${ts.cardBg} ${ts.cardHover}`,
                     isSpotlit && 'outline outline-2 outline-offset-2 outline-sky-400',
                   )}
@@ -761,7 +786,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                   className={classNames(
                     'col-span-full relative rounded-lg sm:rounded-xl p-1.5 sm:p-2.5 transition-all duration-150 cursor-pointer shadow-sm',
                     isFocused
-                      ? 'shadow-md mw-card-focus bg-white dark:bg-gray-800'
+                      ? classNames('mw-card-focus', `${ts.cardBg} ${ts.cardHover}`)
                       : `${ts.cardBg} ${ts.cardHover}`,
                     isSpotlit && 'outline outline-2 outline-offset-2 outline-sky-400',
                   )}
@@ -873,9 +898,10 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                   // A sticky note (mw-postit) in its type's colour.
                   'relative mw-postit p-1.5 transition-all duration-150 cursor-pointer',
                   !isEditing && 'h-14',
-                  isFocused
-                    ? 'shadow-md mw-card-focus bg-white dark:bg-gray-800'
-                    : isModified
+                  // Focused, it keeps its own colour and is lifted and washed
+                  // (index.css .mw-card-focus) — not turned white.
+                  isFocused && 'mw-card-focus',
+                  isModified
                       ? 'bg-amber-50/60 dark:bg-amber-900/20 shadow hover:shadow-md hover:bg-amber-100/60 dark:hover:bg-amber-900/30'
                       : param.required && isEmpty
                         ? 'bg-red-50/40 dark:bg-red-900/15 shadow-sm hover:shadow hover:bg-red-100/40 dark:hover:bg-red-900/25'
@@ -926,7 +952,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                 }
                 headerRight={
                   <>
-                    {(acceptedSubTypes(param).length > 0 || (recommendations[param.name] ?? []).some(r => r.sourceId)) && (
+                    {canPick(param) && (
                       <button
                         type="button"
                         onMouseDown={e => e.preventDefault()}
@@ -1283,7 +1309,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                 'relative rounded-lg sm:rounded-xl p-1.5 transition-all duration-150 cursor-pointer shadow-sm',
                 !isExtraEditing && 'h-14',
                 isExtraFocused
-                  ? 'shadow-md mw-card-focus bg-white dark:bg-gray-800'
+                  ? classNames('mw-card-focus', `${BLUE_SCHEME.cardBg} ${BLUE_SCHEME.cardHover}`)
                   : `${BLUE_SCHEME.cardBg} ${BLUE_SCHEME.cardHover}`
               )}
               BgIcon={Type}

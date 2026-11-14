@@ -103,7 +103,7 @@ export const LogCard: React.FC<LogCardProps> = ({
         className={classNames(
           'relative w-full rounded-lg sm:rounded-xl p-2 shadow-sm',
           'bg-gray-50/80 dark:bg-gray-800/50',
-          isFocused ? 'mw-card-focus bg-white dark:bg-gray-800' : '',
+          isFocused ? 'mw-card-focus' : '',
         )}
         onClick={onFocusRequest}
         showFocusBar={isFocused}

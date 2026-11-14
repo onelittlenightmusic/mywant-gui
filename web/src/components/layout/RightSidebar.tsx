@@ -115,7 +115,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   // dashboard's, instead of a flat opaque panel.
   const appBg = useAppBackgroundStyle();
   const effectiveBg = backgroundStyle ?? appBg;
-  void effectiveBg; // kept for API compatibility; the panel is now solid-coloured
+  void effectiveBg; // the panel's own (backgroundStyle) is drawn on its solid ground below
   const location = useLocation();
   const menuColor = ROUTE_MENU_COLOR[location.pathname];
   const [isAnyDragging, setIsAnyDragging] = useState(false);
@@ -680,7 +680,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         // Down to the screen's bottom edge, its tabs along it: the app's
         // shrunk tab bar and pill are along the sheet's top (MiniDock), and a
         // Mac's drawer has none.
-        style={backgroundStyle}>
+        style={{ ...backgroundStyle, '--mw-focus-color': focusColor } as React.CSSProperties}>
         <HostFramedPanel.Provider value={true}>{children}</HostFramedPanel.Provider>
       </div>
     ) : null;
@@ -751,8 +751,10 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           }}
         />
 
-        {/* Solid, opaque sidebar background tinted with the page's menu colour —
-            no see-through to the app background. */}
+        {/* Solid, opaque sidebar background: the panel's own colour when it has
+            one (a want's — its card's colours, backgroundStyle), as an app's
+            sheet draws the same panel; else tinted with the page's menu colour.
+            No see-through to the app background. */}
         <div
           className="absolute inset-0 w-full pointer-events-none bg-white dark:bg-gray-900"
           style={{
@@ -765,7 +767,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             // carrying the identity row and its close button off the top.
             minHeight: overflowHidden ? '100%' : '100vh',
             zIndex: 0,
-            ...(menuColor ? { backgroundImage: `linear-gradient(${menuColor}2e, ${menuColor}2e)` } : {}),
+            ...(backgroundStyle
+              ? backgroundStyle
+              : menuColor ? { backgroundImage: `linear-gradient(${menuColor}2e, ${menuColor}2e)` } : {}),
           }}
         />
 

@@ -61,6 +61,15 @@ export interface UseCardGridNavigationOptions {
    */
   onExitBottom?: () => void;
   /**
+   * Where a card is chosen as the grid becomes active with none chosen: the
+   * first ('top' — entered from above) or the start of the last row ('bottom'
+   * — entered from below). A grid made active with no card chosen let go of
+   * the focus (see the effect below), and it fell out of the panel onto the
+   * board, whose pad directions then walked the wants. Left out, a grid waits
+   * to be told (focusRequest, an arrow).
+   */
+  entry?: 'top' | 'bottom';
+  /**
    * Called on x / gamepad X with the focused card's index, and the same for
    * y / gamepad Y.
    *
@@ -102,6 +111,7 @@ export function useCardGridNavigation({
   focusRequest,
   onExitTop,
   onExitBottom,
+  entry,
   onButtonX,
   onYButton,
   padHints,
@@ -145,6 +155,15 @@ export function useCardGridNavigation({
       }
     }
   }, [focusRequest, isActive, setFocusedIndex]);
+
+  // Made active with nothing chosen: choose where it was entered (see entry).
+  useEffect(() => {
+    if (!entry || !isActive || focusedIndexRef.current >= 0) return;
+    const n = countRef.current;
+    if (n <= 0) return;
+    setFocusedIndex(entry === 'bottom' ? Math.floor((n - 1) / cols) * cols : 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive]);
 
   // Publish the pad hints while this grid holds the ring; take them back down
   // when it doesn't (or unmounts). `ownsHint` so a grid that never set one

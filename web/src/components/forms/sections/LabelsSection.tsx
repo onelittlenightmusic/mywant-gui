@@ -16,6 +16,11 @@ interface LabelsSectionProps {
   navigationCallbacks: SectionNavigationCallbacks;
   hideHeader?: boolean;
   isActive?: boolean;
+  /** Up off the top row / down off the last: to the section above or below. */
+  onExitTop?: () => void;
+  onExitBottom?: () => void;
+  /** Where a card is chosen as it becomes active (useCardGridNavigation's entry). */
+  entry?: 'top' | 'bottom';
 }
 
 interface EditState {
@@ -29,6 +34,9 @@ export const LabelsSection = forwardRef<HTMLButtonElement, LabelsSectionProps>((
   labels,
   onChange,
   isActive = true,
+  onExitTop,
+  onExitBottom,
+  entry,
 }, ref) => {
   const [edit, setEdit] = useState<EditState>({ key: null, draftKey: '', draftValue: '' });
   const [navFocused, setNavFocused] = useState(-1);
@@ -57,13 +65,17 @@ export const LabelsSection = forwardRef<HTMLButtonElement, LabelsSectionProps>((
     count: navCount,
     cols: 3,
     isActive,
+    onExitTop,
+    onExitBottom,
+    entry,
     focusedIndex: navFocused,
     setFocusedIndex: setNavFocused,
     onConfirm: (i) => { if (i === entries.length) startAdd(); else startEdit(i); },
   });
 
   useEffect(() => {
-    if (isActive && navFocused < 0 && navCount > 0) setNavFocused(0);
+    // Chosen where it was entered (entry); with none said, the first.
+    if (isActive && navFocused < 0 && navCount > 0 && !entry) setNavFocused(0);
     if (!isActive) setNavFocused(-1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive]);

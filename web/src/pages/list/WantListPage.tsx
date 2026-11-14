@@ -15,6 +15,9 @@ import { ThingCard } from '@/components/dashboard/ThingCard';
 import { useMarkJumpStore } from '@/stores/markJumpStore';
 import { hasExtensionRoute, type PanelSubject } from '@/extensions/registry';
 import { SubjectSays } from '@/components/sidebar/PanelIdentityRow';
+import { getCardBackgroundStyle } from '@/components/dashboard/WantTypeVisuals';
+import { useWantTypeStore } from '@/stores/wantTypeStore';
+import { useDarkMode } from '@/hooks/useDarkMode';
 import { Slot } from '@/extensions/Slot';
 import { useConstellationStore } from '@/stores/constellationStore';
 import { classNames } from '@/utils/helpers';
@@ -410,6 +413,9 @@ export const WantListPage: React.FC<{
   useHostFocusedCard(!panel && !card);
   // A card page: where the app shows it now — the corner, a panel, maximized.
   const hostCardMode = useHostCardMode();
+  // The card's own colours, for its head row to stand on (HostCardFrame).
+  const cardTypes = useWantTypeStore(s => s.wantTypes);
+  const cardDark = useDarkMode();
 
   // The map: in the page, or in an app on a phone the app's own sheet, whose
   // presses come back here (usePageMinimap — every page's map works so).
@@ -522,7 +528,9 @@ export const WantListPage: React.FC<{
     // children), so it gets the page as it is.
     const Frame = maximizedCard ? HostCardPage : HostCardFrame;
     return (
-      <Frame head={w && withHead ? { kind: 'want', want: w } : undefined} onHeadTap={() => act('open')}>
+      <Frame head={w && withHead ? { kind: 'want', want: w } : undefined} onHeadTap={() => act('open')}
+        headStyle={w ? getCardBackgroundStyle(w.metadata?.type ?? '',
+          cardTypes.find(t => t.name === w.metadata?.type)?.category ?? '', cardDark ? 'dark' : 'light', 'canvas') : undefined}>
         <HostCardPageButtons />
         {w && (
           <CardEmbeddedContext.Provider value={embeddedCard}>
@@ -667,8 +675,11 @@ const HostCardFrame: React.FC<{
   /** A tap on the head — off the card itself — opens the subject's panel
    *  (the app's: card-act open), as the card's view button does. */
   onHeadTap?: () => void;
+  /** What the head row stands on: the card's own colours (its type's, as its
+   *  face and the panel opened from it are), not a white band over the card. */
+  headStyle?: React.CSSProperties;
   children: React.ReactNode;
-}> = ({ head, onHeadTap, children }) => {
+}> = ({ head, onHeadTap, headStyle, children }) => {
   const [size, setSize] = React.useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => {
     const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight });
@@ -682,7 +693,7 @@ const HostCardFrame: React.FC<{
           that scale: the frame may be another shape (a sheet's card row). */}
       <div className="flex flex-col"
         style={{ width: 420, height: size.h * 420 / size.w, transform: `scale(${size.w / 420})`, transformOrigin: 'top left' }}>
-        {head && <div className="flex-shrink-0" onClick={onHeadTap}><SubjectSays subject={head} inert /></div>}
+        {head && <div className="flex-shrink-0" style={headStyle} onClick={onHeadTap}><SubjectSays subject={head} inert /></div>}
         <div className="flex-1 min-h-0">{children}</div>
       </div>
       </HostFramedPanel.Provider>
@@ -691,7 +702,7 @@ const HostCardFrame: React.FC<{
 };
 
 /** A maximized card's page: the page as it is, for the card to fill. */
-const HostCardPage: React.FC<{ head?: PanelSubject; onHeadTap?: () => void; children: React.ReactNode }> = ({ children }) => (
+const HostCardPage: React.FC<{ head?: PanelSubject; onHeadTap?: () => void; headStyle?: React.CSSProperties; children: React.ReactNode }> = ({ children }) => (
   <div className="fixed inset-0 bg-white dark:bg-gray-900">
     <HostFramedPanel.Provider value={true}>{children}</HostFramedPanel.Provider>
   </div>

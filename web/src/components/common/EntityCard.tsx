@@ -16,7 +16,7 @@
  * opens — "Details" is always the first tile so opening is one more action in
  * the same grid rather than a special case.
  */
-import { hostTrace } from '@/lib/nativeHost';
+import { hostTrace, nativeHost } from '@/lib/nativeHost';
 import React, { useRef, useEffect, useState } from 'react';
 import { X, Move } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
@@ -440,6 +440,8 @@ export const EntityCard: React.FC<EntityCardProps> = ({
     selected
       ? (keepFocus ? CARD_UNSELECTED_CLASSES : CARD_SELECTED_CLASSES)
       : CARD_UNSELECTED_CLASSES,
+    // Focus as every card wears it (index.css .mw-card-focus); not in an app.
+    selected && !keepFocus && !nativeHost && 'mw-card-focus',
     className ?? '',
   );
 

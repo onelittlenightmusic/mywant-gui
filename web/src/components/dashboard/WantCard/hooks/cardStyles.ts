@@ -43,10 +43,11 @@ export function hoverRingVars(color: string, isDark: boolean): React.CSSProperti
  * as a coloured header bar laid on top of the card. An inset glow stays on the
  * card it belongs to whatever contains it.
  */
-export function focusGlowVars(color: string, isDark: boolean): React.CSSProperties {
+export function focusGlowVars(color: string, _isDark: boolean): React.CSSProperties {
   if (nativeHost) return {}; // see hoverRingVars
-  const c = ringColor(color, isDark);
-  return { boxShadow: `inset 0 0 6px ${c}, inset 0 0 16px ${c}88, inset 0 0 30px ${c}44` };
+  // The look itself is the shared focus class's (.mw-card-focus: lifted, the
+  // wash, the dot); this gives it the character's colour.
+  return { '--mw-focus-color': color } as React.CSSProperties;
 }
 
 /** 共通のフォーカス/ボーダースタイル。全カード（Want / WantType / Recipe）で統一して使用する */

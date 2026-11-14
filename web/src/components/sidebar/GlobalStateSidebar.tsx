@@ -472,7 +472,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                 className={classNames(
                   'relative rounded-xl p-1.5 h-14 transition-all duration-150 cursor-pointer shadow-sm group',
                   isFocused
-                    ? 'shadow-md mw-card-focus bg-white dark:bg-gray-800'
+                    ? classNames('mw-card-focus', `${scheme.cardBg} ${scheme.cardHover}`)
                     : `${scheme.cardBg} ${scheme.cardHover}`
                 )}
                 BgIcon={BgIcon}

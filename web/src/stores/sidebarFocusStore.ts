@@ -65,6 +65,9 @@ export function isInSidebarSurface(el: EventTarget | Element | null | undefined)
  * on a panel.
  */
 
+/** Forget where focus was in the panel: the keys have deliberately left it. */
+function lastInPanelForget(): void { lastInPanel = null; }
+
 export const useSidebarFocusStore = create<SidebarFocusStore>((set) => ({
   focused: false,
   request: 0,
@@ -79,7 +82,7 @@ export const useSidebarFocusStore = create<SidebarFocusStore>((set) => ({
   // they are in there. Unlike `focused`, which is only ever a reading of where
   // DOM focus happens to be, nothing incidental calls this.
   bumpRequest: () => { giveStickToPanel(); return set(s => ({ request: s.request + 1 })); },
-  exit: () => { giveStickToBoard(); return set({ focused: false }); },
+  exit: () => { lastInPanelForget(); giveStickToBoard(); return set({ focused: false }); },
 }));
 
 /**
@@ -132,52 +135,88 @@ export function focusSidebarPanel(maxFrames = 30): void {
   tick();
 }
 
-/** Is DOM focus, right now, inside an open sidebar? The single source of truth. */
-function computeFocused(): boolean {
-  const ae = document.activeElement as HTMLElement | null;
-  if (!ae || ae === document.body || typeof ae.closest !== 'function') return false;
-  // Through isInSidebarSurface: a blown-up card is the panel's own, drawn
-  // elsewhere, and reading it as "left the panel" is what made everything
-  // downstream of this flag fight the user for focus.
-  return isInSidebarSurface(ae) && !!document.querySelector('[data-sidebar="true"][data-sidebar-open="true"]');
+/** An open detail panel is on screen (or this page is one, in an app's sheet). */
+function panelOpen(): boolean {
+  return !!document.querySelector('[data-sidebar="true"][data-sidebar-open="true"]');
 }
 
 let tracking = false;
+/** Where focus last was inside the panel — where it is put back (see below). */
+let lastInPanel: HTMLElement | null = null;
 
 /**
- * Make `focused` a reading of reality rather than something anyone sets.
+ * Keep `focused` — whether the panel holds the keys — as the focus state
+ * machine says, and DOM focus where `focused` says it is.
  *
- * This flag started out as a thing several places wrote to — the canvas handing
- * input over, the sidebar noticing a click, tab switches, a panel closing, a
- * landing resetting it — and with two RightSidebar instances mounted at once
- * (one open, one closed) sharing it, those writes interleaved in orders nobody
- * intended. Every resulting bug looked the same from outside: the flag and the
- * actual DOM focus disagreed. Since the flag exists only to describe where
- * focus is, and the card grids' exclusive input capture is gated on it, a
- * disagreement means the keys are owned by a panel that is not focused — Enter
- * vanishes while the mouse still works.
+ * It used to be the other way round: a reading of document.activeElement,
+ * polled. That ended the races between several writers (two RightSidebars
+ * mounted at once, a landing, a tab switch, each setting it), but it made the
+ * DOM the authority: any moment focus fell to <body> — an editor closed with
+ * Escape, a section handing over between its cards, a node swapped under the
+ * focus — the panel was read as having let go, and the next press of the pad
+ * walked the board's wants instead. A brief accident of the DOM became a move
+ * of the keys.
  *
- * So nobody sets it. It is computed from document.activeElement, and the only
- * way to change it is to move focus, which is the thing it was always claiming
- * to describe. Five separate races were patched one at a time before this;
- * deriving it removes the category.
+ * Now the moves are the authority, and still written in one place each
+ * (focusOwner's moveFocusTo, and here):
  *
- * The poll is not laziness: unmounting a focused node (which is what changing
- * which want the sidebar shows does to the card grid) moves focus to <body>
- * and fires no event at all, so there is nothing to listen for.
+ *   - Into the panel: moveFocusTo('panel') (A / Enter), or focus arriving in
+ *     the open panel by any means — a click, a tap, Tab. Entering is never
+ *     an accident.
+ *   - Out of it: moveFocusTo('board') (B / Escape out, walking on), a press on
+ *     the board or the list (the page's <main>), or the panel closing.
+ *   - Focus falling to <body> while the panel holds the keys is no move at
+ *     all: it is put back in the panel — where it last was, or the panel.
+ *
+ * The poll stays for what fires no event: a focused node unmounted (the panel
+ * swapping to another want) moves focus to <body> silently.
  */
 export function installSidebarFocusTracking(): void {
   if (tracking) return;
   tracking = true;
+  const set = (v: boolean) => {
+    if (useSidebarFocusStore.getState().focused !== v) useSidebarFocusStore.setState({ focused: v });
+  };
   const sync = () => {
-    const v = computeFocused();
-    if (useSidebarFocusStore.getState().focused !== v) {
-      useSidebarFocusStore.setState({ focused: v });
+    const st = useSidebarFocusStore.getState();
+    const ae = document.activeElement as HTMLElement | null;
+    const inPanel = !!ae && ae !== document.body && isInSidebarSurface(ae);
+    if (!panelOpen()) {
+      // The panel gone (closed, another page): nothing holds the keys there.
+      if (st.focused) { set(false); giveStickToBoard(); }
+      return;
     }
+    if (inPanel) {
+      lastInPanel = ae;
+      set(true);
+      return;
+    }
+    if (!st.focused) return;
+    if (!ae || ae === document.body) {
+      // Fell out by accident: back in, where it was, or onto the panel.
+      const back = lastInPanel && lastInPanel.isConnected && isInSidebarSurface(lastInPanel)
+        ? lastInPanel
+        : document.querySelector<HTMLElement>('[data-sidebar="true"][data-sidebar-open="true"]');
+      back?.focus({ preventScroll: true });
+    }
+    // Focus on something real outside (a header field, an overlay drawn at
+    // the document root): left alone, and the panel still holds the keys
+    // until one of the moves above says otherwise.
   };
   document.addEventListener('focusin', sync, true);
   // focusout lands before the new focus does, so read on the next tick.
   document.addEventListener('focusout', () => setTimeout(sync, 0), true);
+  // A press on the board or the list: the keys go there with it.
+  document.addEventListener('pointerdown', (e) => {
+    if (!useSidebarFocusStore.getState().focused) return;
+    const t = e.target as HTMLElement | null;
+    if (!t || typeof t.closest !== 'function' || isInSidebarSurface(t) || !t.closest('main')) return;
+    lastInPanel = null;
+    set(false);
+    giveStickToBoard();
+    const ae = document.activeElement as HTMLElement | null;
+    if (ae && isInSidebarSurface(ae)) ae.blur();
+  }, true);
   setInterval(sync, 200);
 }
 

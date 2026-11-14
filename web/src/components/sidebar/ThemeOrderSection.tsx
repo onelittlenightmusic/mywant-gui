@@ -1075,7 +1075,7 @@ const ThemeMemberCard: React.FC<{
         className={classNames(
           'relative rounded-lg sm:rounded-xl p-1.5 shadow-sm h-14',
           INDIGO_SCHEME.cardBg,
-          isFocused ? 'mw-card-focus bg-white dark:bg-gray-800' : '',
+          isFocused ? 'mw-card-focus' : '',
           marked ? 'opacity-50' : '',
         )}
         onClick={onFocusRequest}
