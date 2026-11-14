@@ -389,6 +389,7 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
     onExitTop,
     onExitBottom,
     entry,
+    copyValue: (i) => { const p = filteredParams[i]; return p ? parameters[p.name] : undefined; },
     focusedIndex,
     setFocusedIndex,
     // X names the focused value, Y goes to what it is. Bound on the grid

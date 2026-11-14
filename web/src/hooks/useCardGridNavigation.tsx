@@ -14,6 +14,9 @@
  *   <div {...gridProps} className="grid grid-cols-2 gap-2 outline-none"> ... </div>
  */
 import { useRef, useEffect, useCallback } from 'react';
+import { copyText } from '@/utils/clipboard';
+import { notify } from '@/stores/noticeStore';
+
 import { useInputActions } from './useInputActions';
 import { playSound } from '@/utils/sounds';
 import { usePadActionStore } from '@/stores/padActionStore';
@@ -70,6 +73,12 @@ export interface UseCardGridNavigationOptions {
    */
   entry?: 'top' | 'bottom';
   /**
+   * The focused card's value, for Command+C (Ctrl+C) to copy — text as it
+   * is, anything else as JSON. Undefined (the Add card, a card with nothing
+   * to copy) copies nothing and leaves the key to the page.
+   */
+  copyValue?: (index: number) => unknown;
+  /**
    * Called on x / gamepad X with the focused card's index, and the same for
    * y / gamepad Y.
    *
@@ -112,6 +121,7 @@ export function useCardGridNavigation({
   onExitTop,
   onExitBottom,
   entry,
+  copyValue,
   onButtonX,
   onYButton,
   padHints,
@@ -155,6 +165,35 @@ export function useCardGridNavigation({
       }
     }
   }, [focusRequest, isActive, setFocusedIndex]);
+
+  // Command+C on the focused card: its value copied (copyValue). Not while
+  // text is selected or typed in — that copy is the browser's own.
+  const copyValueRef = useRef(copyValue);
+  copyValueRef.current = copyValue;
+  useEffect(() => {
+    if (!isActive || !copyValueRef.current) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== 'c') return;
+      const i = focusedIndexRef.current;
+      if (i < 0 || !copyValueRef.current) return;
+      const ae = document.activeElement as HTMLElement | null;
+      if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return;
+      if ((window.getSelection()?.toString() ?? '') !== '') return;
+      const v = copyValueRef.current(i);
+      if (v === undefined) return;
+      const text = v === null ? '' : typeof v === 'string' ? v : typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v);
+      // Nothing in it (unset, empty): nothing to copy, and the key is the page's.
+      if (text === '') return;
+      e.preventDefault();
+      void copyText(text).then(ok => {
+        const shown = text.length > 40 ? text.slice(0, 40) + '…' : text;
+        notify(ok ? `コピーしました：${shown}` : 'コピーできませんでした');
+        if (ok) playSound('gridMove');
+      });
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [isActive]);
 
   // Made active with nothing chosen: choose where it was entered (see entry).
   useEffect(() => {

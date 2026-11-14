@@ -71,6 +71,7 @@ const UserCustomSection: React.FC<{
     onContextMenu: (i) => setActivatedIndex(i),
     onButtonX: (i) => setNameIndex(i),
     onYButton: (i) => setFollowIndex(i),
+    copyValue: (i) => entries[i]?.[1],
   });
 
   useEffect(() => {

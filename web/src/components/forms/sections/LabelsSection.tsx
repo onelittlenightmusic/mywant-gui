@@ -71,6 +71,7 @@ export const LabelsSection = forwardRef<HTMLButtonElement, LabelsSectionProps>((
     focusedIndex: navFocused,
     setFocusedIndex: setNavFocused,
     onConfirm: (i) => { if (i === entries.length) startAdd(); else startEdit(i); },
+    copyValue: (i) => entries[i]?.[1],
   });
 
   useEffect(() => {

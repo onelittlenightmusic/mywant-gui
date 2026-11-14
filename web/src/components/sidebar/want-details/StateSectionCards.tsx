@@ -78,6 +78,7 @@ export const StateSectionCards: React.FC<{
     onButtonX: (i) => setNameIndex(i),
     onYButton: (i) => setFollowIndex(i),
     onExitTop,
+    copyValue: (i) => entries[i]?.[1],
   });
 
   useEffect(() => {
