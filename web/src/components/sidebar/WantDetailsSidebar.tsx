@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef, startTransition } from 'react';
 import { useBoardChanged } from '@/api/boardSync';
 import { useOutputFocusStore } from '@/stores/outputFocusStore';
 import { HostMaximizesCard, hostSideSheets, nativePanelPage, postToHost, useHostCardButtons, useHostCardSlot } from '@/lib/nativeHost';
@@ -142,6 +142,13 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
   useEffect(() => {
     if (wantId) void useNotificationStore.getState().markRead(wantId);
   }, [wantId]);
+
+  // The panel's tabs, a frame after the panel itself (useAfterFirstPaint):
+  // landing on a want opened all of it in the one task that also drew the
+  // landing, its thousand-odd elements laid out there — the board stood still
+  // for a fifth of a second just as the character came down. Now the card
+  // and the tab bar come with the landing, and what is under them follows.
+  const tabsReady = useAfterFirstPaint(wantId);
 
   const [activeTab, setActiveTab] = useState<TabType>('settings');
   const [prevTabIndex, setPrevTabIndex] = useState(0);
@@ -770,7 +777,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
           focusSidebarCard();
         }}
       >
-        {loading && !selectedWantDetails ? (
+        {!tabsReady ? null : loading && !selectedWantDetails ? (
           <div className="flex items-center justify-center py-12">
             <LoadingSpinner size="lg" />
           </div>
@@ -951,3 +958,20 @@ const HostCardSlot: React.FC<{ id: string }> = ({ id }) => {
   const ref = useHostCardSlot('want', id);
   return <div ref={ref} className="h-full w-full rounded-xl" />;
 };
+
+/**
+ * True once the page has painted at least once since `key` came — and as a
+ * low-priority update (startTransition), so React may break the render up
+ * around the frames it would otherwise hold. Two animation frames: the first
+ * runs before the next paint, the second after it.
+ */
+function useAfterFirstPaint(key: string | undefined): boolean {
+  const [readyKey, setReadyKey] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    let raf = requestAnimationFrame(() => {
+      raf = requestAnimationFrame(() => startTransition(() => setReadyKey(key)));
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [key]);
+  return readyKey === key;
+}

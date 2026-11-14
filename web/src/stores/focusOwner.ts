@@ -67,6 +67,12 @@ interface MoveOptions {
    * leaves it for the grid, which focuses the selected card itself.
    */
   deliberate?: boolean;
+  /**
+   * A deliberate move whose moment already has its own sound — a pick
+   * decided, say: the cursor still follows, the handover note stays unsaid,
+   * so the one press is heard once.
+   */
+  quiet?: boolean;
 }
 
 /**
@@ -328,7 +334,7 @@ export function moveFocusTo(to: FocusDestination, opts: MoveOptions = {}): boole
 
   // One note per direction, said here so the move has one voice wherever it is
   // triggered from — and so it cannot sound for a move that did not happen.
-  if (deliberate && from !== to) playSound(to === 'board' || to === 'pick' ? 'handoverOut' : 'handoverIn');
+  if (deliberate && !opts.quiet && from !== to) playSound(to === 'board' || to === 'pick' ? 'handoverOut' : 'handoverIn');
   return true;
 }
 

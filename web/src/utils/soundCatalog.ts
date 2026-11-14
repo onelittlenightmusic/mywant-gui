@@ -1,5 +1,5 @@
 import {
-  gridMove, wantPlaced, whoosh, impactAttack, impactMend, impactFreeze, impactFeed, hapticClick, buttonPress, handoverIn, handoverOut, confirmIn, sparkle, chime, ring, pillExpand, pillShrink,
+  gridMove, wantPlaced, whoosh, impactAttack, impactMend, impactFreeze, impactFeed, hapticClick, buttonPress, handoverIn, handoverOut, confirmIn, sparkle, chime, ring, pillExpand, pillShrink, pickChosen, overlayChoose,
 } from './soundSynth';
 
 /**
@@ -29,7 +29,16 @@ export interface SoundDef {
   when: string;
   /** Schedules the notes on an already-running context. */
   play: (c: AudioContext) => void;
+  /**
+   * Felt as well as heard: playing it also buzzes — a pad's rumble, a
+   * phone's vibration, the app's tap (sounds.ts, FEEL). 'light' for
+   * something coming up or going in, 'firm' for a choice made. None: heard
+   * only.
+   */
+  feel?: Feel;
 }
+
+export type Feel = 'light' | 'firm';
 
 export const SOUND_CATALOG = {
   // ── Moving around the board ──────────────────────────────────────────────
@@ -93,6 +102,7 @@ export const SOUND_CATALOG = {
     what: 'The entering sound (same as confirmIn).',
     when: 'A card is blown up to full size.',
     play: confirmIn,
+    feel: 'light',
   },
   cardMaximizeClose: {
     what: 'The leaving sound (same as handoverOut).',
@@ -105,6 +115,7 @@ export const SOUND_CATALOG = {
     what: 'One pebble (in).',
     when: 'The board hands the keys to a panel.',
     play: handoverIn,
+    feel: 'light',
   },
   handoverOut: {
     what: 'One pebble (out).',
@@ -115,11 +126,31 @@ export const SOUND_CATALOG = {
     what: 'One pebble (confirm).',
     when: 'Going into something — A on a card, entering inner focus.',
     play: confirmIn,
+    feel: 'light',
+  },
+  pickChosen: {
+    what: 'Two pebbles rising (connect, then a bright done).',
+    when: 'Pick mode decided: a thing or want on the board (or the thing list) is taken as the parameter\'s value. Replaces the handover note back to the panel.',
+    play: pickChosen,
+    feel: 'firm',
+  },
+  overlayOpen: {
+    what: 'One pebble (done).',
+    when: "A card's action overlay comes up (OverlayActionGrid, or a store saying one is open).",
+    play: sparkle,
+    feel: 'light',
+  },
+  overlayChoose: {
+    what: 'One pebble (confirm).',
+    when: "An action chosen on a card's overlay (OverlayActionGrid) — a tap, A / Enter, or its letter. Comes with a haptic; the overlay closing after it says nothing.",
+    play: overlayChoose,
+    feel: 'firm',
   },
   hapticClick: {
     what: 'One pebble (tick), fainter.',
-    when: 'Small confirmations that want a tick rather than a tune.',
+    when: 'Small confirmations that want a tick rather than a tune — a touch on the d-pad, a hold taking.',
     play: hapticClick,
+    feel: 'light',
   },
 
   // ── Something happened ───────────────────────────────────────────────────

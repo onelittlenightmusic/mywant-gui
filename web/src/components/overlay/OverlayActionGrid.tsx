@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
+import { overlayChosen, overlayShown } from '@/stores/cardOverlaySounds';
 import { useOverlayKeyNav } from '@/hooks/useOverlayKeyNav';
 import { OverlayCell } from './OverlayCell';
 import type { OverlayTone } from './tones';
@@ -122,6 +123,15 @@ export const OverlayActionGrid: React.FC<OverlayActionGridProps> = ({
   const design = useOverlayDesign();
   const rows = Math.ceil(items.length / cols);
 
+  // Heard as it comes up, and each choice heard and felt (overlayChosen) —
+  // whichever way it was made: a tap, A / Enter, or its letter.
+  useEffect(() => { overlayShown(); }, []);
+  const choose = (item: OverlayItem | undefined) => {
+    if (!item || item.disabled) return;
+    overlayChosen();
+    item.onClick();
+  };
+
   // Per-item letter shortcuts ('y'/'n' for confirm/cancel, mostly). Handed to
   // useOverlayKeyNav so they ride the same captureInput handler as this grid's
   // arrows and Enter, instead of a document listener of their own that nothing
@@ -130,7 +140,7 @@ export const OverlayActionGrid: React.FC<OverlayActionGridProps> = ({
     const map: Record<string, () => void> = {};
     for (const item of items) {
       if (!item.keyboard || item.disabled) continue;
-      map[item.keyboard.toLowerCase()] = item.onClick;
+      map[item.keyboard.toLowerCase()] = () => choose(item);
     }
     return Object.keys(map).length > 0 ? map : undefined;
   }, [items]);
@@ -138,7 +148,7 @@ export const OverlayActionGrid: React.FC<OverlayActionGridProps> = ({
   const { focusedIndex, setFocusedIndex } = useOverlayKeyNav({
     cols,
     total: items.length,
-    onConfirm: (idx) => { items[idx]?.onClick(); },
+    onConfirm: (idx) => { choose(items[idx]); },
     onCancel: onClose,
     isDisabled: (idx) => !!items[idx]?.disabled,
     ignoreWhenInSidebar,
@@ -192,7 +202,7 @@ export const OverlayActionGrid: React.FC<OverlayActionGridProps> = ({
               color={item.color}
               off={item.off}
               disabled={item.disabled}
-              onClick={item.onClick}
+              onClick={() => choose(item)}
               onMouseEnter={() => setFocusedIndex(idx)}
               focused={keyboardEnabled && idx === focusedIndex}
               focusRingClass={focusRingClass}

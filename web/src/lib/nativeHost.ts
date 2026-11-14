@@ -95,6 +95,12 @@ interface HostBridge {
   chatThreads?: boolean;
   /** The app draws pick mode's banner itself (a control of kind 'pick'). */
   pickBanner?: boolean;
+  /** The app moves a scrolling box at the page's word (a `scroll` message) —
+   *  see hostScroll. */
+  scrollDrive?: boolean;
+  /** How the app's move of box `id` went: at rest where it was sent, taken by
+   *  a finger, or not possible here (no scroll view of that box). */
+  scroll?: (id: string, state: 'arrived' | 'stopped' | 'unavailable') => void;
 }
 
 declare global {
@@ -186,10 +192,20 @@ export interface HostFocusCard {
  *  the app hands it to the board's page as "float:<act>:<kind>:<id>". */
 export interface HostCardAct { type: 'card-act'; act: string; kind: HostFloatCard['kind']; id: string }
 
+/** A scrolling box moved by the app (hostScroll): `id` the page's name for
+ *  it; `x, y, w, h` where it is in the window and `sw, sh` how much it
+ *  scrolls, which is how the app finds its scroll view. */
+interface HostScrollBox { id: string; x: number; y: number; w: number; h: number; sw: number; sh: number }
+export type HostScrollMove =
+  | ({ type: 'scroll'; op: 'spring'; tx: number; ty: number; omega: number; zeta: number } & HostScrollBox)
+  | ({ type: 'scroll'; op: 'journey'; tx: number; ty: number; ms: number } & HostScrollBox)
+  | { type: 'scroll'; op: 'stop'; id: string };
+
 /** Hand a message to the app. Nothing happens without one. */
-export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostMapRect | HostCardAct | HostCardSlot | HostFocusCard | HostControls | { type: 'haptic'; kind: 'lift' | 'drop' | 'land' }
+export function postToHost(message: HostMessage | HostChoice | HostSheetDone | HostMapRect | HostCardAct | HostCardSlot | HostFocusCard | HostControls | { type: 'haptic'; kind: 'lift' | 'drop' | 'land' | 'choose' | 'show' }
   | { type: 'panel-focus'; on: boolean }
   | { type: 'rumble'; ms: number }
+  | HostScrollMove
   | { type: 'drag-shape'; shape: 'circle'; x: number; y: number; w: number; h: number }
   | { type: 'card-buttons'; list: { id: string; label: string; icon: string }[] }
   | { type: 'open-guide'; url: string; title: string; steps: unknown[]; elements: unknown[]; then: unknown[] }
@@ -455,18 +471,69 @@ if (hostSideSheets && typeof document !== 'undefined') document.documentElement.
 // the stick have been still a moment (noteBoardMove) — at once when the
 // drawer came from anything else.
 
-const DRAWER_EASE_MS = 650;
 const DRAWER_SETTLE_MS = 700;
+/**
+ * How stiff the cover's spring is (rad/s): critically damped, it settles in
+ * about 4.7 / this — some 600ms, more slowly than the drawer itself.
+ */
+const DRAWER_OMEGA = 8;
 const drawerWidth: number = Number(window.__mywantHost?.sideSheetWidth) || 420;
-let drawerFrom = 0, drawerTo = 0, drawerT0 = 0;
+/** Where the cover is going, and where it is: a spring, with its speed. A
+ *  drawer turned back mid-way turns the slide round from the speed it had,
+ *  rather than stopping dead and setting off again. */
+let drawerTo = 0, drawerPos = 0, drawerVel = 0, drawerT = -1;
 /** Where the drawer's cover is going, once the walking stops. */
 let drawerWanted = 0;
+/**
+ * A journey's cover, said as it sets off (expectDrawer): what it will be on
+ * arrival, held while the character is on the way — the drawer closing as
+ * they leave one want and opening as they land on the next is not seen by
+ * the camera. Held until the journey has ended and the drawer is as said, or
+ * `until` at the latest (it did not come: the cover then goes as it is).
+ */
+let drawerHold: { to: number; endAt: number; until: number } | null = null;
+/** How long after a journey's end the drawer is waited for (ms). */
+const DRAWER_HOLD_GRACE_MS = 900;
 let lastMoveAt = -Infinity;
 
+/** The cover's spring, advanced to `now` (read any number of times a frame). */
 function drawerAt(now: number): number {
-  const p = Math.min(1, (now - drawerT0) / DRAWER_EASE_MS);
-  const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
-  return drawerFrom + (drawerTo - drawerFrom) * e;
+  if (drawerT < 0) drawerT = now;
+  const dt = Math.max(0, (now - drawerT) / 1000);
+  drawerT = now;
+  if (dt > 0) {
+    const s = springStep(drawerPos - drawerTo, drawerVel, DRAWER_OMEGA, dt);
+    drawerPos = drawerTo + s.x;
+    drawerVel = s.v;
+    if (Math.abs(drawerPos - drawerTo) < 0.25 && Math.abs(drawerVel) < 2) { drawerPos = drawerTo; drawerVel = 0; }
+  }
+  return drawerPos;
+}
+
+/**
+ * One step of a critically damped spring, exactly (not integrated, so any
+ * frame length is stable): `x` how far from its rest, `v` its speed (per s).
+ */
+export function springStep(x: number, v: number, omega: number, dt: number, zeta = 1): { x: number; v: number } {
+  if (zeta > 1) return dampedSpring(x, v, omega, zeta, dt);
+  const e = Math.exp(-omega * dt);
+  const c = v + omega * x;
+  return { x: (x + c * dt) * e, v: (v - omega * c * dt) * e };
+}
+
+/**
+ * A spring damped past critical (`zeta` > 1), exactly, `dt` seconds on — and
+ * never past its rest: one that would cross it (a quick start toward it can
+ * still carry it over) stops on it there, so it is never seen to come back.
+ */
+export function dampedSpring(x: number, v: number, omega: number, zeta: number, dt: number): { x: number; v: number } {
+  const s = Math.sqrt(zeta * zeta - 1);
+  const r1 = -omega * (zeta - s), r2 = -omega * (zeta + s);
+  const a = (v - r2 * x) / (r1 - r2), b = x - a;
+  const nx = a * Math.exp(r1 * dt) + b * Math.exp(r2 * dt);
+  const nv = r1 * a * Math.exp(r1 * dt) + r2 * b * Math.exp(r2 * dt);
+  if (x !== 0 && Math.sign(nx) !== Math.sign(x)) return { x: 0, v: 0 };
+  return { x: nx, v: nv };
 }
 
 /** The character was walked — by a key or the stick — just now. */
@@ -477,12 +544,13 @@ export function noteBoardMove(): void {
 /** The px of the board's right edge a side drawer covers now (0 without one). */
 export function hostDrawerInset(): number {
   const now = performance.now();
-  if (drawerWanted !== drawerTo && now - lastMoveAt >= DRAWER_SETTLE_MS) {
-    drawerFrom = drawerAt(now);
-    drawerTo = drawerWanted;
-    drawerT0 = now;
+  if (drawerHold) {
+    if (now < drawerHold.until && !(now >= drawerHold.endAt && drawerWanted === drawerHold.to)) return drawerAt(now);
+    drawerHold = null;
   }
-  return drawerTo === drawerFrom ? drawerTo : drawerAt(now);
+  drawerAt(now);
+  if (drawerWanted !== drawerTo && now - lastMoveAt >= DRAWER_SETTLE_MS) drawerTo = drawerWanted;
+  return drawerAt(now);
 }
 
 if (hostSideSheets) {
@@ -490,6 +558,22 @@ if (hostSideSheets) {
     // The map is no drawer: a small one in the corner, over the board.
     drawerWanted = sheet && !sheet.route.includes('__panel=__minimap') ? drawerWidth : 0;
   });
+}
+
+/**
+ * A journey (a Z or Cmd hop, a tap's warp) sets off, ending in `ms`, onto a
+ * tile (whose panel the drawer will be — `open`) or the ground. The cover is
+ * put where it will be at once, before the camera sets off, so the journey's
+ * one move goes to where the camera will rest with the drawer as it will be —
+ * not to the middle as the drawer closes on leaving, and then over again,
+ * late, as the next one opens.
+ */
+export function expectDrawer(open: boolean, ms: number): void {
+  if (!hostSideSheets) return;
+  const to = open ? drawerWidth : 0;
+  const now = performance.now();
+  drawerHold = { to, endAt: now + ms, until: now + ms + DRAWER_HOLD_GRACE_MS };
+  drawerTo = to; drawerPos = to; drawerVel = 0; drawerT = now;
 }
 
 /** Framed by an app on a phone, where panels are the app's sheets — or by the
@@ -765,11 +849,12 @@ export const useHostExtraButtonsStore = create<{
 
 /**
  * A tap felt in the hand, framed by an app: a card picked up (lift) or put
- * down (drop), the character landing on a want or a thing (land). A web view
+ * down (drop), the character landing on a want or a thing (land), an action
+ * chosen on a card's overlay (choose), the overlay coming up (show). A web view
  * has no vibration of its own on iOS, so the app plays it. Nothing outside an
  * app.
  */
-export function hostHaptic(kind: 'lift' | 'drop' | 'land'): void {
+export function hostHaptic(kind: 'lift' | 'drop' | 'land' | 'choose' | 'show'): void {
   if (nativeHost) postToHost({ type: 'haptic', kind });
 }
 

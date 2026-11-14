@@ -3,6 +3,7 @@ import { moveFocusTo } from './focusOwner';
 import { subtypeMatchScore } from '@/utils/wantSeed';
 import { apiClient } from '@/api/client';
 import { subscribeGUIState } from '@/api/guiStateStream';
+import { playSound } from '@/utils/sounds';
 
 /**
  * Pick mode: a parameter asking the board (or the thing list) for its value.
@@ -89,6 +90,8 @@ export function startPick(req: Omit<PickRequest, 'id' | 'at'>, resolve: (choice:
 
 /** The answer: written for the page that asked, and the keys back to it. */
 export function choosePick(choice: PickChoice): void {
+  // Heard where it was decided — the board's page, or the thing list.
+  if (usePickStore.getState().request) playSound('pickChosen');
   end(choice);
 }
 
@@ -105,7 +108,8 @@ function end(choice: PickChoice | null): void {
   answer(req.id, choice);
   // Back to the card that asked: the panel — in an app, beside this page,
   // which moveFocusTo hands them over to.
-  moveFocusTo('panel');
+  // A choice has its own note (pickChosen); the way back says nothing over it.
+  moveFocusTo('panel', { quiet: !!choice });
 }
 
 /** The keys out to the board, then the mode: the move reads where they were. */

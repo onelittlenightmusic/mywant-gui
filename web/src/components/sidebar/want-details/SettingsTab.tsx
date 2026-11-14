@@ -8,6 +8,7 @@ import { Want, WhenSpec } from '@/types/want';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorDisplay } from '@/components/common/ErrorDisplay';
 import { YamlEditor } from '@/components/forms/YamlEditor';
+import { MountWhenNear } from '@/components/common/MountWhenNear';
 import { useConfigStore } from '@/stores/configStore';
 import { formatDate, formatDuration } from '@/utils/helpers';
 import { stringifyYaml } from '@/utils/yaml';
@@ -617,15 +618,10 @@ export const SettingsTab: React.FC<{
                   </button>
                 </div>
                 <div className="flex-1">
-                  <YamlEditor
-                    value={stringifyYaml({
-                      metadata: want.metadata,
-                      spec: want.spec
-                    })}
-                    onChange={() => {}}
-                    readOnly={true}
-                    height="100%"
-                  />
+                  {/* Built only near being seen: see MountWhenNear. */}
+                  <MountWhenNear className="h-full">
+                    <WantYamlView want={want} />
+                  </MountWhenNear>
                 </div>
               </div>
             ) : (
@@ -679,3 +675,13 @@ export const SettingsTab: React.FC<{
     </div>
   );
 };
+
+/** The want as YAML, read-only — worked out only once it is drawn (MountWhenNear). */
+const WantYamlView: React.FC<{ want: Want }> = ({ want }) => (
+  <YamlEditor
+    value={stringifyYaml({ metadata: want.metadata, spec: want.spec })}
+    onChange={() => {}}
+    readOnly={true}
+    height="100%"
+  />
+);

@@ -124,6 +124,12 @@ export const ThingGrid: React.FC<MemoGridProps> = ({
   const flipKeySignature = useMemo(() => filtered.map(r => r.id).join(' '), [filtered]);
   useGridMotion(containerRef, flipKeySignature);
 
+  // A parameter picking its value (stores/pickStore): what can answer it is
+  // lit and a press on it is the answer; the rest is dimmed and does nothing.
+  // (Before the loading return: hooks are not skipped.)
+  const pickRequest = usePickStore(s => s.request);
+  const { getTypeInfo } = useDataTypes();
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-16">
@@ -136,11 +142,6 @@ export const ThingGrid: React.FC<MemoGridProps> = ({
     'px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
 
   const ghostRecord = reorder.ghost ? filtered.find((r) => r.id === reorder.ghost?.id) : undefined;
-
-  // A parameter picking its value (stores/pickStore): what can answer it is
-  // lit and a press on it is the answer; the rest is dimmed and does nothing.
-  const pickRequest = usePickStore(s => s.request);
-  const { getTypeInfo } = useDataTypes();
 
   const renderCard = (r: ThingRecord, index: number) => {
     const picking = !!pickRequest;

@@ -110,7 +110,7 @@ CharacterBadge.displayName = 'CharacterBadge';
  * the minimap's tokens). The same outline drawn in a little, so the colour
  * stays as a rim round the picture whatever the shape.
  */
-export const ShapeImage: React.FC<{ shape?: string | null; image: string }> = ({ shape, image }) => {
+export const ShapeImage = React.memo(function ShapeImage({ shape, image }: { shape?: string | null; image: string }) {
   // React's ids are ":r1:" — and WebKit (Safari, the iPhone app) cannot find
   // a clipPath by a name with colons in url(#…), so the picture was clipped
   // to nothing there and the badge showed its outline alone. Letters only.
@@ -123,4 +123,4 @@ export const ShapeImage: React.FC<{ shape?: string | null; image: string }> = ({
       <image href={image} x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clip})`} />
     </>
   );
-};
+});

@@ -181,6 +181,17 @@ export const sparkle = tap(PITCH.done, 'firm');
 export const chime = tap(PITCH.done, 'firm');
 export const pillExpand = tap(PITCH.open, 'soft');
 export const pillShrink = tap(PITCH.close, 'soft');
+/** An action chosen on a card's overlay: the confirm stone. */
+export const overlayChoose = tap(PITCH.confirm, 'firm');
+
+/**
+ * A pick decided: the value taken. Two taps rising — connect, then done — the
+ * one moment here worth a pair: the board has answered the card that asked.
+ */
+export function pickChosen(c: AudioContext): void {
+  pebble(c, { freq: PITCH.connect, volume: 'firm' });
+  pebble(c, { freq: PITCH.done * 1.26, at: 0.075, volume: 'firm' });
+}
 
 /**
  * A card opening or closing. ('whoosh' is the old name, kept because the

@@ -3,8 +3,44 @@ import { useCardOverlayStore } from './cardOverlayStore';
 import { useWantStore } from './wantStore';
 import { playSound } from '@/utils/sounds';
 
+/** When an action was last chosen on an overlay (overlayChosen). */
+let chosenAt = 0;
+/** How long after a choice the overlay closing is still that choice's. */
+const CHOSEN_CLOSE_MS = 400;
+
+/**
+ * An action chosen on an overlay: its own sound, felt too (overlayChoose's
+ * feel). The overlay closing because of it stays quiet: one press, one sound.
+ */
+export function overlayChosen(): void {
+  chosenAt = Date.now();
+  playSound('overlayChoose');
+}
+
 /** What an action overlay opening and closing sounds like. One definition. */
-const soundOverlay = (open: boolean) => playSound(open ? 'sparkle' : 'handoverOut');
+let lastAt = { open: 0, close: 0 };
+/** One opening heard once: a card and its copy in the panel each show a grid,
+ *  and a store saying so as well — all within a frame or two of each other. */
+const ONCE_MS = 200;
+const soundOverlay = (open: boolean) => {
+  const now = Date.now();
+  if (!open && now - chosenAt < CHOSEN_CLOSE_MS) return;
+  const key = open ? 'open' : 'close';
+  if (now - lastAt[key] < ONCE_MS) return;
+  lastAt = { ...lastAt, [key]: now };
+  // Coming up is felt as well as heard (overlayOpen's feel); going away is not.
+  playSound(open ? 'overlayOpen' : 'handoverOut');
+};
+
+/**
+ * An overlay coming up, whatever holds its open/closed — said by the grid
+ * itself as it appears (OverlayActionGrid), so overlays kept in neither store
+ * nor a field card (a delete confirm, the board's bubbles) are heard too. The
+ * same sound as the stores' within a press is played once (playSound's dedupe).
+ */
+export function overlayShown(): void {
+  soundOverlay(true);
+}
 
 /**
  * A card's action overlay opening and closing, said out loud — wherever it

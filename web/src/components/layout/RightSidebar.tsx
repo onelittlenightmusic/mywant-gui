@@ -486,14 +486,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     };
   }, []);
 
-  const backdropStyle: React.CSSProperties = {
-    top: isBottom
-      ? 'env(safe-area-inset-top, 0px)'
-      : 'calc(env(safe-area-inset-top, 0px) + var(--header-height, 0px))',
-    left: 0,
-    right: 0,
-    bottom: 0,
-  };
 
   // Framed by an app, a sheet always rises from the bottom, as the app's own
   // sheets do: its controls ride on its tab bar, at the bottom, whatever this
@@ -696,15 +688,12 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 
   return (
     <>
-      {/* Backdrop - now non-blocking to keep background active */}
-      {isOpen && (
-        <div
-          className={classNames(
-            'fixed z-40 lg:hidden pointer-events-none opacity-0',
-          )}
-          style={backdropStyle}
-        />
-      )}
+      {/* No backdrop. There was one — invisible (opacity 0) and taking no
+          pointer, so it did nothing — put in the page's root as the panel
+          opened. Doing nothing was not free: a child put into the root has the
+          page's sibling rules (Tailwind's space-y: `> :not([hidden]) ~ …`)
+          work out the style of every element on the page again, and the panel
+          opens on every landing on a want. */}
 
       {/* Sidebar */}
       <div

@@ -13,7 +13,7 @@
  */
 export { OverlayActionGrid, type OverlayItem } from './OverlayActionGrid';
 export { OverlayCell, type OverlayCellProps } from './OverlayCell';
-export { OverlayBubble, type OverlayBubbleProps } from './OverlayBubble';
+export { OverlayBubble, BUBBLE_LIFT_PX, type OverlayBubbleProps } from './OverlayBubble';
 export { OverlayTextStage, type OverlayTextStageProps } from './OverlayTextStage';
 export {
   type OverlayTone, OVERLAY_TONES,

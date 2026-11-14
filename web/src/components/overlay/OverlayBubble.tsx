@@ -40,7 +40,9 @@ export interface OverlayBubbleProps {
 }
 
 /** How far the box sits above the point it is about, clear of the tail. */
-const LIFT_PX = 8;
+/** How far an 'above' bubble's box sits over its point — for anything that moves one by its style. */
+export const BUBBLE_LIFT_PX = 8;
+const LIFT_PX = BUBBLE_LIFT_PX;
 /** Above the pad's face buttons (9000) and every layer the board draws. */
 const BUBBLE_Z = 9500;
 const TAIL_PX = 9;

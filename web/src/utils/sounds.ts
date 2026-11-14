@@ -12,12 +12,13 @@
  */
 
 import { rumbleTap } from '@/lib/controllerHub';
+import { hostHaptic } from '@/lib/nativeHost';
 
 let _ctx: AudioContext | null = null;
 // De-duplicates concurrent resume() calls so we only call it once at a time.
 let _resumeInFlight: Promise<void> | null = null;
 
-import { SOUND_CATALOG, type CatalogSound, type SoundDef } from './soundCatalog';
+import { SOUND_CATALOG, type CatalogSound, type SoundDef, type Feel } from './soundCatalog';
 
 // ── iOS silent-WAV session upgrade ───────────────────────────────────────────
 // Playing a silent <audio> element inside a gesture upgrades the audio session
@@ -211,19 +212,26 @@ export function setSoundEnabledFlag(enabled: boolean): void {
  * inactivity-suspension bug where resume() was previously called without await.
  */
 /**
- * The events that also buzz the controller.
+ * What a sound that is felt (its catalogue entry's `feel`) does in the hand,
+ * everywhere at once: the pad rumbles, a phone that can vibrates (no iOS
+ * browser can), and an app framing the page plays a tap (hostHaptic) — a web
+ * view has no vibration of its own there.
  *
- * The ones that mean "input just went somewhere" — into a panel or a menu, and
- * one level deeper into a choice or into a card that has taken the screen. Not
- * the step tick: it fires on every card you walk past, and a pad that buzzes
- * continuously while you move stops meaning anything. Not the way out either —
- * the arrival is the part worth feeling.
- *
- * cardMaximize is listed even though it shares confirmIn's waveform, because
- * membership is by event and not by sound; picking a page from the menu speaks
- * as cardMaximize, and leaving it out would have quietly dropped that buzz.
+ * Felt are the moments where input just went somewhere — into a panel, a
+ * card, an overlay coming up — and the choices made. Not the step tick: it
+ * fires on every card walked past, and a hand buzzing all the while stops
+ * meaning anything. Not the way out either: the arrival is the part to feel.
  */
-const HAPTIC_EVENTS = new Set<SoundEvent>(['handoverIn', 'confirmIn', 'cardMaximize']);
+const FEEL: Record<Feel, { vibrate: number; host: 'show' | 'choose' }> = {
+  light: { vibrate: 8, host: 'show' },
+  firm: { vibrate: 12, host: 'choose' },
+};
+
+function feel(f: Feel): void {
+  rumbleTap();
+  try { navigator.vibrate?.(FEEL[f].vibrate); } catch { /* not allowed before a gesture */ }
+  hostHaptic(FEEL[f].host);
+}
 
 // Last time each event was played, for the dedupe in playSound below.
 const _lastPlayedAt = new Map<SoundEvent, number>();
@@ -291,7 +299,7 @@ export function playSound(event: SoundEvent): void {
   //
   // It does respect the mute above: that is the user asking for no feedback,
   // not the browser withholding it.
-  if (HAPTIC_EVENTS.has(event)) rumbleTap();
+  if (def.feel) feel(def.feel);
 
   // Already running: play now, in this call, not in a .then.
   //
