@@ -66,6 +66,13 @@ import { useReflectingStore, boardPartsWritten, boardPartRead } from '@/stores/r
 const hostViewOnly = typeof window !== 'undefined' && !!window.__mywantHost && (
   new URLSearchParams(location.search).has('__panel') || location.pathname.startsWith('/panel/card/'));
 
+/** One pill the robot offers in its chat (GET /api/v1/robot/suggestions). */
+export interface RobotSuggestion {
+  id: string; pill: string; ask: string; p?: number;
+  /** The want it is about (none when it makes one), and its type: drawn with that type's icon. */
+  wantId?: string; type?: string;
+}
+
 /** A capture into a whole want, read and proposed one of its answers. */
 export interface CaptureProposal {
   thing: string;
@@ -392,6 +399,19 @@ class MyWantApiClient {
 
   async restartServer(): Promise<{ message: string }> {
     const response = await this.client.post<{ message: string }>('/api/v1/system/restart');
+    return response.data;
+  }
+
+  // What the robot would offer now, as pills for its chat just opened
+  // (engine robot_suggest.go); a pill pressed is done and said in the chat.
+  async robotSuggestions(fresh = false): Promise<{ suggestions: RobotSuggestion[]; by?: string }> {
+    const response = await this.client.get<{ suggestions: RobotSuggestion[]; by?: string }>(
+      '/api/v1/robot/suggestions', fresh ? { params: { fresh: 1 } } : undefined);
+    return response.data;
+  }
+
+  async takeRobotSuggestion(id: string): Promise<{ answer: string }> {
+    const response = await this.client.post<{ answer: string }>(`/api/v1/robot/suggestions/${encodeURIComponent(id)}`);
     return response.data;
   }
 
