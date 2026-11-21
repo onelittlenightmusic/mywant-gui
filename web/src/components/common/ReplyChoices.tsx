@@ -59,12 +59,17 @@ export const ReplyChoices: React.FC<{
   const idle = isRobot && !choices.length && !typed.trim();
   const offering = idle && suggestions.length > 0 && (saidAtOffer === null || said === saidAtOffer);
 
+  // A pill pressed is its words said in the chat, as if typed (onChoose, as
+  // a reply's choice is): the robot's chat does the rest as for anything
+  // asked — its answer, the wants it is about as cards. The server is only
+  // told which pill it was, for what it learns.
   const take = (s: RobotSuggestion) => {
     setTaking(true);
     setSuggestions([]);
     apiClient.takeRobotSuggestion(s.id)
-      .catch(e => console.error('[ReplyChoices] the pill failed:', e))
+      .catch(e => console.error('[ReplyChoices] the pill was not noted:', e))
       .finally(() => setTaking(false));
+    onChoose(s.pill);
   };
 
   const refresh = (

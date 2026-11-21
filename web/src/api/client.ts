@@ -403,15 +403,17 @@ class MyWantApiClient {
   }
 
   // What the robot would offer now, as pills for its chat just opened
-  // (engine robot_suggest.go); a pill pressed is done and said in the chat.
+  // (engine robot_suggest.go); a pill pressed is said in the chat as typed.
   async robotSuggestions(fresh = false): Promise<{ suggestions: RobotSuggestion[]; by?: string }> {
     const response = await this.client.get<{ suggestions: RobotSuggestion[]; by?: string }>(
       '/api/v1/robot/suggestions', fresh ? { params: { fresh: 1 } } : undefined);
     return response.data;
   }
 
-  async takeRobotSuggestion(id: string): Promise<{ answer: string }> {
-    const response = await this.client.post<{ answer: string }>(`/api/v1/robot/suggestions/${encodeURIComponent(id)}`);
+  // A pill pressed, noted (what the robot learns from); its words are then
+  // said in the chat as any question.
+  async takeRobotSuggestion(id: string): Promise<{ pill: string }> {
+    const response = await this.client.post<{ pill: string }>(`/api/v1/robot/suggestions/${encodeURIComponent(id)}`);
     return response.data;
   }
 
