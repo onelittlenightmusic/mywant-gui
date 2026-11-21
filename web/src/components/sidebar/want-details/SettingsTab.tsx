@@ -36,6 +36,7 @@ import { useCardGridNavigation } from '@/hooks/useCardGridNavigation';
 import { FORM_TAB_META, FormTab, SETTINGS_FORM_TABS } from '@/components/forms/FormTabBar';
 import { CountBadge } from '@/components/common/CountBadge';
 import { TimingsSection } from './TimingsSection';
+import type { VoiceSpec } from '@/types/want';
 import { ArtMaker } from '@/components/sidebar/ArtMaker';
 import { artOf, artContextOf } from '@/lib/art';
 
@@ -228,6 +229,29 @@ export const SettingsTab: React.FC<{
       setIsEditingLabels(false);
     }
   }, [want.metadata?.id, labels, onWantUpdate]);
+
+  // Handler for the want's voice (when it murmurs and notifies) — saves to
+  // spec.voice; the labels a want chose them in before (murmur / notify) are
+  // let go, so there is one place it is said.
+  const handleVoiceChange = useCallback(async (voice: VoiceSpec | undefined) => {
+    if (!want.metadata?.id) return;
+    const { voice: _old, ...rest } = want.spec ?? {};
+    try {
+      await updateWant(want.metadata.id, {
+        metadata: want.metadata,
+        spec: voice ? { ...rest, voice } : rest,
+      });
+      if ('murmur' in labels || 'notify' in labels) {
+        const { murmur: _m, notify: _n, ...kept } = labels;
+        await updateWantLabels(want.metadata.id, labels, kept);
+        setLabels(kept);
+      }
+      onWantUpdate?.();
+      showSaved();
+    } catch (error) {
+      setLocalUpdateError(error instanceof Error ? error.message : 'Failed to update the timings');
+    }
+  }, [want, labels, updateWant, onWantUpdate]);
 
   // Handler for dependency changes - saves to API
   const handleDependenciesChange = useCallback(async (newUsing: Array<Record<string, string>>) => {
@@ -579,7 +603,7 @@ export const SettingsTab: React.FC<{
 
             {/* TIMING: when it murmurs and notifies — only for a type that names its timings */}
             {!!wantTypeDef?.timings?.length && section('timing',
-              <TimingsSection timings={wantTypeDef.timings} labels={labels} onChange={handleLabelsChange} />
+              <TimingsSection timings={wantTypeDef.timings} voice={want.spec?.voice} labels={labels} onChange={handleVoiceChange} />
             )}
 
             {/* LABELS */}

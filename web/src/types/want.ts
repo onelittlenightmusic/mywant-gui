@@ -118,7 +118,17 @@ export interface ExposeEntry {
   asGlobalParam?: string;
 }
 
+/** When a want speaks up about its answers: the names of its type's timings
+ *  it murmurs at (its tile's "!") and notifies at (a push). A list left out
+ *  is the type's own say; an empty one, none (engine WantSpec.Voice). */
+export interface VoiceSpec {
+  murmur?: string[];
+  notify?: string[];
+}
+
 export interface WantSpec {
+  /** When it speaks up about its answers (Want Settings' Timing). */
+  voice?: VoiceSpec;
   params?: Record<string, unknown>;
   using?: Array<Record<string, string>>;
   recipe?: string;

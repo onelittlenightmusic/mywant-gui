@@ -4,7 +4,7 @@ import { useOutputFocusStore } from '@/stores/outputFocusStore';
 import { HostMaximizesCard, hostSideSheetsNow, nativePanelPage, postToHost, useHostCardButtons, useHostCardSlot } from '@/lib/nativeHost';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { useCardsEnter } from '@/hooks/useCardsEnter';
-import { Settings, Eye, StickyNote, Check, History, MessageSquare, ArrowDownUp } from 'lucide-react';
+import { Settings, Eye, CheckCircle, Check, History, MessageSquare, ArrowDownUp } from 'lucide-react';
 import { Want, WantExecutionStatus } from '@/types/want';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useWantStore } from '@/stores/wantStore';
@@ -575,7 +575,7 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
   const tabs = [
     { id: 'settings' as TabType, label: 'Settings', icon: Settings },
     // A sticky note, as the values in it are drawn (mw-postit).
-    { id: 'results' as TabType, label: 'Results', icon: StickyNote, badge: resultsBadge },
+    { id: 'results' as TabType, label: 'Results', icon: CheckCircle, badge: resultsBadge },
     // One tab, because it is one story: what comes in, and what goes out.
     { id: 'wiring' as TabType, label: 'Wiring', icon: ArrowDownUp,
       badge: (importBadge ?? 0) + (exposeBadge ?? 0) || null },

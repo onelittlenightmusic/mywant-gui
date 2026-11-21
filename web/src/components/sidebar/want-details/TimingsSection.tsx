@@ -3,8 +3,10 @@ import { BellRing, MessageCircle } from 'lucide-react';
 import { classNames } from '@/utils/helpers';
 import { FIELD_CARD_SURFACE } from '@/design/cards';
 import type { TimingDef } from '@/types/wantType';
+import type { VoiceSpec } from '@/types/want';
 
-/** The labels a want chooses its timings in (engine core/result_timings.go). */
+/** The labels a want chose its timings in before spec.voice — still read when
+ *  it has none, and let go when it is set (engine core/result_timings.go). */
 const MURMUR = 'murmur';
 const NOTIFY = 'notify';
 
@@ -12,16 +14,20 @@ const NOTIFY = 'notify';
  * When the want tells of its answer: each of its type's timings (a song
  * changing, the album changing, coming near a saved place), with whether the
  * want murmurs at it (its tile's "!") and notifies at it (a push). Written to
- * the want's labels `murmur` / `notify` as a list of names, or `none`; with
- * neither written, the type's own say — shown, and a press makes it the
- * want's own.
+ * the want's spec.voice — { murmur: [names], notify: [names] }, an empty list
+ * for none; with neither written, the type's own say — shown, and a press
+ * makes it the want's own.
  */
 export const TimingsSection: React.FC<{
   timings: TimingDef[];
+  voice: VoiceSpec | undefined;
+  /** A want's choice as labels held it before spec.voice. */
   labels: Record<string, string>;
-  onChange: (labels: Record<string, string>) => void;
-}> = ({ timings, labels, onChange }) => {
-  const chosen = (key: string, byDefault: (t: TimingDef) => boolean): Set<string> => {
+  /** The new voice (undefined: back to the type's say). */
+  onChange: (voice: VoiceSpec | undefined) => void;
+}> = ({ timings, voice, labels, onChange }) => {
+  const chosen = (list: string[] | undefined, key: string, byDefault: (t: TimingDef) => boolean): Set<string> => {
+    if (list) return new Set(list);
     const raw = labels[key]?.trim();
     if (!raw) return new Set(timings.filter(byDefault).map(t => t.name));
     const out = new Set<string>();
@@ -31,21 +37,22 @@ export const TimingsSection: React.FC<{
     }
     return out;
   };
-  const murmurAt = chosen(MURMUR, t => !!t.murmur);
-  const notifyAt = chosen(NOTIFY, t => !!t.notify);
+  const murmurAt = chosen(voice?.murmur, MURMUR, t => !!t.murmur);
+  const notifyAt = chosen(voice?.notify, NOTIFY, t => !!t.notify);
 
-  const toggle = (key: string, set: Set<string>, name: string) => {
+  const toggle = (key: 'murmur' | 'notify', set: Set<string>, name: string) => {
     const next = new Set(set);
     if (next.has(name)) next.delete(name); else next.add(name);
-    // In the type's order, so the label reads as the list does.
-    const names = timings.map(t => t.name).filter(n => next.has(n));
-    onChange({ ...labels, [key]: names.length ? names.join(',') : 'none' });
+    // In the type's order, so the list reads as the section does. Both lists
+    // written, so what is shown is what the want holds.
+    const ordered = (s: Set<string>) => timings.map(t => t.name).filter(n => s.has(n));
+    onChange({
+      murmur: ordered(key === 'murmur' ? next : murmurAt),
+      notify: ordered(key === 'notify' ? next : notifyAt),
+    });
   };
-  const reset = () => {
-    const { [MURMUR]: _m, [NOTIFY]: _n, ...rest } = labels;
-    onChange(rest);
-  };
-  const own = MURMUR in labels || NOTIFY in labels;
+  const reset = () => onChange(undefined);
+  const own = !!voice || MURMUR in labels || NOTIFY in labels;
 
   const cell = (on: boolean, Icon: React.ElementType, label: string, press: () => void) => (
     <button
@@ -72,11 +79,11 @@ export const TimingsSection: React.FC<{
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{t.description || t.name}</div>
             <div className="text-[10px] font-mono text-gray-400 truncate">
-              {t.name}{t.onChange ? ` · onChange ${t.onChange}` : ''}{t.if ? ` · if ${t.if}` : ''}
+              {t.name}{t.onChange ? ` · onChange ${t.onChange}` : ''}{t.onIncrease ? ` · onIncrease ${t.onIncrease}` : ''}{t.onDecrease ? ` · onDecrease ${t.onDecrease}` : ''}{t.if ? ` · if ${t.if}` : ''}
             </div>
           </div>
-          {cell(murmurAt.has(t.name), MessageCircle, 'つぶやく', () => toggle(MURMUR, murmurAt, t.name))}
-          {cell(notifyAt.has(t.name), BellRing, '通知', () => toggle(NOTIFY, notifyAt, t.name))}
+          {cell(murmurAt.has(t.name), MessageCircle, 'つぶやく', () => toggle('murmur', murmurAt, t.name))}
+          {cell(notifyAt.has(t.name), BellRing, '通知', () => toggle('notify', notifyAt, t.name))}
         </div>
       ))}
       <div className="flex justify-end text-[11px] text-gray-400">

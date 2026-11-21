@@ -177,6 +177,10 @@ export interface TimingDef {
   description?: string;
   if?: string;
   onChange?: string;
+  /** A field that must have grown since the last answer (a number, or a list's length). */
+  onIncrease?: string;
+  /** A field that must have shrunk since the last answer. */
+  onDecrease?: string;
   murmur?: boolean;
   notify?: boolean;
 }
