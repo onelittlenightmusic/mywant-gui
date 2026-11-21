@@ -126,9 +126,19 @@ export interface VoiceSpec {
   notify?: string[];
 }
 
+/** One kind of murmur a want hears: from wants of `type`, at its `timings`,
+ *  the `nearest` of them on the board (default 1) — woken by it to answer. */
+export interface HearSpec {
+  type: string;
+  timings?: string[];
+  nearest?: number;
+}
+
 export interface WantSpec {
   /** When it speaks up about its answers (Want Settings' Timing). */
   voice?: VoiceSpec;
+  /** Whose murmurs it hears (the canvas's wire: Hear). */
+  hear?: HearSpec[];
   params?: Record<string, unknown>;
   using?: Array<Record<string, string>>;
   recipe?: string;

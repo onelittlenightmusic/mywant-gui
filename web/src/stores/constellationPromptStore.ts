@@ -18,7 +18,7 @@ export interface PromptAction {
   id: string;
   label: string;
   title: string;
-  icon: 'connect' | 'fill';
+  icon: 'connect' | 'fill' | 'hear';
   /** Runs once the menu has closed. Resolves false when there was nothing to
    *  offer, which the menu answers with a bump. */
   run: () => Promise<boolean>;
