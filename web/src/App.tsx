@@ -31,6 +31,7 @@ import { apiClient } from '@/api/client';
 import { useWantStore } from '@/stores/wantStore';
 import { startNotificationPolling } from '@/stores/notificationStore';
 import { registerServiceWorker } from '@/lib/push';
+import { startNotices } from '@/lib/notices';
 import { useSSEEvent } from '@/hooks/useSSEEvent';
 import { useCodingAgentRing } from '@/hooks/useCodingAgentRing';
 import { useIntersectionEffects } from '@/hooks/useIntersectionEffects';
@@ -162,6 +163,7 @@ function App() {
     loadExternalPlugins();
     startNotificationPolling();
     void registerServiceWorker();
+    startNotices();
   }, [fetchConfig, fetchWantTypes, fetchCharacters]);
 
   // Live cross-tab/cross-device sync: a character created, edited, or deleted
