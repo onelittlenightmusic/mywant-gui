@@ -33,6 +33,8 @@ interface DeviceDetailsSidebarProps {
    */
   onToggleLocation?: () => void;
   onToggleHome?: () => void;
+  notices?: boolean;
+  onToggleNotices?: () => void;
 }
 
 /**
@@ -42,7 +44,7 @@ interface DeviceDetailsSidebarProps {
  */
 export const DeviceDetailsSidebar: React.FC<DeviceDetailsSidebarProps> = ({
   device, isActive, isMe, isOnline, characters, assignedCharacterId, onCharacterChange, isHome = false,
-  onToggleLocation, onToggleHome,
+  onToggleLocation, onToggleHome, notices = true, onToggleNotices,
 }) => {
   if (!device) {
     return (
@@ -102,6 +104,8 @@ export const DeviceDetailsSidebar: React.FC<DeviceDetailsSidebarProps> = ({
             onClick={() => {}}
             onToggleLocation={onToggleLocation}
             onToggleHome={onToggleHome}
+            notices={notices}
+            onToggleNotices={onToggleNotices}
           />
         </div>
         <div className="mb-3"><CardStatusRow items={pillItems} /></div>

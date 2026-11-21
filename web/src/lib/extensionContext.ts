@@ -44,12 +44,40 @@ const RETRY_AT_MS = [150, 400, 900, 1600];
 // bridge may not be listening yet (see useRobotInteract).
 const RETRYABLE = new Set(['MYWANT_QUERY_CONTEXT', 'MYWANT_LIST_CONTEXTS', 'MYWANT_FM_STATUS']);
 
+/** The extension's runtime, when this page is one of the extension's own
+ *  (chrome-extension:// or moz-extension://) — not a site's, where a content
+ *  script relays instead. */
+function extensionRuntime(): { sendMessage(msg: unknown, cb: (response: unknown) => void): void } | null {
+  const runtime = (globalThis as any).chrome?.runtime;
+  if (!runtime?.id || typeof runtime.sendMessage !== 'function') return null;
+  return /^(chrome|moz)-extension:$/.test(window.location.protocol) ? runtime : null;
+}
+
 /** Resolves null when no extension answers, which is also how "not installed" looks. */
 function ask<T>(type: string, payload: Record<string, unknown> = {}, timeoutMs = REPLY_TIMEOUT_MS): Promise<T | null> {
   // Framed by an app that keeps profiles the way the extension does
   // (mywant-ios): the same questions go to it, and it answers in the
   // extension's shapes, so the Extension page manages the app's profiles.
   const host = nativeHost ? window.webkit?.messageHandlers?.mywantExtension : undefined;
+  // Drawn inside the extension itself (its settings page mounts the
+  // Extension page — webext options.html): no content script to relay, the
+  // background is asked directly, in the shape the bridge forwards.
+  const runtime = extensionRuntime();
+  if (runtime) {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(null), timeoutMs);
+      try {
+        runtime.sendMessage({ type, ...payload }, (response: unknown) => {
+          clearTimeout(timer);
+          const error = (globalThis as any).chrome?.runtime?.lastError;
+          resolve((error ? { error: String(error.message) } : (response ?? {})) as T);
+        });
+      } catch {
+        clearTimeout(timer);
+        resolve(null);
+      }
+    });
+  }
   if (host) {
     return Promise.resolve(host.postMessage({ type, ...payload }) as unknown as Promise<T>)
       .then(v => (v ?? null) as T | null)

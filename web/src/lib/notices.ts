@@ -8,10 +8,13 @@
  */
 import { subscribeSSE } from '@/api/sseClient';
 import { nativeHost, postToHost } from '@/lib/nativeHost';
+import { myDeviceId } from '@/hooks/useDeviceSession';
 
 export interface WantNotice {
   /** The same for the same answer: shown once however many pages are open. */
   id: string;
+  /** Devices that do not show notices (Devices' bell, off). */
+  off?: string[];
   wantId: string;
   title: string;
   body: string;
@@ -25,6 +28,8 @@ export function startNotices(): void {
   started = true;
   subscribeSSE<WantNotice>('notice', notice => {
     if (!notice?.id) return;
+    // This device's notices are turned off (the Devices page).
+    if (notice.off?.includes(myDeviceId)) return;
     if (nativeHost) {
       // The app shows it — once, though each of its tabs hands it over.
       postToHost({ type: 'notice', ...notice });

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Smartphone, Radio, RadioTower, UserRound, MapPin, MapPinOff, Puzzle, Download, Home } from 'lucide-react';
+import { Smartphone, Radio, RadioTower, UserRound, MapPin, MapPinOff, Puzzle, Download, Home, Bell, BellOff } from 'lucide-react';
 import { BrowserDevice } from '@/types/device';
 import { Character } from '@/types/character';
 import { classNames } from '@/utils/helpers';
@@ -29,6 +29,10 @@ interface DeviceCardProps {
   isHome?: boolean;
   /** Makes this device home, or clears it when it already is. */
   onToggleHome?: () => void;
+  /** It shows a want's notices as its notifications (Devices' 通知). */
+  notices?: boolean;
+  /** Turns its notices on or off. */
+  onToggleNotices?: () => void;
   /** Character assigned to this device, if any — shown as a small badge. */
   assignedCharacter?: Character;
 }
@@ -39,7 +43,7 @@ const EXTENSION_DOWNLOAD_URL =
 
 export const DeviceCard: React.FC<DeviceCardProps> = ({
   device, isFocused, keepFocus, isActive, isMe, isOnline, onClick, onToggleLocation, assignedCharacter,
-  isHome = false, onToggleHome,
+  isHome = false, onToggleHome, notices = true, onToggleNotices,
 }) => {
   const navId = entityCardId('device', device.id);
 
@@ -109,6 +113,20 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       : isMe
         ? 'Run all browser work in this browser'
         : `Run all browser work in ${device.name}`,
+  });
+
+  // Whether a want's notices (its spec.voice.notify) come up on this device as
+  // its notifications — the app's, the browser's, the extension's. A server
+  // setting (devices.yaml noticesOff), so any device can turn another's off.
+  actions.push({
+    icon: notices ? <Bell className="w-5 h-5 text-white" /> : <BellOff className="w-5 h-5 text-white" />,
+    label: notices ? 'Mute' : 'Notify',
+    onClick: () => onToggleNotices?.(),
+    tone: notices ? 'confirm' : 'accent',
+    disabled: !onToggleNotices,
+    title: notices
+      ? `Stop showing want notices on ${isMe ? 'this device' : device.name}`
+      : `Show want notices on ${isMe ? 'this device' : device.name}`,
   });
 
   // The extension, by contrast, can only be asked about the browser it lives
@@ -192,6 +210,11 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             ? <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 animate-pulse" />
             : <MapPinOff className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500" />}
         </span>
+        {!notices && (
+          <span title="Want notices are not shown here" className="inline-flex">
+            <BellOff className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500" />
+          </span>
+        )}
         {isHome && (
           <span title="Home browser — all browser work runs here" className="inline-flex">
             <Home className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />

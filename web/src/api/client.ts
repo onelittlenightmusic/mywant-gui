@@ -1493,7 +1493,7 @@ class MyWantApiClient {
 
   /** Which browser browser work is pinned to and which sends its location
    *  (devices.yaml) — PUT /devices/settings; "" unsets. */
-  async putDeviceSettings(settings: { homeBrowserDevice?: string; activeLocationDevice?: string; locationWantId?: string }): Promise<{ homeBrowserDevice?: string; activeLocationDevice?: string; locationWantId?: string }> {
+  async putDeviceSettings(settings: { homeBrowserDevice?: string; activeLocationDevice?: string; locationWantId?: string; noticesOff?: string[] }): Promise<{ homeBrowserDevice?: string; activeLocationDevice?: string; locationWantId?: string; noticesOff?: string[] }> {
     const response = await this.client.put('/api/v1/devices/settings', settings);
     return response.data;
   }

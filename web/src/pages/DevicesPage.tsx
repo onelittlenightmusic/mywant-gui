@@ -26,6 +26,7 @@ export default function DevicesPage() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [activeDevice, setActiveDevice] = useState<string>('');
   const [homeDevice, setHomeDevice] = useState<string>('');
+  const [noticesOff, setNoticesOff] = useState<string[]>([]);
   const [guiSeq, setGuiSeq] = useState<number>(0);
   const [saving, setSaving] = useState(false);
 
@@ -62,6 +63,7 @@ export default function DevicesPage() {
     setDevices(devList);
     setActiveDevice(String(state.activeLocationDevice ?? ''));
     setHomeDevice(String(state.homeBrowserDevice ?? ''));
+    setNoticesOff(Array.isArray(state.noticesOff) ? (state.noticesOff as string[]) : []);
   }, []);
 
   const load = useCallback(async () => {
@@ -112,7 +114,7 @@ export default function DevicesPage() {
    * through a proxy, as on Fly) was always behind it. The server mirrors the
    * settings back into gui_state, and its push brings them here.
    */
-  const writeSetting = async (updates: { homeBrowserDevice?: string; activeLocationDevice?: string }) => {
+  const writeSetting = async (updates: { homeBrowserDevice?: string; activeLocationDevice?: string; noticesOff?: string[] }) => {
     await apiClient.putDeviceSettings(updates);
   };
 
@@ -125,6 +127,21 @@ export default function DevicesPage() {
     setSaving(true);
     try {
       await writeSetting({ homeBrowserDevice: next });
+    } catch {
+      await load();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Whether a want's notices come up on the device as its notifications.
+  const handleToggleNotices = async (id: string) => {
+    if (saving) return;
+    const next = noticesOff.includes(id) ? noticesOff.filter(d => d !== id) : [...noticesOff, id];
+    setNoticesOff(next);
+    setSaving(true);
+    try {
+      await writeSetting({ noticesOff: next });
     } catch {
       await load();
     } finally {
@@ -222,6 +239,8 @@ export default function DevicesPage() {
         isHome={homeDevice === focusedDevice.id}
         onToggleLocation={() => handleSelectDevice(focusedDevice.id)}
         onToggleHome={() => handleToggleHome(focusedDevice.id)}
+        notices={!noticesOff.includes(focusedDevice.id)}
+        onToggleNotices={() => handleToggleNotices(focusedDevice.id)}
       />
     ) : null,
   });
@@ -271,6 +290,8 @@ export default function DevicesPage() {
                   onClick={() => setFocusedIdx(idx)}
                   onToggleLocation={() => handleSelectDevice(device.id)}
                   onToggleHome={() => handleToggleHome(device.id)}
+                  notices={!noticesOff.includes(device.id)}
+                  onToggleNotices={() => handleToggleNotices(device.id)}
                   assignedCharacter={characters.find(c => c.id === deviceCharacterMap.get(device.id))}
                 />
               ))}
