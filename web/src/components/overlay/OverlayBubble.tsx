@@ -36,6 +36,11 @@ export interface OverlayBubbleProps {
    * must never also walk a tile across it. Default: false.
    */
   contain?: boolean;
+  /**
+   * Its fill, in place of the design's — box and tail alike: a bubble whose
+   * colour is what it says (a want's "!" orange, its "♪" green).
+   */
+  fill?: string;
   children: React.ReactNode;
 }
 
@@ -58,7 +63,7 @@ const TAIL_PX = 9;
  */
 export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps>(({
   left, top, width, height, anchor = 'above', position = 'fixed', zIndex = BUBBLE_Z,
-  className, contain = false, children,
+  className, contain = false, fill, children,
 }, ref) => {
   const design = useOverlayDesign();
   const above = anchor === 'above';
@@ -83,7 +88,8 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
       onMouseDown={contain ? (e) => e.stopPropagation() : undefined}
     >
       <div ref={setFrameEl}
-        className={classNames('relative h-full w-full', design.frame, nativeHost && '!border-0')}>
+        className={classNames('relative h-full w-full', design.frame, nativeHost && '!border-0')}
+        style={fill ? { background: fill, borderColor: fill } : undefined}>
         {children}
       </div>
       {beside && (
@@ -95,7 +101,7 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
             width: 0, height: 0,
             borderTop: `${TAIL_PX}px solid transparent`,
             borderBottom: `${TAIL_PX}px solid transparent`,
-            borderRight: `${TAIL_PX}px solid ${design.tailColor}`,
+            borderRight: `${TAIL_PX}px solid ${fill ?? design.tailColor}`,
           }}
         />
       )}
@@ -107,7 +113,7 @@ export const OverlayBubble = React.forwardRef<HTMLDivElement, OverlayBubbleProps
             width: 0, height: 0,
             borderLeft: `${TAIL_PX}px solid transparent`,
             borderRight: `${TAIL_PX}px solid transparent`,
-            borderTop: `${TAIL_PX}px solid ${design.tailColor}`,
+            borderTop: `${TAIL_PX}px solid ${fill ?? design.tailColor}`,
           }}
         />
       )}

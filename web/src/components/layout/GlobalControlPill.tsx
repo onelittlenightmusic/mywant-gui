@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAttentionStore } from '@/stores/attentionStore';
+import { useAttentionStore, attentionCount } from '@/stores/attentionStore';
 import { Slot } from '@/extensions/Slot';
 import { useMarkJumpStore } from '@/stores/markJumpStore';
 import type { AttentionItem } from '@/api/client';
@@ -240,19 +240,19 @@ export const GlobalControlPill: React.FC<GlobalControlPillProps> = ({
               failed want, a tab run that failed or hit a login. Pressing it
               goes to the first of them (see goToAttention). */}
           {attentionItems.length > 0 && (
-            <Tooltip label={attentionLabel(attentionItems[0], attentionItems.length)} below={!isBottom}>
+            <Tooltip label={attentionLabel(attentionItems[0], attentionCount(attentionItems))} below={!isBottom}>
               <button
                 type="button"
                 onClick={() => goToAttention(attentionItems[0], navigate)}
                 onPointerDown={onPointerDown}
                 tabIndex={hiddenTab}
-                aria-label={`Needs you: ${attentionItems.length}`}
+                aria-label={`Needs you: ${attentionCount(attentionItems)}`}
                 data-header-btn-id="global-attention"
                 className={classNames('mwp-cell mwp-alert mwp-divided', focus('pill-attention'))}
               >
                 {icon('alert')}
                 <span className="mwp-label">{CONTROL_PILL_LABELS.alert}</span>
-                <span className="mwp-count">{attentionItems.length}</span>
+                <span className="mwp-count">{attentionCount(attentionItems)}</span>
               </button>
             </Tooltip>
           )}
