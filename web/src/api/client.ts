@@ -1287,8 +1287,10 @@ class MyWantApiClient {
     total: number;
     /** Per want, the ids of the outputs its unread alerts announce. */
     outputs?: Record<string, string[]>;
+    /** Per want, the words of its newest unread alert. */
+    messages?: Record<string, string>;
   }> {
-    const response = await this.client.get<{ counts: Record<string, number>; total: number; outputs?: Record<string, string[]> }>(
+    const response = await this.client.get<{ counts: Record<string, number>; total: number; outputs?: Record<string, string[]>; messages?: Record<string, string> }>(
       '/api/v1/notifications/unread-counts',
     );
     return response.data;

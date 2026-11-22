@@ -17,6 +17,8 @@ interface NotificationStore {
    * how the board tells which of the answers it draws are still news.
    */
   unreadOutputs: Record<string, string[]>;
+  /** Per want, the words of its newest unread alert (what it murmured). */
+  unreadMessages: Record<string, string>;
   total: number;
   fetch: () => Promise<void>;
   markRead: (wantId: string) => Promise<void>;
@@ -27,12 +29,13 @@ interface NotificationStore {
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
   counts: {},
   unreadOutputs: {},
+  unreadMessages: {},
   total: 0,
 
   fetch: async () => {
     try {
-      const { counts, total, outputs } = await apiClient.getUnreadWantCounts();
-      set({ counts: counts ?? {}, total: total ?? 0, unreadOutputs: outputs ?? {} });
+      const { counts, total, outputs, messages } = await apiClient.getUnreadWantCounts();
+      set({ counts: counts ?? {}, total: total ?? 0, unreadOutputs: outputs ?? {}, unreadMessages: messages ?? {} });
     } catch {
       /* leave the last known counts in place */
     }
