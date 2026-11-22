@@ -8,7 +8,8 @@ import { GenericRecipe } from '@/types/recipe';
 import { getBackgroundStyle, getBackgroundToneColor } from '@/utils/backgroundStyles';
 import { getCategoryBgLight, getCategoryBgDark, getCategoryHexColor, type IconFamily } from '@/components/dashboard/WantTypeVisuals';
 import { WantIcon } from '@/components/dashboard/WantIcon';
-import { WantCardFace, wantTypeIconStyle } from '@/components/dashboard/WantCardFace';
+import { wantTypeIconStyle, solidTypeColor, SOLID_ICON_STYLE } from '@/components/dashboard/WantCardFace';
+import { SolidTypeFace } from '@/components/common/SolidTypeFace';
 import { useSeedFlightStore } from '@/stores/seedFlightStore';
 import { useConfigStore } from '@/stores/configStore';
 import { useColorMode } from '@/hooks/useColorMode';
@@ -454,54 +455,34 @@ function WantInventoryPicker({
             'transition-shadow inventory-slot-focus',
           ].join(' ')}
         >
-          <div className="relative w-full aspect-[2/1]">
-          {/* Same face the child mini tiles use — the want type's own background
-              and its icon in the type colour, rather than a flat category tile
-              with a white icon.
-
-              Icon and name are drawn here rather than by the face, because they
-              sit side by side: a tinted badge on the left, the name in the strip
-              to its right. That is the shape every other card in the app wears
-              (EntityCard's icon badge — thing cards, want type cards, worlds),
-              and the phase-2 header this grid hands off to already used it, so
-              the picked card keeps its layout on the way there. */}
-          <WantCardFace
-            typeName={item.name}
-            displayName={item.title}
-            category={item.category ?? ''}
-            theme={colorMode}
-            context="canvas"
-            showName={false}
-            showIcon={false}
-            // The name owns the right half now, so a background image is fitted
-            // to the height and pinned right — behind the badge, not under the
-            // text — exactly as EntityCard's badge cards do it.
-            imageAlign="right"
-            // Fills the slot via w/h, NOT absolute inset-0: the face's own root
-            // carries `relative`, which wins the position conflict and would
-            // leave this collapsed to zero height with everything inside it
-            // absolutely positioned — i.e. an empty slot.
-            className="w-full h-full"
+          <div className="relative w-full aspect-square rounded-[inherit]">
+          {/* The type as the board draws a want up close (SolidTypeFace): its
+              colour all over, its glyph white at the top left, its name and
+              category on the white face below — so what is picked here looks
+              like what lands on the board. */}
+          <SolidTypeFace
+            color={solidTypeColor(item.name, item.category ?? '')}
+            icon={item.type === 'recipe' ? (
+              <Package style={SOLID_ICON_STYLE} />
+            ) : (
+              <WantIcon
+                typeName={item.name}
+                category={item.category ?? ''}
+                iconFont={iconFont}
+                size={24}
+                isLight={!isDark}
+                iconStyle={SOLID_ICON_STYLE}
+                className="w-full h-full [&_svg]:w-full [&_svg]:h-full"
+              />
+            )}
           >
-            <BadgeNameLayout
-              badgeColor={badgeColor}
-              isDark={isDark}
-              name={item.title}
-              badge={item.type === 'recipe' ? (
-                <Package style={{ width: '58%', height: '58%', ...typeIconStyle }} />
-              ) : (
-                <WantIcon
-                  typeName={item.name}
-                  category={item.category ?? ''}
-                  iconFont={iconFont}
-                  size={18}
-                  isLight={!isDark}
-                  iconStyle={typeIconStyle}
-                  iconClassName="flex-shrink-0"
-                />
+            <div className="h-full flex flex-col justify-center px-[7cqw] py-[4cqh] text-left">
+              <span className="font-bold leading-tight line-clamp-2" style={{ fontSize: 'max(10px, 10.5cqh)' }}>{item.title}</span>
+              {item.category && (
+                <span className="text-gray-500 dark:text-gray-400 truncate" style={{ fontSize: 'max(8px, 8.5cqh)' }}>{item.category}</span>
               )}
-            />
-          </WantCardFace>
+            </div>
+          </SolidTypeFace>
           {/* Overlay covers the face only, so the name bar below stays readable */}
           {isOverlayOpen && (() => {
             const slotItems = buildSlotItems(item, closeOverlay);
@@ -588,7 +569,7 @@ function WantInventoryPicker({
               let slotCounter = 0;
               return groups.map(({ label, items: groupItems }, gi) => {
                 const grid = (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {groupItems.map(item => renderSlot(item, slotCounter++))}
                   </div>
                 );

@@ -14,7 +14,7 @@ import {
 import { useConfigStore } from '@/stores/configStore';
 import { EntityCard, EntityCardAction } from '@/components/common/EntityCard';
 import { entityCardId } from '@/stores/cardOverlayStore';
-import { wantTypeIconStyle } from '@/components/dashboard/WantCardFace';
+import { wantTypeIconStyle, solidTypeColor, SOLID_ICON_STYLE } from '@/components/dashboard/WantCardFace';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { getBackgroundToneColor } from '@/utils/backgroundStyles';
 
@@ -77,7 +77,18 @@ export const WantTypeCard: React.FC<WantTypeCardProps> = ({
       onView={() => onView(wantType)}
       actions={actions}
       iconBadgeColor={getBackgroundToneColor(wantType.name) ?? getCategoryHexColor(wantType.category ?? '', isDarkMode)}
-      icon={<CatIcon style={wantTypeIconStyle(wantType.name, wantType.category ?? '', isDarkMode)} strokeWidth={iconStrokeWidth} />}
+      // The type as a filled block, as the board draws a want of it up close
+      // and the Add Want picker offers it (SolidTypeFace).
+      solidFace={{
+        color: solidTypeColor(wantType.name, wantType.category ?? ''),
+        label: (wantType.category ?? '').toUpperCase(),
+        detail: (
+          <span className="inline-flex items-center gap-1 capitalize">
+            <PatIcon className="h-3 w-3" />{wantType.pattern}
+          </span>
+        ),
+      }}
+      icon={<CatIcon style={SOLID_ICON_STYLE} />}
       titleIcon={<Zap className="h-2 w-2 sm:h-3.5 sm:w-3.5 flex-shrink-0 text-yellow-500" />}
       className={className}
       badges={

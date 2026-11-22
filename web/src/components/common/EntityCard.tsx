@@ -17,6 +17,7 @@
  * the same grid rather than a special case.
  */
 import { hostTrace, nativeHost } from '@/lib/nativeHost';
+import { SolidTypeFace } from '@/components/common/SolidTypeFace';
 import React, { useRef, useEffect, useState } from 'react';
 import { X, Move } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
@@ -178,6 +179,13 @@ export interface EntityCardProps {
    * On by default: it is what every card in the app does, and the one that did
    * not do it was simply the one that forgot.
    */
+  /**
+   * The card as a filled block (SolidTypeFace) — a want type's colour all
+   * over, `icon` white at the top left, `label` small at the top right, and
+   * the title (with `detail` under it) on a white face below. The board draws
+   * a want up close the same way. Replaces the badge face.
+   */
+  solidFace?: { color: string; label?: string; detail?: React.ReactNode };
   iconBadge?: boolean;
   /** Tint (hex) for the icon-badge background wash + ring. */
   iconBadgeColor?: string;
@@ -226,12 +234,15 @@ export const EntityCard: React.FC<EntityCardProps> = ({
   children,
   className,
   style,
-  iconBadge = true,
+  iconBadge: iconBadgeProp = true,
+  solidFace,
   iconBadgeColor,
   iconBadgeBackground,
   wideBadge = false,
   badgeShape = 'square',
 }) => {
+  // A filled face replaces the badge face entirely.
+  const iconBadge = iconBadgeProp && !solidFace;
   const cardRef = useRef<HTMLDivElement>(null);
   const isDarkMode = useDarkMode();
   // The page's own accent, unless the caller names one. Every card in the app
@@ -548,6 +559,16 @@ export const EntityCard: React.FC<EntityCardProps> = ({
 
   const faceChildren = (
     <>
+      {solidFace && (
+        <SolidTypeFace color={solidFace.color} icon={icon} label={solidFace.label} className="z-10 pointer-events-none">
+          <div className="h-full flex flex-col justify-center px-3 py-1.5 min-w-0">
+            <span className="font-bold leading-tight line-clamp-2 text-sm sm:text-base">{title}</span>
+            {solidFace.detail && (
+              <div className="mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 flex-wrap">{solidFace.detail}</div>
+            )}
+          </div>
+        </SolidTypeFace>
+      )}
       {children}
       {iconBadgeNode}
 
@@ -595,7 +616,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
       {/* Badge cards carry their name on the face and their state in the pill,
           so this bar only ever appeared on focus to repeat them. It is left for
           the cards that have nowhere else to put a name. */}
-      {!iconBadge && (
+      {!iconBadge && !solidFace && (
       <div
         className={classNames(
           'absolute bottom-0 left-0 right-0 z-20 mt-auto select-none',
@@ -690,7 +711,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
       {/* Centred icon + name — the generic mirror of WantCardFace's content
           layer. Skipped in badge mode, where the icon becomes a bottom-left
           background badge and the name lives only in the bottom bar. */}
-      {!iconBadge && (
+      {!iconBadge && !solidFace && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 px-2 pb-6 pointer-events-none">
           {icon}
           <p

@@ -161,6 +161,20 @@ export function wantTypeIconStyle(typeName: string, category: string, isDark: bo
 }
 
 /**
+ * The colour a want type's block is filled with — its icon's colour, at the
+ * depth it takes on a light surface, so a white glyph reads on it. One for
+ * every surface that fills a block with its type (the board's tiles at every
+ * zoom, their walls, the Add Want picker, the Want Types cards), so a type is
+ * the same block wherever it is drawn.
+ */
+export function solidTypeColor(typeName: string, category: string): string {
+  return String(wantTypeIconStyle(typeName, category, false).color);
+}
+
+/** A glyph on a filled block: white, drawn heavier, no emboss. */
+export const SOLID_ICON_STYLE: React.CSSProperties = { color: '#ffffff', filter: 'none', strokeWidth: 2.25 };
+
+/**
  * A stable angle for a type with no colour of its own.
  *
  * Derived from the name, so it is the same on every screen and every reload
@@ -409,6 +423,9 @@ export interface WantCardFaceProps {
   /** Overrides the computed icon colour/emboss — pass wantTypeIconStyle() to
    *  match the want card's badge exactly. */
   iconStyle?: React.CSSProperties;
+  /** Filled with the type's colour (solidTypeColor) and its glyph white — a
+   *  block rather than a tint. A type with a background picture keeps it. */
+  solid?: boolean;
 }
 
 export const WantCardFace: React.FC<WantCardFaceProps> = ({
@@ -448,6 +465,7 @@ export const WantCardFace: React.FC<WantCardFaceProps> = ({
   backgroundNode,
   iconStyle,
   paint,
+  solid = false,
 }) => {
   // Subscribe to dynamic maps so this component re-renders when plugin icons/backgrounds load
   useWantTypeStore(s => s.categoryIconMap);
@@ -473,6 +491,9 @@ export const WantCardFace: React.FC<WantCardFaceProps> = ({
     ? Object.fromEntries(Object.entries(bgFitted).map(([k, v]) =>
         [k, typeof v === 'string' && (k === 'background' || k === 'backgroundColor' || k === 'backgroundImage') ? paint(v) : v]))
     : bgFitted;
+  // Filled: the type's colour, unless the type has a picture of its own.
+  const filled = solid && !bgHasImage;
+  const filledBg = filled ? (paint ? paint(solidTypeColor(typeName, category)) : solidTypeColor(typeName, category)) : undefined;
   const overlayRaw = getCardOverlayBg(effectiveBgType, theme, context);
   const overlayBg = paint && typeof overlayRaw === 'string' ? paint(overlayRaw) : overlayRaw;
   // Shared card background opacity (Settings → Cards). Applied to the
@@ -522,6 +543,10 @@ export const WantCardFace: React.FC<WantCardFaceProps> = ({
           className="absolute inset-0 pointer-events-none z-0 rounded-[inherit] overflow-hidden"
           style={{ opacity: cardOpacity }}
         >
+          {filled ? (
+            <div className="absolute inset-0" style={{ background: filledBg }} />
+          ) : (
+          <>
           <div
             className={classNames(
               'absolute inset-0',
@@ -532,6 +557,8 @@ export const WantCardFace: React.FC<WantCardFaceProps> = ({
           />
           {backgroundNode}
           <div className="absolute inset-0" style={{ background: overlayBg }} />
+          </>
+          )}
         </div>
       )}
 
@@ -555,6 +582,7 @@ export const WantCardFace: React.FC<WantCardFaceProps> = ({
             // light cards use a soft shadow so the darker tint isn't over-ringed.
             filter: iconEmbossFilter(isLight),
             ...iconStyle,
+            ...(filled ? SOLID_ICON_STYLE : null),
           }}
         />
         )}
