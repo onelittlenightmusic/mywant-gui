@@ -230,6 +230,11 @@ export function setExtensionSaveContext(name: string): Promise<{ ok?: boolean; s
 
 /** Forget a profile. It leaves the watch set with it, so the extension does not
  *  keep polling a server whose credentials it has just thrown away. */
+/** Name a profile anew — the same server, watched and chosen as before. */
+export function renameExtensionContext(name: string, to: string): Promise<{ ok?: boolean; name?: string; error?: string } | null> {
+  return ask('MYWANT_RENAME_CONTEXT', { name, to });
+}
+
 export function deleteExtensionContext(name: string): Promise<{ ok?: boolean; watched?: string[]; error?: string } | null> {
   return ask('MYWANT_DELETE_CONTEXT', { name });
 }

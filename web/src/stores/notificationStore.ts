@@ -21,7 +21,8 @@ interface NotificationStore {
   unreadMessages: Record<string, string>;
   total: number;
   fetch: () => Promise<void>;
-  markRead: (wantId: string) => Promise<void>;
+  /** by 'near': its words said in full near the person, not opened. */
+  markRead: (wantId: string, by?: 'near') => Promise<void>;
   /** unread count for one want (0 when none) */
   countFor: (wantId: string) => number;
 }
@@ -41,7 +42,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     }
   },
 
-  markRead: async (wantId) => {
+  markRead: async (wantId, by) => {
     // Optimistic: drop this want's badge now, reconcile on the next fetch.
     set((s) => {
       if (!s.counts[wantId] && !s.unreadOutputs[wantId]) return s;
@@ -50,10 +51,12 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       delete next[wantId];
       const outputs = { ...s.unreadOutputs };
       delete outputs[wantId];
-      return { counts: next, unreadOutputs: outputs, total: Math.max(0, s.total - was) };
+      const messages = { ...s.unreadMessages };
+      delete messages[wantId];
+      return { counts: next, unreadOutputs: outputs, unreadMessages: messages, total: Math.max(0, s.total - was) };
     });
     try {
-      await apiClient.markWantNotificationsRead(wantId);
+      await apiClient.markWantNotificationsRead(wantId, by);
     } catch {
       void get().fetch();
     }

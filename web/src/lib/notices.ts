@@ -9,6 +9,7 @@
 import { subscribeSSE } from '@/api/sseClient';
 import { nativeHost, postToHost } from '@/lib/nativeHost';
 import { myDeviceId } from '@/hooks/useDeviceSession';
+import { useNotificationStore } from '@/stores/notificationStore';
 
 export interface WantNotice {
   /** The same for the same answer: shown once however many pages are open. */
@@ -39,6 +40,13 @@ export function startNotices(): void {
     // no page open): not a second time here.
     if (extensionShowsNotices()) return;
     showInBrowser(notice);
+  });
+  // Read somewhere — the board, a device's notification — gone everywhere:
+  // the board's "♪" (the unread counts again), the app's notification.
+  subscribeSSE<{ wantId?: string; ids?: string[] }>('notice_read', read => {
+    if (!read?.ids?.length) return;
+    void useNotificationStore.getState().fetch();
+    if (nativeHost) postToHost({ type: 'notice_read', ids: read.ids });
   });
   if (!nativeHost && !extensionShowsNotices()) askOnFirstTouch();
 }

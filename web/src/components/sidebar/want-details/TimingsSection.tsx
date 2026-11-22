@@ -1,5 +1,5 @@
 import React from 'react';
-import { BellRing, MessageCircle } from 'lucide-react';
+import { BellRing, MessageCircle, BellOff } from 'lucide-react';
 import { classNames } from '@/utils/helpers';
 import { FIELD_CARD_SURFACE } from '@/design/cards';
 import type { TimingDef } from '@/types/wantType';
@@ -10,13 +10,18 @@ import type { VoiceSpec } from '@/types/want';
 const MURMUR = 'murmur';
 const NOTIFY = 'notify';
 
+/** How a want tells of its answer at a timing: not at all, a murmur on the
+ *  board, or a murmur that also goes to the devices as their notification
+ *  (one and the same, by one id: read on the board, gone from the devices). */
+type Telling = 'none' | 'murmur' | 'notify';
+
 /**
  * When the want tells of its answer: each of its type's timings (a song
- * changing, the album changing, coming near a saved place), with whether the
- * want murmurs at it (its tile's "!") and notifies at it (a push). Written to
- * the want's spec.voice — { murmur: [names], notify: [names] }, an empty list
- * for none; with neither written, the type's own say — shown, and a press
- * makes it the want's own.
+ * changing, the album changing, coming near a saved place), each told in one
+ * of three ways — なし, つぶやき (its tile's "♪"), つぶやき＋通知 (and the
+ * devices' notification). Written to the want's spec.voice — { murmur:
+ * [names], notify: [names] }, notify always within murmur; with neither
+ * written, the type's own say — shown, and a press makes it the want's own.
  */
 export const TimingsSection: React.FC<{
   timings: TimingDef[];
@@ -40,37 +45,63 @@ export const TimingsSection: React.FC<{
   const murmurAt = chosen(voice?.murmur, MURMUR, t => !!t.murmur);
   const notifyAt = chosen(voice?.notify, NOTIFY, t => !!t.notify);
 
-  const toggle = (key: 'murmur' | 'notify', set: Set<string>, name: string) => {
-    const next = new Set(set);
-    if (next.has(name)) next.delete(name); else next.add(name);
+  // A notice is a murmur too: notified at a timing is told as both.
+  const tellingAt = (name: string): Telling =>
+    notifyAt.has(name) ? 'notify' : murmurAt.has(name) ? 'murmur' : 'none';
+
+  const choose = (name: string, telling: Telling) => {
+    const murmur = new Set(murmurAt);
+    const notify = new Set(notifyAt);
+    murmur.delete(name);
+    notify.delete(name);
+    if (telling !== 'none') murmur.add(name);
+    if (telling === 'notify') notify.add(name);
+    // Notified ones are murmured too, wherever they came from (labels).
+    notify.forEach(n => murmur.add(n));
     // In the type's order, so the list reads as the section does. Both lists
     // written, so what is shown is what the want holds.
-    const ordered = (s: Set<string>) => timings.map(t => t.name).filter(n => s.has(n));
-    onChange({
-      murmur: ordered(key === 'murmur' ? next : murmurAt),
-      notify: ordered(key === 'notify' ? next : notifyAt),
-    });
+    const ordered = (set: Set<string>) => timings.map(t => t.name).filter(n => set.has(n));
+    onChange({ murmur: ordered(murmur), notify: ordered(notify) });
   };
   const reset = () => onChange(undefined);
   const own = !!voice || MURMUR in labels || NOTIFY in labels;
 
-  const cell = (on: boolean, Icon: React.ElementType, label: string, press: () => void) => (
-    <button
-      type="button"
-      onClick={press}
-      aria-pressed={on}
-      title={label}
-      className={classNames(
-        'flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors',
-        on
-          ? 'bg-blue-600 text-white'
-          : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700',
-      )}
-    >
-      <Icon className="w-3.5 h-3.5" />
-      <span>{label}</span>
-    </button>
-  );
+  const choices: Array<{ telling: Telling; label: string; Icon: React.ElementType }> = [
+    { telling: 'none', label: 'なし', Icon: BellOff },
+    { telling: 'murmur', label: 'つぶやき', Icon: MessageCircle },
+    { telling: 'notify', label: '＋通知', Icon: BellRing },
+  ];
+  // One pill, three ways: なし / つぶやき / つぶやき＋通知.
+  const pill = (name: string) => {
+    const at = tellingAt(name);
+    return (
+      <div role="radiogroup" aria-label="伝え方"
+        className="shrink-0 inline-flex rounded-full bg-gray-100 dark:bg-gray-800 p-0.5">
+        {choices.map(({ telling, label, Icon }) => {
+          const on = at === telling;
+          return (
+            <button
+              key={telling}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => choose(name, telling)}
+              title={telling === 'notify' ? 'つぶやき＋通知' : label}
+              className={classNames(
+                'flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors',
+                on
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{label}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-2">
@@ -82,8 +113,7 @@ export const TimingsSection: React.FC<{
               {t.name}{t.onChange ? ` · onChange ${t.onChange}` : ''}{t.onIncrease ? ` · onIncrease ${t.onIncrease}` : ''}{t.onDecrease ? ` · onDecrease ${t.onDecrease}` : ''}{t.if ? ` · if ${t.if}` : ''}
             </div>
           </div>
-          {cell(murmurAt.has(t.name), MessageCircle, 'つぶやく', () => toggle('murmur', murmurAt, t.name))}
-          {cell(notifyAt.has(t.name), BellRing, '通知', () => toggle('notify', notifyAt, t.name))}
+          {pill(t.name)}
         </div>
       ))}
       <div className="flex justify-end text-[11px] text-gray-400">

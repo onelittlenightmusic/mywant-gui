@@ -216,6 +216,7 @@ export function postToHost(message: HostMessage | HostChoice | HostSheetDone | H
   | { type: 'drag-shape'; shape: 'circle'; x: number; y: number; w: number; h: number }
   | { type: 'card-buttons'; list: { id: string; label: string; icon: string }[] }
   | { type: 'notice'; id: string; wantId: string; title: string; body: string }
+  | { type: 'notice_read'; ids: string[] }
   | { type: 'open-guide'; url: string; title: string; steps: unknown[]; elements: unknown[]; then: unknown[] }
   | { type: 'typing'; on: boolean; composing: boolean }): void {
   window.webkit?.messageHandlers?.mywantHost?.postMessage(message);

@@ -1312,9 +1312,11 @@ class MyWantApiClient {
     await this.client.post(`/api/v1/wants/${wantId}/notify`, { message, title });
   }
 
-  async markWantNotificationsRead(wantId: string): Promise<number> {
+  /** by 'near': its words were said in full near the person on the board —
+   *  read, but not opened (not what Laya counts as the notice being news). */
+  async markWantNotificationsRead(wantId: string, by?: 'near'): Promise<number> {
     const response = await this.client.post<{ read: number }>(
-      `/api/v1/wants/${wantId}/notifications/read`,
+      `/api/v1/wants/${wantId}/notifications/read`, undefined, by ? { params: { by } } : undefined,
     );
     return response.data.read;
   }
