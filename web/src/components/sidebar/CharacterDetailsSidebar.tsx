@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, X, MousePointer2, Users, UserRound, Palette, Smile, Droplet, Shapes, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Check, X, MousePointer2, Users, UserRound, Palette, Smile, Droplet, Shapes, Sparkles, Image as ImageIcon, BarChart3, Bell } from 'lucide-react';
 import { Character } from '@/types/character';
 import { classNames } from '@/utils/helpers';
 import { AVATAR_PRESETS, COLOR_PRESETS } from '@/components/characters/characterPresets';
 import { CharacterCard } from '@/components/characters/CharacterCard';
 import { TabContent, TabSection } from '@/components/sidebar/DetailsSidebar';
 import { CharacterDisplaySettings } from './CharacterDisplaySettings';
+import { CharacterStoryStats } from './CharacterStoryStats';
+import { CharacterNotices } from './CharacterNotices';
 import { SubTabBar } from '@/components/sidebar/SubTabBar';
 import { useInputActions } from '@/hooks/useInputActions';
 import { useSpatialFocusNav } from '@/hooks/useSpatialFocusNav';
@@ -39,8 +41,8 @@ interface CharacterDetailsSidebarProps {
  * The card triggers edit mode through its overlay grid so the interaction is
  * the same keyboard/gamepad path as every other card action.
  */
-/** The sheet's tabs: who this is, how they like the app, and (with an extension) their skills. */
-type SheetTab = 'about' | 'display' | 'skills';
+/** The sheet's tabs: who this is, how they like the app, what its story says, and (with an extension) their skills. */
+type SheetTab = 'about' | 'display' | 'story' | 'notices' | 'skills';
 
 export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = ({
   character, isMyCursor, editing, onEditingChange, onSave, onSetAsMyCursor, onDelete, onSaveDisplay,
@@ -63,7 +65,7 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
   // that can only be tabbed with a finger is a sheet the gamepad has to be put
   // down for, and the two sheets are read the same way.
   const cycleTab = (dir: 1 | -1) => {
-    const order: SheetTab[] = hasSkills ? ['about', 'display', 'skills'] : ['about', 'display'];
+    const order: SheetTab[] = hasSkills ? ['about', 'display', 'story', 'notices', 'skills'] : ['about', 'display', 'story', 'notices'];
     setTab(prev => order[(order.indexOf(prev) + dir + order.length) % order.length]);
   };
   useInputActions({
@@ -161,6 +163,8 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
           tabs={[
             { id: 'about',   label: 'Character', icon: UserRound, hasData: true },
             { id: 'display', label: 'Display',   icon: Palette,   hasData: true },
+            { id: 'story',   label: 'ストーリー', icon: BarChart3, hasData: true },
+            { id: 'notices', label: '通知',      icon: Bell,      hasData: true },
             ...(hasSkills ? [{ id: 'skills' as const, label: '技能', icon: Sparkles, hasData: true }] : []),
           ]}
           active={tab}
@@ -168,7 +172,11 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
           isBottom={isBottom}
         />
         <div className={classNames('flex-1 min-h-0 overflow-y-auto', isBottom && 'order-first')}>
-        {tab === 'skills' ? (
+        {tab === 'notices' ? (
+          <CharacterNotices characterId={character.id} />
+        ) : tab === 'story' ? (
+          <CharacterStoryStats characterId={character.id} />
+        ) : tab === 'skills' ? (
           <TabContent>
             <Slot name="characterSkills" character={character} />
           </TabContent>

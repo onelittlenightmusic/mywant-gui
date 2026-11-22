@@ -1,3 +1,30 @@
+/** A notice told as a device's own notification (notices.go), with its rating now. */
+export interface ToldNotice {
+  id: string;
+  at: string;
+  wantId: string;
+  want: string;
+  wantType?: string;
+  text: string;
+  moment?: string;
+  timings?: string[];
+  rating?: 'up' | 'down';
+  ratedBy?: string;
+  ratedAt?: string;
+}
+
+/** A character's story in figures (story_stats.go). */
+export interface CharacterStoryStats {
+  character: string;
+  days: number;
+  events: number;
+  /** The part of the day it is now (朝・昼・夕方・夜). */
+  now: string;
+  kinds: Record<string, number>;
+  parts: { part: string; events: number; home?: string; kind?: string; asks?: number; of?: number }[];
+  wants: { id: string; name: string; type: string; opens: number; arrives: number; score: number }[];
+}
+
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { WantPatch,
   Want,
@@ -1459,6 +1486,28 @@ class MyWantApiClient {
 
   async getCharacter(id: string): Promise<Character> {
     return this.deduplicatedGet<Character>(`/api/v1/characters/${id}`);
+  }
+
+  /** The notices told (GET /api/v1/notices), newest first, each with its
+   *  rating now. */
+  async getNotices(limit = 100): Promise<ToldNotice[]> {
+    const response = await this.client.get<{ notices: ToldNotice[] }>('/api/v1/notices', { params: { limit } });
+    return response.data.notices ?? [];
+  }
+
+  /** Rate a notice told — or take its rating back ('none'): the last rating
+   *  stands, and Laya learns from it with the rest. */
+  async rateNotice(id: string, rating: 'up' | 'down' | 'none', character?: string): Promise<void> {
+    await this.client.post(`/api/v1/notices/${encodeURIComponent(id)}/rate`, { rating, character });
+  }
+
+  /** A character's story in figures (GET /api/v1/characters/{id}/story/stats):
+   *  each kind of event, the parts of the day with where it goes then, and the
+   *  wants it looked at most. */
+  async getCharacterStoryStats(id: string, days = 30): Promise<CharacterStoryStats> {
+    const response = await this.client.get<CharacterStoryStats>(
+      `/api/v1/characters/${encodeURIComponent(id)}/story/stats`, { params: { days } });
+    return response.data;
   }
 
   async createCharacter(req: Pick<Character, 'name' | 'avatar' | 'color'>): Promise<Character> {
