@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Globe, Check, LogIn, RefreshCw, Download } from 'lucide-react';
+import { Layers, Check, LogIn, RefreshCw, Download } from 'lucide-react';
 import { WorldSummary } from '@/types/world';
 import { apiClient } from '@/api/client';
 import { classNames } from '@/utils/helpers';
@@ -82,7 +82,7 @@ export const WorldCard: React.FC<WorldCardProps> = ({
       onView={() => onView(world)}
       actions={actions}
       iconBadgeColor={world.current ? '#6366f1' : '#64748b'}
-      icon={<Globe style={{ color: world.current ? '#6366f1' : '#64748b' }} />}
+      icon={<Layers style={{ color: world.current ? '#6366f1' : '#64748b' }} />}
       backgroundNode={showThumbnail ? (
         <>
           <img
@@ -95,7 +95,7 @@ export const WorldCard: React.FC<WorldCardProps> = ({
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/80 via-white/30 to-white/80 dark:from-gray-900/85 dark:via-gray-900/40 dark:to-gray-900/85" />
         </>
       ) : undefined}
-      titleIcon={<Globe className="h-2 w-2 sm:h-3.5 sm:w-3.5 flex-shrink-0 text-primary-500" />}
+      titleIcon={<Layers className="h-2 w-2 sm:h-3.5 sm:w-3.5 flex-shrink-0 text-primary-500" />}
       badges={world.current ? (
         <span className="flex items-center gap-1 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">
           <Check className="w-3 h-3" />Current

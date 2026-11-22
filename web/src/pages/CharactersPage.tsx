@@ -1,6 +1,7 @@
 import { useHostPanel } from '@/lib/nativeHost';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Users, MousePointer2, User } from 'lucide-react';
+import { PanelFloatButton } from '@/components/common/PanelFloatButton';
 import { useAppHeader } from '@/hooks/useAppHeader';
 import { useAppSidebar } from '@/hooks/useAppSidebar';
 import { CharacterCard } from '@/components/characters/CharacterCard';
@@ -159,6 +160,8 @@ export default function CharactersPage() {
     onCreateWant: startCreating,
     title: 'Characters',
     createButtonLabel: 'Add Character',
+    // The menu's own icon, as every page's add (and the ＋ on it).
+    createButtonIcon: Users,
     itemCount: characters.length,
     itemLabel: 'character',
   });
@@ -335,7 +338,7 @@ const NewCharacterForm: React.FC<NewCharacterFormProps> = ({
   form, nameRef, onChange, onSave, onCancel, saving,
 }) => (
   // No card chrome or heading: the sidebar already frames this and titles it.
-  <div className="flex flex-col gap-3 p-4">
+  <div className="relative h-full flex flex-col gap-3 p-4">
 
     {/* No onKeyDown: Enter/Escape are handled once, by the page's
         useInputActions hook, so keyboard and gamepad take the same path. They
@@ -396,15 +399,7 @@ const NewCharacterForm: React.FC<NewCharacterFormProps> = ({
       <span className="text-sm font-semibold truncate" style={{ color: form.color }}>{form.name || 'Preview'}</span>
     </div>
 
-    <div className="flex gap-2">
-      <button
-        onClick={onSave}
-        disabled={saving || !form.name.trim()}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 disabled:opacity-40 transition-colors"
-      >
-        <Plus className="w-3.5 h-3.5" />
-        {saving ? 'Creating…' : 'Create'}
-      </button>
+    <div>
       <button
         onClick={onCancel}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -413,6 +408,11 @@ const NewCharacterForm: React.FC<NewCharacterFormProps> = ({
         Cancel
       </button>
     </div>
+
+    {/* Create: the round button floating at the panel's bottom right, as
+        every add panel's (PanelFloatButton). */}
+    <PanelFloatButton label="Create character" icon={Users} onPress={onSave}
+      disabled={saving || !form.name.trim()} color="bg-indigo-600" />
   </div>
 );
 

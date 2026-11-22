@@ -197,14 +197,19 @@ export const PanelShell: React.FC<{
   onClose?: () => void;
   actions?: React.ReactNode;
   subject?: PanelSubject;
+  /** The actions in the top row even when a panel's tabs go along the bottom
+   *  (Add Want, laid as a want's details are: nothing under their tabs). */
+  actionsInRow?: boolean;
   children: React.ReactNode;
-}> = ({ title, onClose, actions, subject, children }) => {
-  const isBottom = usePanelAtBottom();
+}> = ({ title, onClose, actions, subject, actionsInRow, children }) => {
+  const isBottom = usePanelAtBottom() && !actionsInRow;
   const framed = useContext(HostFramedPanel);
   // Nothing left for the row to hold: no name, no close (an app's sheet has
   // its own way out), the actions down in the bar. Drawn anyway it was an
   // empty 62px band at the top of the sheet.
-  const rowEmpty = !title && isBottom && (framed || !onClose);
+  // Add Want's row (actionsInRow) is empty too once its buttons have gone
+  // elsewhere — the app's dock, beside the type's card.
+  const rowEmpty = !title && (isBottom || (actionsInRow && !actions)) && (framed || !onClose);
   // The bar's own clearance of the screen's bottom edge — none on a panel page
   // in an app's sheet, whose frame already keeps clear of it (and of the pill).
   const barEdge = nativePanelPage ? '0px' : 'env(safe-area-inset-bottom, 0px)';

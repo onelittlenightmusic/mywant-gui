@@ -207,6 +207,8 @@ export default function WantTypePage() {
   useAppHeader({
     onCreateWant: () => {},
     title: 'Want Types',
+    // Types come from their YAML (custom install): nothing to add here.
+    hideCreateButton: true,
     itemCount: wantTypes.length,
     itemLabel: 'type',
     showMinimap: minimapOpen,

@@ -1,6 +1,6 @@
 import { useHostPanel } from '@/lib/nativeHost';
 import React, { useEffect, useRef, useState } from 'react';
-import { Globe } from 'lucide-react';
+import { Layers } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWorldStore } from '@/stores/worldStore';
 import { WorldSummary } from '@/types/world';
@@ -12,6 +12,7 @@ import { useGridCols } from '@/hooks/useGridCols';
 import { useRightSidebarExclusivity } from '@/hooks/useRightSidebarExclusivity';
 import { WorldGrid } from '@/components/dashboard/WorldGrid';
 import { WorldDetailsSidebar } from '@/components/sidebar/WorldDetailsSidebar';
+import { AddWorldSidebar } from '@/components/sidebar/AddWorldSidebar';
 import { ErrorBanner } from '@/components/common/ErrorBanner';
 import { useCardOverlayStore, entityCardId } from '@/stores/cardOverlayStore';
 import { useGuiStateFlushStore } from '@/stores/guiStateFlushStore';
@@ -23,6 +24,8 @@ export default function WorldsPage() {
   const [openError, setOpenError] = useState<string | null>(null);
   const [exportingName, setExportingName] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  // New World's panel open (AddWorldSidebar).
+  const [adding, setAdding] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
@@ -39,17 +42,16 @@ export default function WorldsPage() {
   // auto-saves the current wants under the outgoing world's name (or "default"),
   // clears them, and starts the new name empty. So there is no separate create
   // endpoint to call — see openWorld in handlers_worlds.go.
-  const handleCreate = async () => {
-    const name = window.prompt('New world name')?.trim();
-    if (!name) return;
-    if (worlds.some(w => w.name === name)) {
-      setOpenError(`World "${name}" already exists — open it from its card instead.`);
-      return;
-    }
+  // New World opens its panel (AddWorldSidebar) — a prompt was not shown in an
+  // app's web view, so the button did nothing there.
+  const handleCreate = () => { sidebar.clearSelection(); setOpenError(null); setAdding(true); };
+  const createWorld = async (name: string) => {
     setOpeningName(name);
     setOpenError(null);
     try {
+      await useGuiStateFlushStore.getState().flush?.();
       await apiClient.openWorld(name);
+      setAdding(false);
       navigate('/dashboard');
     } catch (err) {
       setOpenError(err instanceof Error ? err.message : `Failed to create world "${name}"`);
@@ -154,7 +156,8 @@ export default function WorldsPage() {
     cols,
   });
 
-  const panelRoute = useHostPanel(selectedWorld?.name, (name) => {
+  const panelRoute = useHostPanel(adding ? '__add' : selectedWorld?.name, (name) => {
+    if (name === '__add') { setAdding(true); return; }
     const w = worlds.find(x => x.name === name);
     if (!w) return false;
     sidebar.selectItem(w);
@@ -163,13 +166,21 @@ export default function WorldsPage() {
   useAppSidebar({
     // In an app on a phone, the app's own sheet (lib/nativeHost, useHostPanel).
     hostRoute: panelRoute,
-    open: !!selectedWorld,
-    title: selectedWorld?.name ?? '',
-    onClose: () => sidebar.clearSelection(),
+    open: adding || !!selectedWorld,
+    title: adding ? 'New World' : (selectedWorld?.name ?? ''),
+    onClose: () => { setAdding(false); sidebar.clearSelection(); },
     // A detail panel opens on its subject's card and takes the host's
     // identity row — one name, one close, in the same place on every page.
     chromeless: true,
-    content: selectedWorld ? (
+    content: adding ? (
+      <AddWorldSidebar
+        taken={worlds.map(w => w.name)}
+        busy={!!openingName}
+        error={openError}
+        onCreate={createWorld}
+        onCancel={() => setAdding(false)}
+      />
+    ) : selectedWorld ? (
       <WorldDetailsSidebar
         world={selectedWorld}
         onRefresh={fetchWorlds}
@@ -185,7 +196,8 @@ export default function WorldsPage() {
   useAppHeader({
     onCreateWant: handleCreate,
     createButtonLabel: 'New World',
-    createButtonIcon: Globe,
+    createButtonIcon: Layers,
+    isAddWantActive: adding,
     title: 'Worlds',
     itemCount: worlds.length,
     itemLabel: 'world',
@@ -203,7 +215,7 @@ export default function WorldsPage() {
           <WorldGrid
             worlds={worlds}
             selectedWorld={selectedWorld}
-            onViewWorld={sidebar.selectItem}
+            onViewWorld={(w) => { setAdding(false); sidebar.selectItem(w); }}
             onOpenWorld={handleOpen}
             onRefresh={fetchWorlds}
             onExportWorld={handleExport}

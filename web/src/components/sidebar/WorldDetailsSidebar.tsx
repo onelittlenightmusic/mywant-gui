@@ -1,6 +1,6 @@
 import React from 'react';
 import { WorldCard } from '@/components/dashboard/WorldCard';
-import { Check, Globe } from 'lucide-react';
+import { Check, Layers } from 'lucide-react';
 import { WorldSummary } from '@/types/world';
 import { CardStatusRow, CardStatusItem } from './CardStatusRow';
 import { apiClient } from '@/api/client';
@@ -31,7 +31,7 @@ export const WorldDetailsSidebar: React.FC<WorldDetailsSidebarProps> = ({
   if (!world) {
     return (
       <div className="text-center py-12">
-        <Globe className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <Layers className="h-12 w-12 text-gray-400 mx-auto mb-4" />
         <p className="text-gray-500">Select a world to view details</p>
       </div>
     );

@@ -1,5 +1,6 @@
 import { useHostPanel } from '@/lib/nativeHost';
 import React, { useState, useEffect, useRef } from 'react';
+import { Bot } from 'lucide-react';
 import { AgentResponse } from '@/types/agent';
 import { useAgentStore } from '@/stores/agentStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -149,6 +150,8 @@ export const AgentsPage: React.FC = () => {
     onCreateWant: handleCreateAgent,
     title: 'Agents',
     createButtonLabel: 'Add Agent',
+    // The menu's own icon, as every page's add (and the ＋ on it).
+    createButtonIcon: Bot,
     itemCount: agents.length,
     itemLabel: 'agent',
   });

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
+import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { Save, Plus, Heart, Bot, FolderOpen, Crown } from 'lucide-react';
+import { useHostActions, useHostDockAction } from '@/lib/nativeHost';
 import { Want, CreateWantRequest, UpdateWantRequest, WhenSpec } from '@/types/want';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { MarkButton } from '@/components/common/MarkButton';
 import { ErrorDisplay } from '@/components/common/ErrorDisplay';
-import { FormYamlToggle } from '@/components/common/FormYamlToggle';
 import { RightSidebar } from '@/components/layout/RightSidebar';
 import { PanelShell, PANEL_ACTION_BUTTON } from '@/components/sidebar/PanelIdentityRow';
 import { YamlEditor } from './YamlEditor';
@@ -839,7 +839,22 @@ export const WantForm = forwardRef<WantFormHandle, WantFormProps>(function WantF
   const isTypeSelected = !!type;
   const shouldGlowButton = isTypeSelected && !isEditing && selectedTypeId;
   const config = useConfigStore(state => state.config);
-  const isBottom = useHeaderAtBottom();
+  // The form's tabs along the bottom when the person keeps a panel's tabs
+  // there — as a want's details do (usePanelAtBottom), in an app too, where
+  // there is no header of the page's to go by.
+  const isBottom = usePanelAtBottom();
+  // Its add / update / deploy button, the app's own where an app draws it.
+  const submitDisabled = isSubmitting || (!isEditing && !isTypeSelected);
+  const hostActionsRoom = useHostActions([{
+    id: 'submit',
+    label: isRecommendationMode ? 'Deploy' : (isEditing ? 'Update' : 'Add'),
+    icon: isEditing ? 'Save' : isRecommendationMode ? 'Plus' : 'HeartPlus',
+    disabled: submitDisabled,
+    tone: isEditing ? 'save' : isRecommendationMode ? 'deploy' : 'add',
+  }], () => {
+    if (submitDisabled) return;
+    (document.getElementById('want-form') as HTMLFormElement | null)?.requestSubmit();
+  });
 
   const allExamples = useMemo(() => {
     const recipeExamples = selectedItemType === 'recipe'
@@ -867,97 +882,109 @@ export const WantForm = forwardRef<WantFormHandle, WantFormProps>(function WantF
     return selectedRecipe?.recipe?.parameters ?? undefined;
   }, [selectedItemType, type, recipes]);
 
-  const headerAction = (
-    <div className="flex items-stretch gap-0">
-      {!isEditing && !!selectedTypeId && allExamples.length > 0 && (
-        <div ref={exampleMenuRef} className="relative flex items-stretch">
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={() => setShowExampleMenu(v => !v)}
-            className={classNames(
-              "flex flex-col items-center justify-center gap-0.5 px-3 h-full transition-all duration-150 focus:outline-none",
-              showExampleMenu
-                ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
-            )}
-            title="Load example"
-          >
-            <FolderOpen className="w-4 h-4" />
-            <span className="text-[9px] font-bold uppercase tracking-tighter hidden sm:block">Example</span>
-          </button>
-          {showExampleMenu && (
-            <div className="absolute bottom-full left-0 mb-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 min-w-48 max-h-48 overflow-y-auto">
-              {allExamples.map(ex => (
-                <button
-                  key={ex.key}
-                  type="button"
-                  onClick={() => { ex.onLoad(); setShowExampleMenu(false); }}
-                  className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{ex.name}</p>
-                  {ex.description && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{ex.description}</p>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
+  // The add / update / deploy button — a round one at the right of the top
+  // row, beside Example and Form/YAML (floatingAdd: the form), else the
+  // row's block button (a recommendation's deploy, the YAML editor). Its icon alone, in a
+  // browser as in an app. In an app's sheet the app draws it in its room
+  // (useHostActions).
+  const floatingAdd = editMode === 'form' && !isRecommendationMode;
+  const submitIcon = isEditing ? (
+    <Save className="w-6 h-6" />
+  ) : isRecommendationMode ? (
+    <Plus className="w-6 h-6" />
+  ) : (
+    <span className="relative inline-flex flex-shrink-0">
+      <Heart className="w-6 h-6" />
+      <Plus className="w-3 h-3 absolute -top-1 -right-1.5" style={{ strokeWidth: 3.5 }} />
+    </span>
+  );
+  const submitLabel = isRecommendationMode ? 'Deploy' : (isEditing ? 'Update' : 'Add');
+  // In a phone's sheet, the app's own, at the right end of the row along the
+  // sheet's top (useHostDockAction).
+  const submitDocked = useHostDockAction(floatingAdd ? {
+    id: 'submit', label: submitLabel, icon: isEditing ? 'Save' : 'HeartPlus',
+    disabled: submitDisabled, tone: isEditing ? 'save' : 'add',
+  } : null, () => {
+    if (submitDisabled) return;
+    (document.getElementById('want-form') as HTMLFormElement | null)?.requestSubmit();
+  });
+  const submitButton = (round: boolean) => round && submitDocked ? null : hostActionsRoom ? (
+    <div ref={hostActionsRoom} aria-hidden className={round ? 'w-11 h-11 self-center flex-shrink-0 mx-2 rounded-full invisible' : classNames(PANEL_ACTION_BUTTON, 'invisible')} />
+  ) : (
+    <button
+      ref={addButtonRef}
+      type="submit"
+      disabled={submitDisabled}
+      form="want-form"
+      title={submitLabel}
+      aria-label={submitLabel}
+      data-robot-target="form_deploy_btn"
+      data-free-cursor-item
+      onFocus={() => setAddButtonFocused(true)}
+      onBlur={() => setAddButtonFocused(false)}
+      className={classNames(
+        round
+          ? 'w-11 h-11 self-center flex-shrink-0 mx-2 rounded-full shadow-md flex items-center justify-center transition-all duration-150 sidebar-focus-ring'
+          : PANEL_ACTION_BUTTON,
+        submitDisabled
+          ? (round ? 'bg-gray-400 text-white cursor-not-allowed opacity-60' : 'bg-gray-400/30 cursor-not-allowed grayscale opacity-50')
+          : isEditing
+            ? 'bg-indigo-600 text-white hover:brightness-110 active:opacity-80'
+            : isRecommendationMode
+              ? 'bg-purple-600 text-white hover:brightness-110 active:opacity-80'
+              : addButtonFocused
+                ? 'bg-blue-500 text-white active:opacity-80'
+                : 'bg-blue-600 text-white hover:brightness-110 active:opacity-80'
+      )}
+    >
+      {isSubmitting ? <LoadingSpinner size="sm" /> : submitIcon}
+    </button>
+  );
+
+  // Example: loads a want type's example parameters — about the type, so
+  // beside its card (the type card's row), opening downward over the fields.
+  const exampleControl = !isEditing && !!selectedTypeId && allExamples.length > 0 ? (
+    <div ref={exampleMenuRef} className="relative flex-shrink-0">
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShowExampleMenu(v => !v)}
+        className={classNames(
+          'h-12 w-12 flex items-center justify-center rounded-lg border shadow-sm transition-all duration-150 focus:outline-none',
+          showExampleMenu
+            ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700'
+            : 'text-gray-500 dark:text-gray-300 bg-white dark:bg-gray-800 border-gray-300/80 dark:border-black/60 hover:text-gray-700 dark:hover:text-white'
+        )}
+        title="Load example"
+        aria-label="Load example"
+      >
+        <FolderOpen className="w-5 h-5" />
+      </button>
+      {showExampleMenu && (
+        <div className="absolute top-full right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 min-w-48 max-h-60 overflow-y-auto">
+          {allExamples.map(ex => (
+            <button
+              key={ex.key}
+              type="button"
+              onClick={() => { ex.onLoad(); setShowExampleMenu(false); }}
+              className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{ex.name}</p>
+              {ex.description && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{ex.description}</p>
+              )}
+            </button>
+          ))}
         </div>
       )}
-      <div className="flex items-center h-full px-2">
-        <FormYamlToggle
-          mode={editMode}
-          onModeChange={setEditMode}
-        />
-      </div>
-      <button
-        ref={addButtonRef}
-        type="submit"
-        disabled={isSubmitting || (!isEditing && !isTypeSelected)}
-        form="want-form"
-        data-robot-target="form_deploy_btn"
-        data-free-cursor-item
-
-        onFocus={() => setAddButtonFocused(true)}
-        onBlur={() => setAddButtonFocused(false)}
-        className={classNames(
-          PANEL_ACTION_BUTTON,
-          isSubmitting || (!isEditing && !isTypeSelected)
-            ? "bg-gray-400/30 cursor-not-allowed grayscale opacity-50"
-            : isEditing
-              ? "bg-indigo-600/90 text-white hover:brightness-110 active:opacity-80"
-              : isRecommendationMode
-                ? "bg-purple-600/90 text-white hover:brightness-110 active:opacity-80"
-                : addButtonFocused
-                  ? "bg-blue-500 text-white active:opacity-80"
-                  : "bg-gray-700 text-white hover:bg-gray-600 active:opacity-80"
-        )}
-      >
-        {isSubmitting ? (
-          <LoadingSpinner size="sm" />
-        ) : (
-          <>
-            <div className="w-5 h-5 flex items-center justify-center">
-              {isEditing ? (
-                <Save className="w-5 h-5" />
-              ) : isRecommendationMode ? (
-                <Plus className="w-5 h-5" />
-              ) : (
-                <span className="relative inline-flex flex-shrink-0">
-                  <Heart className="w-4 h-4" />
-                  <Plus className="w-2.5 h-2.5 absolute -top-1 -right-1" style={{ strokeWidth: 3 }} />
-                </span>
-              )}
-            </div>
-            <span className="text-white text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">
-              {isRecommendationMode ? 'Deploy' : (isEditing ? 'Update' : 'Add')}
-            </span>
-          </>
-        )}
-      </button>
     </div>
-  );
+  ) : null;
+
+  // The row's one button, or nothing (it is in the app's dock): then no row.
+  const headerSubmit = submitButton(floatingAdd);
+  const headerAction = headerSubmit ? (
+    <div className="flex items-stretch gap-0">{headerSubmit}</div>
+  ) : undefined;
 
   // Get background style based on selected want type
   // Only show background when a type is selected (not during selection/re-selection)
@@ -994,8 +1021,11 @@ export const WantForm = forwardRef<WantFormHandle, WantFormProps>(function WantF
       // otherwise still think the stick was its own.
       claimsInputOnOpen
     >
-      <PanelShell title="" onClose={onClose} actions={headerAction}>
-      <form id="want-form" onSubmit={handleSubmit} className="space-y-3 focusable-container h-full flex flex-col">
+      {/* Its buttons in the top row, with the close — where a want's
+          details have their way out — whichever side the tabs are on, so
+          the tabs are the bottom of the panel as theirs are. */}
+      <PanelShell title="" onClose={onClose} actions={headerAction} actionsInRow>
+      <form id="want-form" onSubmit={handleSubmit} className="focusable-container h-full flex flex-col">
 
         {editMode === 'form' ? (
           <>
@@ -1181,6 +1211,12 @@ export const WantForm = forwardRef<WantFormHandle, WantFormProps>(function WantF
 
                 return (
                   <>
+                    {/* The head — what is being made — laid as a want's
+                        details lay their card (WantDetailsSidebar): px-3 pt-3
+                        above the tabs, and lifted over them with the body when
+                        the tabs go along the bottom, so the tabs are the last
+                        thing in the panel in both. */}
+                    <div className={classNames('flex-shrink-0 px-3 pt-3', isBottom ? 'order-first' : '')}>
                     {/* The sentence the form has been saying all along —
                         "With <thing> … I want <type>" — keeps its shape once a
                         type is chosen. Only the blank at the end gets filled;
@@ -1222,9 +1258,10 @@ export const WantForm = forwardRef<WantFormHandle, WantFormProps>(function WantF
                         not a different-looking slot. Keeping the card shape
                         across both phases is what lets the picked card fly here
                         rather than vanish and be replaced by something else. */}
+                    <div className="flex items-stretch gap-2">
                     <div
                       ref={typeCardRef}
-                      className="relative flex-shrink-0 h-12 rounded-lg overflow-hidden border border-gray-300/80 dark:border-black/60 shadow-sm"
+                      className="relative flex-1 min-w-0 h-12 rounded-lg overflow-hidden border border-gray-300/80 dark:border-black/60 shadow-sm"
                     >
                       {/* The card IS the header — the type's own background runs
                           the full width with its name over it, rather than a
@@ -1282,20 +1319,26 @@ export const WantForm = forwardRef<WantFormHandle, WantFormProps>(function WantF
                       </div>
                     </div>
 
-                    {/* ── Tab bar — order-2 when isBottom so content floats above ── */}
-                    <div className={isBottom ? 'order-2' : ''}>
-                      <FormTabBar
-                        activeTab={activeFormTab}
-                        onTabChange={(tab) => setActiveFormTab(tab)}
-                        badges={tabBadges}
-                        isBottom={isBottom}
-                      />
+                    {exampleControl}
                     </div>
+                    </div>
+
+                    {/* ── Tab bar — where a want's details have theirs: between
+                        the head and the body, the last thing in the panel when
+                        the tabs go along the bottom (head and body order-first). */}
+                    <FormTabBar
+                      activeTab={activeFormTab}
+                      onTabChange={(tab) => setActiveFormTab(tab)}
+                      badges={tabBadges}
+                      isBottom={isBottom}
+                    />
 
                     {/* ── Tab content (scrollable) — order-1 when isBottom ── */}
                     <div className={classNames(
-                      'flex-1 min-h-0 overflow-y-auto space-y-3 pr-0.5',
-                      isBottom ? 'order-1' : ''
+                      // A want's settings tab's own body (SettingsTab): its
+                      // margins, so the fields stand where they stand there.
+                      'flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col gap-3 px-3 sm:px-4 pt-3 pb-4',
+                      isBottom ? 'order-first' : ''
                     )}>
 
                       {/* NAME tab */}
@@ -1484,17 +1527,13 @@ export const WantForm = forwardRef<WantFormHandle, WantFormProps>(function WantF
           </>
         )}
 
-        {/* Error Display */}
-        {validationError && (
-          <ErrorDisplay error={validationError} />
-        )}
-
-        {apiError && (
-          <ErrorDisplay error={apiError} />
-        )}
-
-        {error && (
-          <ErrorDisplay error={error} />
+        {/* Error Display — over the tabs, with the body. */}
+        {(validationError || apiError || error) && (
+          <div className={classNames('flex-shrink-0 px-3 space-y-2', isBottom ? 'order-first' : '')}>
+            {validationError && <ErrorDisplay error={validationError} />}
+            {apiError && <ErrorDisplay error={apiError} />}
+            {error && <ErrorDisplay error={error} />}
+          </div>
         )}
 
       </form>

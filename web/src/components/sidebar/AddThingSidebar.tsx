@@ -1,11 +1,13 @@
 import { BadgeNameLayout } from '@/components/common/BadgeNameLayout';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bookmark, Check, Pin, Save, Search, Type } from 'lucide-react';
+import { useHostActions, useHostDockAction } from '@/lib/nativeHost';
 import { useThingStore } from '@/stores/thingStore';
 import { useThingTileStore } from '@/stores/thingTileStore';
 import { ThingRecord } from '@/types/thing';
 import { resolveLucideIcon } from '@/utils/subtypeIcons';
-import { PanelActions, usePanelActionsPlacement, PANEL_ACTION_BUTTON } from '@/components/sidebar/PanelIdentityRow';
+import { PanelActions } from '@/components/sidebar/PanelIdentityRow';
+import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { classNames } from '@/utils/helpers';
 import { vividIconColor, iconEmbossFilter } from '@/components/dashboard/WantCardFace';
 import { thingBackgroundSrc, kindBackgroundSrc, THING_BACKGROUND_SCRIM } from '@/utils/thingBackground';
@@ -95,6 +97,7 @@ export function defaultThingName(typeName: string): string {
 }
 
 export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCancel, getPinPosition, record }) => {
+  const isBottom = usePanelAtBottom();
   const dataTypes = useThingStore(s => s.dataTypes);
   const addRecord = useThingStore(s => s.addRecord);
   const recategorize = useThingStore(s => s.recategorizeRecord);
@@ -279,7 +282,7 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
     return (
       <div ref={panelRef} className="h-full flex flex-col">
         <ThingPanelTabs tab={tab} onChange={setTab} />
-        <div className="p-4 pb-2 flex-shrink-0">
+        <div className={classNames('p-4 pb-2 flex-shrink-0', isBottom ? 'order-first' : '')}>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             <input
@@ -298,7 +301,7 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
           </p>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 pb-4">
+        <div className={classNames('flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 pb-4', isBottom ? 'order-first' : '')}>
           {pinnable.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
               {records.length === 0 ? 'Nothing remembered yet.' : `No results for "${pinFilter}"`}
@@ -405,7 +408,7 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
     // they were a box of fixed height that stopped partway down the screen.
     <div ref={panelRef} className="h-full flex flex-col">
       {!editing && <ThingPanelTabs tab={tab} onChange={setTab} />}
-      <div className="p-4 flex-1 min-h-0 flex flex-col gap-4">
+      <div className={classNames('relative p-4 flex-1 min-h-0 flex flex-col gap-4', isBottom ? 'order-first' : '')}>
       {/* The name itself — first, because it is what the user came to write. */}
       <div className="flex-shrink-0">
         <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
@@ -548,9 +551,17 @@ export const AddThingSidebar: React.FC<AddMemoSidebarProps> = ({ onAdded, onCanc
           same rule through the same shell, which is the point: both panels
           open from the same board, and a button that moves in one and not the
           other reads as two different kinds of panel. See PanelActions. */}
-      <PanelActions>
-        <ThingActions save={save} canSave={canSave} editing={editing} onCancel={onCancel} />
-      </PanelActions>
+      {onCancel && (
+        <PanelActions>
+          <ThingCancel onCancel={onCancel} />
+        </PanelActions>
+      )}
+      {/* Its save: a round button floating over the cards, as Add Want's
+          add floats over its fields — the icon alone, in a browser as in an
+          app (which draws it, useHostActions). */}
+      <div className="absolute bottom-4 right-6 z-10 pointer-events-none">
+        <ThingActions save={save} canSave={canSave} editing={editing} />
+      </div>
       </div>
     </div>
   );
@@ -574,47 +585,54 @@ const ThingActions: React.FC<{
   save: () => void;
   canSave: boolean;
   editing: boolean;
-  onCancel?: () => void;
-}> = ({ save, canSave, editing, onCancel }) => {
-  const placement = usePanelActionsPlacement();
-  const inBar = placement === 'bar';
+}> = ({ save, canSave, editing }) => {
   const [focused, setFocused] = useState(false);
+  const label = editing ? 'Save' : 'Remember';
+  // Its save / remember button, the app's own where an app draws it.
+  const hostRoom = useHostActions([{
+    id: 'save', label, icon: editing ? 'Save' : 'Bookmark',
+    disabled: !canSave, tone: editing ? 'save' : 'thing',
+  }], () => { if (canSave) save(); });
+  // In a phone's sheet, the app's own, at the right end of its top row.
+  const docked = useHostDockAction({
+    id: 'save', label, icon: editing ? 'Save' : 'Bookmark',
+    disabled: !canSave, tone: editing ? 'save' : 'thing',
+  }, () => { if (canSave) save(); });
+  if (docked) return null;
+  if (hostRoom) return <div ref={hostRoom} aria-hidden className="w-14 h-14 rounded-full invisible" />;
   return (
-    <div className={classNames('flex items-stretch', inBar ? 'flex-1 justify-end' : '')}>
-      {onCancel && (
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-3 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex-shrink-0"
-        >
-          Cancel
-        </button>
+    <button
+      type="button"
+      onClick={save}
+      disabled={!canSave}
+      title={label}
+      aria-label={label}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      className={classNames(
+        'pointer-events-auto w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-150 sidebar-focus-ring',
+        !canSave
+          ? 'bg-gray-400 text-white cursor-not-allowed opacity-60'
+          : focused
+            ? 'bg-blue-500 text-white active:opacity-80'
+            : 'bg-amber-500 text-white hover:brightness-110 active:opacity-80',
       )}
-      <button
-        type="button"
-        onClick={save}
-        disabled={!canSave}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        className={classNames(
-          PANEL_ACTION_BUTTON,
-          !canSave
-            ? 'bg-gray-400/30 cursor-not-allowed grayscale opacity-50'
-            : focused
-              ? 'bg-blue-500 text-white active:opacity-80'
-              : 'bg-amber-500 text-white hover:brightness-110 active:opacity-80',
-        )}
-      >
-        <div className="w-5 h-5 flex items-center justify-center">
-          {editing ? <Save className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
-        </div>
-        <span className="text-white text-[9px] font-bold leading-none uppercase tracking-tighter hidden sm:block">
-          {editing ? 'Save' : 'Remember'}
-        </span>
-      </button>
-    </div>
+    >
+      {editing ? <Save className="w-6 h-6" /> : <Bookmark className="w-6 h-6" />}
+    </button>
   );
 };
+
+/** The way out of editing a thing, where the panel's shell keeps its actions. */
+const ThingCancel: React.FC<{ onCancel: () => void }> = ({ onCancel }) => (
+  <button
+    type="button"
+    onClick={onCancel}
+    className="px-3 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex-shrink-0"
+  >
+    Cancel
+  </button>
+);
 
 /** The two ways onto the board, in the order L1/R1 walk them. */
 const THING_PANEL_TABS = [
@@ -628,6 +646,7 @@ const THING_PANEL_TABS = [
  */
 const ThingPanelTabs: React.FC<{ tab: 'add' | 'pin'; onChange: (t: 'add' | 'pin') => void }> = ({ tab, onChange }) => (
   <SidebarTabBar
+    isBottom={usePanelAtBottom()}
     tabs={THING_PANEL_TABS}
     activeTab={tab}
     onTabChange={(id) => onChange(id as 'add' | 'pin')}

@@ -75,6 +75,8 @@ interface HostBridge {
   /** Panels as the app's drawers from the side, whatever the width — the
    *  app on a Mac, whose window is never a phone's (see hostSheetsOn). */
   sideSheets?: boolean;
+  /** It draws a panel's own buttons (kind 'actions') in the room the page keeps. */
+  actionBars?: boolean;
   /** How wide those drawers are, in px. */
   sideSheetWidth?: number;
   /** A card page is shown as the corner card ('corner'), embedded in a
@@ -936,12 +938,14 @@ export function hostDragShape(rect: DOMRect, shape: 'circle'): void {
 // phase: 'press' for a button pressed once; 'down' and 'up' for what is held
 // (the pad's arrows and face buttons).
 
-export type HostControlKind = 'pill' | 'pad' | 'ring' | 'frame' | 'tabs' | 'chat' | 'pick';
+export type HostControlKind = 'pill' | 'pad' | 'ring' | 'frame' | 'tabs' | 'chat' | 'pick' | 'actions';
 export type HostInputPhase = 'press' | 'down' | 'up';
 
 export interface HostControlItem {
   id: string;
   label?: string;
+  /** Shown but not pressable now. */
+  disabled?: boolean;
   /** A Lucide icon name; the app picks its own glyph for it. */
   icon?: string;
   /** A second, smaller line. */
@@ -1096,6 +1100,77 @@ export function useHostTabs(
       detail: t.count, tone: t.alert ? 'alert' : undefined })),
   } : null, (item, phase) => { if (phase === 'press') onChange(item); });
   return native ? box : null;
+}
+
+// ── A panel's own buttons, drawn by the app ─────────────────────────────────
+//
+// A panel's primary action — Add Want's add, Add Thing's add or save — is
+// drawn by the app as its tab strip is (kind 'actions'), where an app says it
+// can (actionBars): the page keeps the button's room, an empty box the
+// button's size, follows where it is every frame, and runs the same action on
+// a press there. Anywhere else, the page's own button.
+
+/** The app draws a panel's buttons in the room the page keeps for them. */
+export const hostDrawsActions: boolean = nativeHost && !!window.__mywantHost?.actionBars;
+
+export interface HostActionItem {
+  id: string;
+  label: string;
+  /** A Lucide icon name. */
+  icon: string;
+  disabled?: boolean;
+  /** Its colour: add, save, deploy (the page's button's). */
+  tone?: string;
+}
+
+/** Room for a panel's buttons, for the app to draw them in — the ref goes on
+ *  the room; null where the page draws its own. */
+export function useHostActions(items: HostActionItem[], onPress: (id: string) => void): RefCallback<HTMLDivElement> | null {
+  // The room as it comes and goes: a panel's footer may be drawn after the
+  // panel itself (a form's, once its type is known), so it is followed from
+  // when it is there, not looked for once.
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
+  const uid = useId();
+  const [at, setAt] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const native = hostDrawsActions && nativePanelPage;
+  useEffect(() => {
+    if (!native || !el) { setAt(null); return; }
+    // Every frame, as a tab strip's room: a panel slides in sideways.
+    let raf = 0;
+    const tick = () => {
+      const r = el.getBoundingClientRect();
+      setAt(prev => {
+        const next = { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
+        return prev && prev.x === next.x && prev.y === next.y && prev.w === next.w && prev.h === next.h ? prev : next;
+      });
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => cancelAnimationFrame(raf);
+  }, [native, el]);
+  useHostControl(native && at && at.w > 0 ? {
+    id: `actions-${uid}`,
+    kind: 'actions',
+    at,
+    items: items.map(i => ({ id: i.id, label: i.label, icon: i.icon, disabled: i.disabled, tone: i.tone })),
+  } : null, (item, phase) => { if (phase === 'press') onPress(item); });
+  return native ? setEl : null;
+}
+
+/** A panel's primary button handed to the app's dock — the row along the top
+ *  of a phone's sheet, beside its pill, at its right end (no room kept on the
+ *  page: the control has no `at`). True where the app draws it there; the
+ *  page then draws nothing of it. A Mac's drawer has no such row. */
+export const hostDocksActions: boolean = hostDrawsActions && nativePanelPage && !window.__mywantHost?.sideSheets;
+
+export function useHostDockAction(item: HostActionItem | null, onPress: () => void): boolean {
+  const uid = useId();
+  useHostControl(hostDocksActions && item ? {
+    id: `dock-${uid}`,
+    kind: 'actions',
+    items: [{ id: item.id, label: item.label, icon: item.icon, disabled: item.disabled, tone: item.tone }],
+  } : null, (_id, phase) => { if (phase === 'press') onPress(); });
+  return hostDocksActions && !!item;
 }
 
 // ── A chat want's conversation, drawn by the app ────────────────────────────

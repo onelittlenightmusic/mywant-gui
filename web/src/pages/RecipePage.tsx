@@ -1,7 +1,7 @@
 import { useHostPanel } from '@/lib/nativeHost';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { notify } from '@/stores/noticeStore';
-import { Plus } from 'lucide-react';
+import { Plus, BookOpen } from 'lucide-react';
 import { useRecipeStore } from '@/stores/recipeStore';
 import { useWantStore } from '@/stores/wantStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -266,6 +266,8 @@ export default function RecipePage() {
     onCreateWant: handleCreateRecipe,
     title: 'Recipes',
     createButtonLabel: 'Add Recipe',
+    // The menu's own icon, as every page's add (and the ＋ on it).
+    createButtonIcon: BookOpen,
     itemCount: recipes.length,
     itemLabel: 'recipe',
   });
