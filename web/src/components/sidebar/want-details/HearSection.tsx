@@ -163,63 +163,142 @@ const HearEntryRows: React.FC<{ hearer: Want; entry: HearSpec; onChange: (entry:
   );
 };
 
-const AddHear: React.FC<{ hearerType?: string; taken: Set<string>; onAdd: (entry: HearSpec) => void; onCancel: () => void }> = ({
-  hearerType, taken, onAdd, onCancel,
+/** A slot of the row still to be filled: a cube's outline, waiting. */
+const EmptyCube: React.FC<{ active?: boolean; label: string; onClick?: () => void; size?: number }> = ({ active, label, onClick, size = 46 }) => (
+  <button type="button" onClick={onClick} aria-label={label} title={label}
+    className={classNames('flex-none rounded-[22%] border-2 border-dashed flex items-center justify-center text-[10px] font-bold transition-colors',
+      active ? 'border-violet-500 text-violet-600 bg-violet-50 dark:bg-violet-900/30 dark:text-violet-300'
+        : 'border-gray-300 dark:border-gray-600 text-gray-400')}
+    style={{ width: size, height: size + Math.max(3, Math.round(size * 0.1)) }}>
+    ?
+  </button>
+);
+
+/**
+ * A new moment to hear, made as a row of the list above is read: this want,
+ * then whom it hears, then when — each slot filled in turn, the choices for
+ * the slot being filled laid out under it as cubes, the row reading out what
+ * it will do as it fills. Whom: the types of the wants on the board, the
+ * nearest first (one has to be in earshot to be heard). When: that type's
+ * moments, as many as wanted.
+ */
+const AddHear: React.FC<{ hearer: Want; onAdd: (entry: HearSpec) => void; onCancel: () => void }> = ({
+  hearer, onAdd, onCancel,
 }) => {
   const types = useWantTypeStore(s => s.wantTypes);
   const fetchWantTypes = useWantTypeStore(s => s.fetchWantTypes);
   useEffect(() => { if (!types.length) void fetchWantTypes(); }, [types.length, fetchWantTypes]);
+  const wants = useWantStore(s => s.wants);
+  const hearerType = hearer.metadata?.type ?? '';
+  const hearerDef = useTypeDef(hearerType);
+  const categoryOf = (type: string) => types.find(t => t.name === type)?.category ?? '';
+
+  // Whom it could hear: each type on the board once, by its nearest want.
+  const speakers = useMemo(() => {
+    const here = cellOf(hearer);
+    const best = new Map<string, { want: Want; d: number }>();
+    for (const w of wants) {
+      const type = w.metadata?.type;
+      if (!type || idOf(w) === idOf(hearer) || w.metadata?.isSystemWant) continue;
+      if (types.length && !types.some(t => t.name === type && !t.system_type)) continue;
+      const c = cellOf(w);
+      const d = here && c ? Math.hypot(c.x - here.x, c.y - here.y) : Infinity;
+      const had = best.get(type);
+      if (!had || d < had.d) best.set(type, { want: w, d });
+    }
+    return [...best.entries()].sort((a, b) => a[1].d - b[1].d).map(([type, v]) => ({ type, ...v }));
+  }, [wants, hearer, types]);
+
   const [type, setType] = useState('');
   const def = useTypeDef(type || undefined);
   const offered = heardTimings(def);
-  const [chosen, setChosen] = useState<Set<string>>(new Set());
-  // A new type: its moments other than the standard answer, chosen to start.
-  useEffect(() => {
-    const names = offered.map(t => t.name);
-    const own = names.filter(n => n !== 'answer');
-    setChosen(new Set(own.length ? own : names));
-  }, [def]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const choices = useMemo(
-    () => types.filter(t => !t.system_type && t.name !== hearerType && !taken.has(t.name))
-      .sort((a, b) => (a.title || a.name).localeCompare(b.title || b.name)),
-    [types, hearerType, taken],
-  );
-  const color = solidTypeColor(type, def?.metadata?.category ?? types.find(t => t.name === type)?.category ?? '');
+  const [chosen, setChosen] = useState<string[]>([]);
+  useEffect(() => { setChosen([]); }, [type]);
+  const step: 'whom' | 'when' = type ? 'when' : 'whom';
+  const speaker = speakers.find(sp => sp.type === type);
+  const speakerColor = solidTypeColor(type, categoryOf(type));
+  const firstTiming = offered.find(t => t.name === chosen[0]);
+  const hearing = (hearerDef as { hearing?: { description?: string } } | null)?.hearing;
 
   return (
-    <div className={classNames('rounded-lg px-2.5 py-2 space-y-2', FIELD_CARD_SURFACE)}>
-      <select value={type} onChange={e => setType(e.target.value)} aria-label="聞く type"
-        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm">
-        <option value="">聞く type を選ぶ…</option>
-        {choices.map(t => <option key={t.name} value={t.name}>{t.title || t.name}</option>)}
-      </select>
-      {type && (offered.length ? (
-        <div className="flex flex-wrap gap-1.5">
-          {offered.map(t => {
-            const on = chosen.has(t.name);
-            return (
-              <button key={t.name} type="button" aria-pressed={on}
-                onClick={() => setChosen(prev => { const n = new Set(prev); if (n.has(t.name)) n.delete(t.name); else n.add(t.name); return n; })}
-                className={classNames('inline-flex items-center gap-1.5 rounded-full pl-1 pr-2 py-0.5 text-[11px] border transition-colors',
-                  on ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400')}>
-                <TimingCube icon={t.icon} color={color} size={20} />
-                {t.description || t.name}
-                {on && <Check className="w-3 h-3" />}
-              </button>
-            );
-          })}
+    <div className={classNames('rounded-xl pl-1.5 pr-1 py-1.5 space-y-2 ring-2 ring-violet-300/60 dark:ring-violet-700/60', FIELD_CARD_SURFACE)}>
+      {/* The row, as it will read once filled. */}
+      <div className="flex items-center gap-1.5">
+        <WantCube type={hearerType} category={categoryOf(hearerType)} label={hearer.metadata?.name} title={hearer.metadata?.name} />
+        <span className="flex-none text-gray-400" aria-hidden><Ear className="w-3.5 h-3.5" /></span>
+        {type ? (
+          <button type="button" onClick={() => setType('')} title="相手を選びなおす" className="flex-none">
+            <WantCube type={type} category={categoryOf(type)} label={speaker?.want.metadata?.name ?? type} />
+          </button>
+        ) : <EmptyCube active label="聞く相手" />}
+        <span className="flex-none text-[11px] font-bold text-gray-400" aria-hidden>の</span>
+        {firstTiming ? (
+          <span className="relative flex-none">
+            <TimingCube icon={firstTiming.icon} color={speakerColor} size={46} label={firstTiming.name} title={firstTiming.description} />
+            {chosen.length > 1 && (
+              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center">
+                +{chosen.length - 1}
+              </span>
+            )}
+          </span>
+        ) : <EmptyCube active={step === 'when'} label="いつ" />}
+        <div className="flex-1 min-w-0 pl-1">
+          <div className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug truncate">
+            {firstTiming ? `「${firstTiming.description || firstTiming.name}」${chosen.length > 1 ? ` ほか${chosen.length - 1}つ` : ''}を聞いて`
+              : step === 'whom' ? '誰の…' : 'いつを…'}
+          </div>
+          <div className={classNames('text-[13px] font-bold leading-snug truncate', firstTiming ? 'text-gray-900 dark:text-gray-100' : 'text-gray-300 dark:text-gray-600')}>
+            {hearing?.description || 'ひとこと返す'}
+          </div>
         </div>
-      ) : (
-        <div className="text-[11px] text-gray-500">この type はつぶやくタイミングがありません</div>
-      ))}
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="px-2.5 py-1 text-xs rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">やめる</button>
-        <button type="button" disabled={!type || chosen.size === 0}
-          onClick={() => onAdd({ type, timings: offered.map(t => t.name).filter(n => chosen.has(n)), nearest: 1 })}
-          className="px-2.5 py-1 text-xs rounded bg-blue-600 text-white disabled:opacity-40">聞く</button>
+        <div className="flex-none flex flex-col gap-1 self-start">
+          <button type="button" onClick={onCancel} aria-label="やめる" title="やめる"
+            className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"><X className="w-3.5 h-3.5" /></button>
+        </div>
       </div>
+
+      {/* The choices for the slot being filled. */}
+      {step === 'whom' && (
+        speakers.length ? (
+          <div className="flex flex-wrap gap-2 pl-1">
+            {speakers.map(sp => (
+              <button key={sp.type} type="button" onClick={() => setType(sp.type)} className="flex flex-col items-center gap-0.5 w-[54px]"
+                title={`${sp.want.metadata?.name}（${types.find(t => t.name === sp.type)?.title ?? sp.type}）${Number.isFinite(sp.d) ? ` · ${sp.d.toFixed(1)} マス` : ''}`}>
+                <WantCube type={sp.type} category={categoryOf(sp.type)} size={40} dim={sp.d > HEAR_RADIUS_CELLS} />
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-full">{sp.want.metadata?.name}</span>
+              </button>
+            ))}
+          </div>
+        ) : <div className="text-[11px] text-gray-500 pl-1">盤面にほかの want がいません</div>
+      )}
+      {step === 'when' && (
+        offered.length ? (
+          <div className="flex flex-wrap gap-2 pl-1">
+            {offered.map(t => {
+              const on = chosen.includes(t.name);
+              return (
+                <button key={t.name} type="button" aria-pressed={on} title={t.description || t.name}
+                  onClick={() => setChosen(prev => (on ? prev.filter(n => n !== t.name) : [...prev, t.name]))}
+                  className={classNames('relative flex flex-col items-center gap-0.5 w-[64px] rounded-lg p-0.5', on && 'bg-violet-100 dark:bg-violet-900/40')}>
+                  <TimingCube icon={t.icon} color={speakerColor} size={40} label={t.name} />
+                  <span className="text-[10px] leading-tight text-gray-600 dark:text-gray-300 line-clamp-2 text-center">{t.description || t.name}</span>
+                  {on && <Check className="absolute top-0 right-1 w-3.5 h-3.5 text-violet-600" />}
+                </button>
+              );
+            })}
+          </div>
+        ) : <div className="text-[11px] text-gray-500 pl-1">この type はつぶやくタイミングがありません</div>
+      )}
+
+      {step === 'when' && (
+        <div className="flex justify-end">
+          <button type="button" disabled={chosen.length === 0}
+            onClick={() => onAdd({ type, timings: offered.map(t => t.name).filter(n => chosen.includes(n)), nearest: 1 })}
+            className="inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full bg-violet-600 text-white disabled:opacity-40">
+            <Ear className="w-3.5 h-3.5" /> 聞く
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -230,7 +309,6 @@ export const HearSection: React.FC<{
   onHearChange: (hear: HearSpec[]) => void;
 }> = ({ want, hear, onHearChange }) => {
   const [adding, setAdding] = useState(false);
-  const taken = useMemo(() => new Set(hear.map(h => h.type)), [hear]);
   return (
     <div className="space-y-2">
       {hear.map(h => (
@@ -238,8 +316,15 @@ export const HearSection: React.FC<{
           onChange={(next) => onHearChange(next ? hear.map(x => (x.type === h.type ? next : x)) : hear.filter(x => x.type !== h.type))} />
       ))}
       {adding ? (
-        <AddHear hearerType={want.metadata?.type} taken={taken}
-          onAdd={(entry) => { onHearChange([...hear, entry]); setAdding(false); }}
+        <AddHear hearer={want}
+          onAdd={(entry) => {
+            // A type it hears already gains the moments; a new one is added.
+            const had = hear.find(h => h.type === entry.type);
+            onHearChange(had
+              ? hear.map(h => (h.type === entry.type ? { ...h, timings: [...new Set([...(h.timings ?? []), ...(entry.timings ?? [])])] } : h))
+              : [...hear, entry]);
+            setAdding(false);
+          }}
           onCancel={() => setAdding(false)} />
       ) : (
         <button type="button" onClick={() => setAdding(true)}
