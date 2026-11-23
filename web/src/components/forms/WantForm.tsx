@@ -844,7 +844,16 @@ export const WantForm = forwardRef<WantFormHandle, WantFormProps>(function WantF
   // there is no header of the page's to go by.
   const isBottom = usePanelAtBottom();
   // Its add / update / deploy button, the app's own where an app draws it.
-  const submitDisabled = isSubmitting || (!isEditing && !isTypeSelected);
+  // Required parameters still empty: a new want is not added without them. An
+  // example shown in one is only an example (例: …), and a want made with it
+  // empty sat waiting for it ("パラメータ待機中") as if it had been given.
+  const missingRequired = useMemo(() => (
+    isEditing || selectedItemType === 'recipe' || !selectedWantType?.parameters ? [] :
+      selectedWantType.parameters
+        .filter(p => p.required && (params[p.name] === undefined || params[p.name] === null || params[p.name] === ''))
+        .map(p => p.name)
+  ), [isEditing, selectedItemType, selectedWantType, params]);
+  const submitDisabled = isSubmitting || (!isEditing && !isTypeSelected) || missingRequired.length > 0;
   const hostActionsRoom = useHostActions([{
     id: 'submit',
     label: isRecommendationMode ? 'Deploy' : (isEditing ? 'Update' : 'Add'),
@@ -916,7 +925,7 @@ export const WantForm = forwardRef<WantFormHandle, WantFormProps>(function WantF
       type="submit"
       disabled={submitDisabled}
       form="want-form"
-      title={submitLabel}
+      title={missingRequired.length ? `必須のパラメータが未入力です: ${missingRequired.join(', ')}` : submitLabel}
       aria-label={submitLabel}
       data-robot-target="form_deploy_btn"
       data-free-cursor-item
@@ -1528,8 +1537,13 @@ export const WantForm = forwardRef<WantFormHandle, WantFormProps>(function WantF
         )}
 
         {/* Error Display — over the tabs, with the body. */}
-        {(validationError || apiError || error) && (
+        {(validationError || apiError || error || missingRequired.length > 0) && (
           <div className={classNames('flex-shrink-0 px-3 space-y-2', isBottom ? 'order-first' : '')}>
+            {missingRequired.length > 0 && !validationError && !apiError && !error && (
+              <div className="text-xs text-amber-700 dark:text-amber-400">
+                必須のパラメータが未入力です: {missingRequired.join(', ')}
+              </div>
+            )}
             {validationError && <ErrorDisplay error={validationError} />}
             {apiError && <ErrorDisplay error={apiError} />}
             {error && <ErrorDisplay error={error} />}

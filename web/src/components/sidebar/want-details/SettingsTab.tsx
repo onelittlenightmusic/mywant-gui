@@ -408,6 +408,11 @@ export const SettingsTab: React.FC<{
     schedule: when.length,
     deps: using.length,
   };
+  // Required parameters left empty — what the want is waiting for.
+  const missingRequired = (wantTypeDef?.parameters ?? [])
+    .filter(p => p.required && (params[p.name] === undefined || params[p.name] === null || params[p.name] === ''))
+    .map(p => p.name);
+
   const section = (tab: FormTab, body: React.ReactNode) => {
     const { label, icon: Icon } = FORM_TAB_META[tab];
     const active = activeSettingsTab === tab && sidebarDetailFocused;
@@ -577,6 +582,15 @@ export const SettingsTab: React.FC<{
             {/* PARAMS */}
             {section('params',
               <div>
+                {/* A required parameter left empty: the want does nothing until
+                    it is given ("パラメータ待機中" on its card), which the card
+                    alone did not say plainly enough to be connected to it. */}
+                {missingRequired.length > 0 && (
+                  <div role="status" className="mb-2 flex items-start gap-2 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/30 px-3 py-2 text-xs text-red-700 dark:text-red-300">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-px" />
+                    <span>必須のパラメータが未入力のため待機中です: <b>{missingRequired.join(', ')}</b></span>
+                  </div>
+                )}
                 <ParameterGridSection
                   parameters={params}
                   parameterDefinitions={wantTypeDef?.parameters}

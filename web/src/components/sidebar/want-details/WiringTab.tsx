@@ -1,6 +1,8 @@
 /** The Wiring tab — how this want is joined to the others. */
 import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { LucideIcon, ArrowUpFromLine, ArrowDownToLine, Radio, Folder } from 'lucide-react';
+import { LucideIcon, ArrowUpFromLine, ArrowDownToLine, Radio, Folder, Ear } from 'lucide-react';
+import { HearSection } from './HearSection';
+import type { HearSpec } from '@/types/want';
 import { ThemeOrderSection } from '@/components/sidebar/ThemeOrderSection';
 import { useConstellationStore } from '@/stores/constellationStore';
 import { Want } from '@/types/want';
@@ -96,6 +98,19 @@ export const WiringTab: React.FC<{
     if (!typeName) return;
     apiClient.getWantType(typeName).then(def => setWantTypeDef(def)).catch(() => {});
   }, [want.metadata?.type]);
+
+  // Whose murmurs it hears (spec.hear), written as the others here are.
+  const [hear, setHear] = useState<HearSpec[]>(want.spec?.hear ?? []);
+  useEffect(() => { setHear(want.spec?.hear ?? []); }, [want.spec?.hear]);
+  const handleHearChange = useCallback(async (next: HearSpec[]) => {
+    const id = want.metadata?.id ?? want.id;
+    if (!id) return;
+    setHear(next);
+    try {
+      await updateWant(id, { metadata: want.metadata, spec: { ...want.spec, hear: next } });
+      onWantUpdate?.();
+    } catch { setHear(want.spec?.hear ?? []); }
+  }, [want, updateWant, onWantUpdate]);
 
   const handleImportsChange = useCallback(async (newImports: Record<string, string>) => {
     const id = want.metadata?.id;
@@ -209,6 +224,13 @@ export const WiringTab: React.FC<{
           focusRequest={base + exposeArrival}
           onExitTop={() => { setHalf('subscribe'); setSubscribeArrival(t => t + 1); }}
         />
+      </div>
+      {/* Whose murmurs it hears — the board's Hear, here as well. Mouse and
+          touch only for now, as Constellations below. */}
+      <div>
+        <WiringHeading icon={Ear} label="Hear" count={hear.length}
+          className="text-violet-500 dark:text-violet-400" />
+        <HearSection want={want} hear={hear} onHearChange={handleHearChange} />
       </div>
       {/* The constellations it is in — the thing panel's Constellations tab,
           about a want: joined, left, ordered here. A tie to other wants and

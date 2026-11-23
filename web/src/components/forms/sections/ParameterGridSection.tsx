@@ -905,7 +905,9 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                   isModified
                       ? 'bg-amber-50/60 dark:bg-amber-900/20 shadow hover:shadow-md hover:bg-amber-100/60 dark:hover:bg-amber-900/30'
                       : param.required && isEmpty
-                        ? 'bg-red-50/40 dark:bg-red-900/15 shadow-sm hover:shadow hover:bg-red-100/40 dark:hover:bg-red-900/25'
+                        // Wanted and not given: the want waits for it, so it is
+                        // ringed, not merely tinted, to be found at a glance.
+                        ? 'bg-red-50 dark:bg-red-900/25 ring-2 ring-inset ring-red-400/70 dark:ring-red-500/60 shadow-sm hover:shadow hover:bg-red-100/60 dark:hover:bg-red-900/35'
                         : `${typeStyle.tint} hover:shadow-md`
                 )}
                 bgIconLarge
@@ -1254,7 +1256,11 @@ export const ParameterGridSection: React.FC<ParameterGridSectionProps> = ({
                       // Words between quotes, so they read as words given;
                       // a number as a number, digits lined up.
                       const quoted = !isNumber && !isEmpty && !!displayValue;
-                      const shownText = isEmpty && !displayValue ? '未入力' : quoted ? `“${displayValue}”` : (displayValue || param.description || '—');
+                      // Empty, with an example to show: said as one (例: …), so it
+                      // is never taken for a value already given.
+                      const shownText = isEmpty && !displayValue ? '未入力'
+                        : isEmpty ? `例: ${displayValue}`
+                        : quoted ? `“${displayValue}”` : (displayValue || param.description || '—');
                       const bigFont = shownText.length <= 8;
                       const paramValueColor = (() => {
                         if (param.type === 'percent' && displayValue) {
