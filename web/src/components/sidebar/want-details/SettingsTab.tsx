@@ -603,7 +603,8 @@ export const SettingsTab: React.FC<{
 
             {/* TIMING: when it murmurs and notifies — only for a type that names its timings */}
             {!!wantTypeDef?.timings?.length && section('timing',
-              <TimingsSection timings={wantTypeDef.timings} voice={want.spec?.voice} labels={labels} onChange={handleVoiceChange} />
+              <TimingsSection timings={wantTypeDef.timings} voice={want.spec?.voice} labels={labels} onChange={handleVoiceChange}
+                typeName={want.metadata?.type} category={wantTypeDef.metadata?.category} />
             )}
 
             {/* LABELS */}

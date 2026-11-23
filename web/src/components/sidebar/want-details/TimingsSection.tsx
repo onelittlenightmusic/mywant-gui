@@ -4,6 +4,8 @@ import { classNames } from '@/utils/helpers';
 import { FIELD_CARD_SURFACE } from '@/design/cards';
 import type { TimingDef } from '@/types/wantType';
 import type { VoiceSpec } from '@/types/want';
+import { TimingCube } from '@/components/common/TimingCube';
+import { solidTypeColor } from '@/components/dashboard/WantCardFace';
 
 /** The labels a want chose its timings in before spec.voice — still read when
  *  it has none, and let go when it is set (engine core/result_timings.go). */
@@ -30,7 +32,11 @@ export const TimingsSection: React.FC<{
   labels: Record<string, string>;
   /** The new voice (undefined: back to the type's say). */
   onChange: (voice: VoiceSpec | undefined) => void;
-}> = ({ timings, voice, labels, onChange }) => {
+  /** The want's type and its category: each timing's cube is in its colour. */
+  typeName?: string;
+  category?: string;
+}> = ({ timings, voice, labels, onChange, typeName, category }) => {
+  const cubeColor = solidTypeColor(typeName ?? '', category ?? '');
   const chosen = (list: string[] | undefined, key: string, byDefault: (t: TimingDef) => boolean): Set<string> => {
     if (list) return new Set(list);
     const raw = labels[key]?.trim();
@@ -107,6 +113,7 @@ export const TimingsSection: React.FC<{
     <div className="space-y-2">
       {timings.map(t => (
         <div key={t.name} className={classNames('flex items-center gap-2 rounded-lg px-2.5 py-2', FIELD_CARD_SURFACE)}>
+          <TimingCube icon={t.icon} color={cubeColor} size={32} title={t.description || t.name} />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{t.description || t.name}</div>
             <div className="text-[10px] font-mono text-gray-400 truncate">

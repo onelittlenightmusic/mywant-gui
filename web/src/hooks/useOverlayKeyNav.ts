@@ -85,11 +85,13 @@ export function useOverlayKeyNav({
    * `step` is in items for left/right and in whole rows for up/down, so the
    * search never wanders out of the line the user is moving along.
    */
-  const nextEnabled = (from: number, step: number): number => {
+  const nextEnabled = (from: number, step: number, alongRow: boolean): number => {
     for (let i = from + step; i >= 0 && i < total; i += step) {
       // Left/right must not wrap onto the next row: a row is a line, and the
-      // end of it is the end of the movement.
-      if (Math.abs(step) === 1 && Math.floor(i / cols) !== Math.floor(from / cols)) break;
+      // end of it is the end of the movement. Told by the direction, not by the
+      // size of the step — in a one-column list a step down is also 1, and
+      // read as one along the row it never left the first item.
+      if (alongRow && Math.floor(i / cols) !== Math.floor(from / cols)) break;
       if (!isDisabled?.(i)) return i;
     }
     return from;
@@ -120,10 +122,10 @@ export function useOverlayKeyNav({
     onNavigate: (dir) => {
       setFocusedIndex(prev => {
         switch (dir) {
-          case 'right': return nextEnabled(prev, 1);
-          case 'left':  return nextEnabled(prev, -1);
-          case 'down':  return nextEnabled(prev, cols);
-          case 'up':    return nextEnabled(prev, -cols);
+          case 'right': return nextEnabled(prev, 1, true);
+          case 'left':  return nextEnabled(prev, -1, true);
+          case 'down':  return nextEnabled(prev, cols, false);
+          case 'up':    return nextEnabled(prev, -cols, false);
           default:      return prev;
         }
       });

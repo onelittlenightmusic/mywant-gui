@@ -175,6 +175,8 @@ export interface WantTypeListResponse {
 export interface TimingDef {
   name: string;
   description?: string;
+  /** Its glyph: a lucide icon name (TimingCube); none — a clock. */
+  icon?: string;
   if?: string;
   onChange?: string;
   /** A field that must have grown since the last answer (a number, or a list's length). */
