@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { usePanelAtBottom } from '@/hooks/useDisplaySettings';
 import { WantTypeCard } from '@/components/dashboard/WantTypeCard';
-import { Zap, Settings, Database, Share2, BookOpen, FileText, List, Play } from 'lucide-react';
+import { Zap, Settings, Database, Share2, BookOpen, FileText, List, Play, BellRing, Ear, MessageCircle, BellOff } from 'lucide-react';
+import { TimingCube } from '@/components/common/TimingCube';
+import { solidTypeColor } from '@/components/dashboard/WantCardFace';
 import { SidebarTabBar } from '@/components/common/SidebarTabBar';
 import { useSidebarTabNav } from '@/hooks/useSidebarTabNav';
 import { WantTypeDefinition, ExampleDef, WantTypeListItem } from '@/types/wantType';
@@ -27,7 +29,7 @@ interface WantTypeDetailsSidebarProps {
   onDeployExample?: (example: ExampleDef) => void;
 }
 
-type TabType = 'overview' | 'parameters' | 'state' | 'connectivity' | 'agents' | 'examples' | 'constraints';
+type TabType = 'overview' | 'parameters' | 'state' | 'timings' | 'connectivity' | 'agents' | 'examples' | 'constraints';
 
 export const WantTypeDetailsSidebar: React.FC<WantTypeDetailsSidebarProps> = ({
   wantType,
@@ -42,6 +44,7 @@ export const WantTypeDetailsSidebar: React.FC<WantTypeDetailsSidebarProps> = ({
     { id: 'overview' as TabType, label: 'Overview', icon: FileText },
     { id: 'parameters' as TabType, label: 'Parameters', icon: Settings },
     { id: 'state' as TabType, label: 'State', icon: Database },
+    { id: 'timings' as TabType, label: 'Timing', icon: BellRing },
     { id: 'connectivity' as TabType, label: 'Connectivity', icon: Share2 },
     { id: 'agents' as TabType, label: 'Agents', icon: Zap },
     { id: 'examples' as TabType, label: 'Examples', icon: BookOpen },
@@ -129,6 +132,7 @@ export const WantTypeDetailsSidebar: React.FC<WantTypeDetailsSidebarProps> = ({
         {activeTab === 'overview' && <OverviewTab wantType={wantType} />}
         {activeTab === 'parameters' && <ParametersTab wantType={wantType} />}
         {activeTab === 'state' && <StateTab wantType={wantType} />}
+        {activeTab === 'timings' && <TimingsTab wantType={wantType} />}
         {activeTab === 'connectivity' && <ConnectivityTab wantType={wantType} />}
         {activeTab === 'agents' && <AgentsTab wantType={wantType} />}
         {activeTab === 'examples' && (
@@ -271,6 +275,65 @@ const StateTab: React.FC<{ wantType: WantTypeDefinition }> = ({ wantType }) => (
     )}
   </TabContent>
 );
+
+const HEARING_KIND: Record<string, string> = { say: 'ひとこと', propose: '提案', act: 'すぐ動く' };
+
+/**
+ * When a want of this type tells of its answer (its timings: each a cube, as
+ * the board and a want's Timing settings draw it — its words, the condition
+ * it comes at, and how it is told unless a want chooses otherwise), and what
+ * it does with a murmur it hears of another (its hearing).
+ */
+const TimingsTab: React.FC<{ wantType: WantTypeDefinition }> = ({ wantType }) => {
+  const timings = wantType.timings ?? [];
+  const color = solidTypeColor(wantType.metadata.name, wantType.metadata.category ?? '');
+  const condition = (t: NonNullable<WantTypeDefinition['timings']>[number]) =>
+    [t.onChange && `onChange ${t.onChange}`, t.onIncrease && `onIncrease ${t.onIncrease}`,
+     t.onDecrease && `onDecrease ${t.onDecrease}`, t.if && `if ${t.if}`].filter(Boolean).join(' · ');
+  return (
+    <TabContent>
+      {timings.length > 0 ? (
+        <TabSection title="Timings">
+          <div className="space-y-2">
+            {timings.map(t => {
+              const told = t.notify ? { Icon: BellRing, label: '＋通知' } : t.murmur ? { Icon: MessageCircle, label: 'つぶやき' } : { Icon: BellOff, label: 'なし' };
+              return (
+                <div key={t.name} className="flex items-center gap-2.5">
+                  <TimingCube icon={t.icon} color={color} size={34} title={t.icon || 'clock'} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{t.description || t.name}</div>
+                    <div className="text-[10px] font-mono text-gray-500 dark:text-gray-400 break-all">
+                      {t.name}{condition(t) ? ` · ${condition(t)}` : ''}
+                    </div>
+                  </div>
+                  <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-1 text-[11px] text-gray-600 dark:text-gray-300"
+                    title="want が選ばないときの伝え方">
+                    <told.Icon className="w-3.5 h-3.5" />{told.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </TabSection>
+      ) : (
+        <EmptyState icon={BellRing} message="No timings defined" />
+      )}
+      {wantType.hearing && (
+        <TabSection title="Hearing">
+          <div className="flex items-center gap-2 text-sm">
+            <Ear className="w-4 h-4 text-gray-500 shrink-0" />
+            <span className="text-gray-900 dark:text-gray-100">{wantType.hearing.description || '聞いたことに答える'}</span>
+            {wantType.hearing.kind && (
+              <span className="ml-auto shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[11px] text-gray-600 dark:text-gray-300">
+                {HEARING_KIND[wantType.hearing.kind] ?? wantType.hearing.kind}
+              </span>
+            )}
+          </div>
+        </TabSection>
+      )}
+    </TabContent>
+  );
+};
 
 const ConnectivityTab: React.FC<{ wantType: WantTypeDefinition }> = ({ wantType }) => (
   <TabContent>

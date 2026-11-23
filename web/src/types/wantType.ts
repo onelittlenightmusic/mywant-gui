@@ -136,6 +136,16 @@ export interface WantTypeDefinition {
   examples: ExampleDef[];
   relatedTypes?: string[];
   seeAlso?: string[];
+  /** The moments of its answer worth telling of (engine core/result_timings.go). */
+  timings?: TimingDef[];
+  /** What a want of it does with a murmur it heard (spec.hear). */
+  hearing?: HearingDef;
+}
+
+/** How a want of a type answers what it heard: a word, a proposal, or at once. */
+export interface HearingDef {
+  kind?: 'say' | 'propose' | 'act' | string;
+  description?: string;
 }
 
 // API Response Types
