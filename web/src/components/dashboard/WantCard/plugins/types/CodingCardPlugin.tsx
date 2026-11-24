@@ -269,6 +269,7 @@ export const CodingContentSection: React.FC<WantCardPluginProps> = ({
           {hostDrawsChats ? <div ref={chatRoom} className="flex-1 min-h-0" /> : <ChatThread
             want={want}
             compact={compact}
+            onChoose={(said) => { void handleSend(said); }}
             className="flex-1 px-0.5"
             empty={(
               <span className="text-gray-400 dark:text-gray-500 italic">

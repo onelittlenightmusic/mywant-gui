@@ -180,6 +180,7 @@ export const ChatTab: React.FC<{ want: Want }> = ({ want }) => {
       <ChatThread
         want={want}
         showActivity={showActivity}
+        onChoose={(said) => { void handleSend(said); }}
         className="flex-1 px-4 py-4"
         empty={(
           <div className="text-center py-12">

@@ -20,6 +20,7 @@ import { Want } from '@/types/want';
 import { formatRelativeTime, classNames } from '@/utils/helpers';
 import { MarkdownContent, looksLikeMarkdown } from '@/components/common/MarkdownContent';
 import { ChatWantCard, type ChatCardRef } from '@/components/common/ChatWantCard';
+import { ChoiceTiles } from '@/components/common/ChoiceTiles';
 
 export interface CCMessage {
   sender: string;
@@ -409,16 +410,25 @@ interface ChatThreadProps {
   /** Shown when nothing has been said yet. */
   empty?: React.ReactNode;
   className?: string;
+  /** Say a reply, as if typed: a choice tile pressed (which want a request
+   *  was, put side by side — ChoiceTiles) is its name said. */
+  onChoose?: (said: string) => void;
 }
 
 export const ChatThread: React.FC<ChatThreadProps> = ({
-  want, compact = false, showActivity = false, empty, className,
+  want, compact = false, showActivity = false, empty, className, onChoose,
 }) => {
+  // The replies the last answer waits for: its choice tiles are live only then.
+  const waiting = replyChoices(want);
   const threadRef = useRef<HTMLDivElement>(null);
   const hasLandedRef = useRef(false);
   const { streamingText } = readChat(want);
   const streaming = isChatStreaming(want);
   const items = buildChatItems(want, showActivity);
+  const isChoice = (c: ChatCardRef) => c.kind === 'choice';
+  // Only the latest question's tiles can be pressed, and only while it waits.
+  let lastChoiceAt = -1;
+  items.forEach((it, i) => { if (it.kind === 'message' && it.cards?.some(isChoice)) lastChoiceAt = i; });
 
   // Keep the newest message in view. The first run happens on mount, and a
   // reopened thread must already be at the bottom rather than travel there —
@@ -483,9 +493,16 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
             {entry.role === 'assistant' && entry.about && (
               <AnswerFeedback about={entry.about} compact={compact} />
             )}
-            {entry.role === 'assistant' && entry.cards?.map(card => (
+            {entry.role === 'assistant' && entry.cards?.filter(c => !isChoice(c)).map(card => (
               <ChatWantCard key={card.id} card={card} compact={compact} />
             ))}
+            {entry.role === 'assistant' && entry.cards?.some(isChoice) && (
+              <ChoiceTiles
+                tiles={entry.cards.filter(isChoice)}
+                compact={compact}
+                onChoose={onChoose && i === lastChoiceAt && entry.cards.filter(isChoice).every(c => waiting.includes(c.name)) ? onChoose : undefined}
+              />
+            )}
             {!compact && entry.timestamp && (
               <p className={classNames(
                 'text-xs mt-1',
