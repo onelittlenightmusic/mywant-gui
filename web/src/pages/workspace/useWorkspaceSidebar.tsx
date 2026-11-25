@@ -50,6 +50,20 @@ export interface WorkspaceSidebarApi {
    *  for it (its forms, its card) — shown
    *  ahead of the thing and the want (see useDetailTarget's cursorGroupShown). */
   cursorGroup: { name: string; color?: string; panel: React.ReactNode } | null;
+  /**
+   * A person's sheet, from the page — chosen from the People list, or walked
+   * to on the board for a talk. Ahead of what is underfoot (a group, a thing, a
+   * want): it was asked for, or the person is what was walked to. Behind the
+   * forms and Global, which were asked for too and are not walked away from.
+   */
+  characterPanel?: {
+    id: string;
+    title: string;
+    content: React.ReactNode;
+    onClose: () => void;
+    /** Opened from the People list: it holds the input, and B closes it. */
+    claimsInput?: boolean;
+  } | null;
   addingThing: boolean;
   /** The constellation filter is open (the want list's Filter button). */
   filterOpen?: boolean;
@@ -120,7 +134,7 @@ export interface WorkspaceSidebarApi {
 
 export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
   const {
-    sidebar, selectedWant, cursorThingRecord, cursorGroup, addingThing, setAddingThing,
+    sidebar, selectedWant, cursorThingRecord, cursorGroup, characterPanel, addingThing, setAddingThing,
     editingThing, consumeThingEdit, detailPanelOpen, isMobileCanvas, isDarkMode,
     expandedChain, setExpandedChain, headerState,
     sidebarWantTypes, setDetailsRequestedFor, setDetailsDismissed,
@@ -205,11 +219,14 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
     return p ? { x: p.x, y: p.y } : undefined;
   };
 
+  // The person's sheet, when nothing asked for ahead of it is open.
+  const person = !api.filterOpen && !sidebar.showGlobal && !addingThing && !editingThing ? characterPanel ?? null : null;
+
   useAppSidebar({
     // On a phone, selecting a card is focus — not "show me everything". The
     // sheet covers the list it was chosen from, so it opens when asked for
     // (Enter, or a second tap), exactly as it does on the board.
-    open: detailPanelOpen || !!api.filterOpen,
+    open: detailPanelOpen || !!api.filterOpen || (!!characterPanel && !sidebar.showGlobal && !addingThing && !editingThing),
     // Every panel stands on a page of its own, for an app to open as a sheet
     // of its own (lib/nativeHost) — a group's too, drawn there by the
     // extension that has one (the groupDetails slot). What a panel reads off
@@ -220,6 +237,7 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
       : sidebar.showGlobal ? hostPanelRoute('/dashboard', 'global')
       : addingThing ? hostPanelRoute('/dashboard', 'add-thing', here())
       : editingThing ? hostPanelRoute('/dashboard', `edit-thing:${editingThing.id}`)
+      : person ? undefined
       : cursorGroup ? hostPanelRoute('/dashboard', `group:${cursorGroup.name}`)
       : selectedWant ? hostPanelRoute('/dashboard', `want:${selectedWant.metadata?.id || selectedWant.id || ''}`)
       : cursorThingRecord ? hostPanelRoute('/dashboard', `thing:${cursorThingRecord.id}`, here())
@@ -235,25 +253,26 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
       // subject, which is a detail panel's job rather than a form's.
       : addingThing ? ''
       : editingThing ? `Edit ${editingThing.value}`
+      : person ? person.title
       : cursorGroup ? cursorGroup.name
       : selectedWant ? (selectedWant.metadata?.name || selectedWant.metadata?.id || 'Want Details')
       : (cursorThingRecord ? thingDisplayName(cursorThingRecord.value) : ''),
     // The thing under the character, when its panel is the one showing — the
     // identity row's mark (see PanelIdentityRow). The want panel names its own.
-    subject: api.filterOpen || sidebar.showGlobal || addingThing || editingThing ? undefined
+    subject: api.filterOpen || sidebar.showGlobal || addingThing || editingThing || person ? undefined
       : cursorGroup ? { kind: 'group', name: cursorGroup.name, color: cursorGroup.color }
       : !selectedWant && cursorThingRecord ? { kind: 'thing', record: cursorThingRecord }
       : undefined,
-    titleIcon: api.filterOpen ? Waypoints : sidebar.showGlobal ? Globe : (selectedWant && !cursorGroup ? sidebarTitleIcon : undefined),
+    titleIcon: api.filterOpen ? Waypoints : sidebar.showGlobal ? Globe : (selectedWant && !cursorGroup && !person ? sidebarTitleIcon : undefined),
     titleIconClassName: sidebar.showGlobal ? 'text-green-500' : undefined,
-    titleIconStyle: sidebar.showGlobal || !selectedWant || cursorGroup
+    titleIconStyle: sidebar.showGlobal || !selectedWant || cursorGroup || person
       ? undefined
       : wantTypeIconStyle(
           selectedWant.metadata?.type ?? '',
           sidebarWantTypes.find(t => t.name === selectedWant.metadata?.type)?.category ?? '',
           isDarkMode,
         ),
-    backgroundStyle: api.filterOpen ? undefined : !sidebar.showGlobal && selectedWant && !cursorGroup ? sidebarBgStyle : undefined,
+    backgroundStyle: api.filterOpen || person ? undefined : !sidebar.showGlobal && selectedWant && !cursorGroup ? sidebarBgStyle : undefined,
     // The want detail says which want it is on its own card, so the frame's
     // header — name, status, close, all under a card already showing them —
     // is not drawn for it. Every other panel (Global, Add Thing, Edit Thing)
@@ -266,24 +285,25 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
     // sidebar in this layout, so a panel that kept it had its way out in a
     // different place from every panel that had given it up. One row, one
     // place, whichever panel is open; the shell supplies it (see PanelShell).
-    chromeless: !api.filterOpen && !sidebar.showGlobal && !editingThing
+    chromeless: !api.filterOpen && !sidebar.showGlobal && !editingThing && !person
       && (addingThing || !!selectedWant || !!cursorThingRecord || !!cursorGroup),
     // The want panel builds its own identity row, glued to the card inside the
     // block the phone's bottom sheet re-orders. Everything else — this page's
     // thing detail included — takes the host's. See appSidebarStore.ownIdentity.
-    ownIdentity: !api.filterOpen && (!!selectedWant && !cursorGroup),
+    ownIdentity: !api.filterOpen && !person && (!!selectedWant && !cursorGroup),
     // The two forms are panels the user went and opened, so they arrive
     // holding the input and B cancels out of them — the same contract Add Want
     // has had all along (WantForm passes it directly). The detail panels
     // deliberately do not: they open by themselves as the character walks onto
     // something, and taking the stick on an arrival strands the walk.
-    claimsInputOnOpen: !!api.filterOpen || addingThing || !!editingThing,
-    headerActions: api.filterOpen ? undefined : !sidebar.showGlobal && selectedWant && !cursorGroup ? headerActions : undefined,
+    claimsInputOnOpen: !!api.filterOpen || addingThing || !!editingThing || !!person?.claimsInput,
+    headerActions: api.filterOpen || person ? undefined : !sidebar.showGlobal && selectedWant && !cursorGroup ? headerActions : undefined,
     onClose: () => {
       if (api.filterOpen) { api.onCloseFilter?.(); return; }
       if (addingThing) { setAddingThing(false); return; }
       if (editingThing) { consumeThingEdit(); return; }
       if (sidebar.showGlobal) { sidebar.closeMemo(); return; }
+      if (person) { person.onClose(); return; }
       // Closing spends the request. It names a want so that choosing a
       // DIFFERENT card cannot inherit it, but the same card would still match
       // its own earlier request — so tapping it again after closing reopened
@@ -309,9 +329,10 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
     contentKey: api.filterOpen ? 'filter' : sidebar.showGlobal ? 'global'
       : addingThing ? 'add-thing'
       : editingThing ? `edit-thing:${editingThing.id}`
+      : person ? `character:${person.id}`
       : cursorGroup ? `group:${cursorGroup.name}`
       : ((selectedWant?.metadata?.id || selectedWant?.id) ?? cursorThingRecord?.id ?? ''),
-    contentOrder: sidebar.showGlobal || addingThing || editingThing || !selectedWant || cursorGroup
+    contentOrder: sidebar.showGlobal || addingThing || editingThing || person || !selectedWant || cursorGroup
       ? undefined
       : (() => {
           const id = selectedWant.metadata?.id || selectedWant.id;
@@ -364,6 +385,8 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
         onAdded={() => consumeThingEdit()}
         onCancel={() => consumeThingEdit()}
       />
+    ) : person ? (
+      person.content
     ) : cursorGroup ? (
       cursorGroup.panel
     ) : cursorThingRecord ? (

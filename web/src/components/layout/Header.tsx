@@ -40,6 +40,15 @@ export interface HeaderProps {
   isAddWantActive?: boolean;
   /** The Add Thing panel is open, so the button closes it — see isAddWantActive. */
   isAddThingActive?: boolean;
+  /**
+   * Opens the people on this server — the characters, listed as the want
+   * list's map lists wants — beside Add Want and Add Thing. A person is as much
+   * a thing on the board as a want or a value, and the third of them to have
+   * a button of their own. Provided only where there is somewhere to list them.
+   */
+  onPeople?: () => void;
+  /** The people list is open: lit, the way Add Thing is while its panel is. */
+  isPeopleActive?: boolean;
   title?: string;
   /** Tooltip/label for the create button. Pages that create something other
    *  than a want (Worlds, ...) override this and createButtonIcon together. */
@@ -216,6 +225,8 @@ export const Header: React.FC<HeaderProps> = ({
   onCreateThing,
   isAddWantActive = false,
   isAddThingActive = false,
+  onPeople,
+  isPeopleActive = false,
   title = 'MyWant',
   createButtonLabel = 'Add Want',
   createButtonIcon: CreateIcon = Heart,
@@ -600,6 +611,8 @@ export const Header: React.FC<HeaderProps> = ({
       // Beside it, as the pair is drawn: the other answer to the same choice.
       if (onCreateThing) btns.push({ id: 'thing', label: 'Thing', action: createThing });
     }
+    // The people: the third of the board's kinds, after the two you make.
+    if (onPeople) btns.push({ id: 'people', label: 'People', action: onPeople });
     if (onGlobalStateToggle) {
       btns.push({ id: 'global', label: 'Global', action: onGlobalStateToggle });
     }
@@ -610,7 +623,7 @@ export const Header: React.FC<HeaderProps> = ({
     // walk through it.
     if (onPadToggle) btns.push({ id: 'pad', label: 'Pad', action: onPadToggle });
     return btns;
-  }, [onGlobalStateToggle, onImport, onToggleSelectMode, pageAction, hideCreateButton, onCreateThing, createWant, createThing, createButtonLabel, onPadToggle, compact, attentionCount, onInteractSubmit, navigate]);
+  }, [onGlobalStateToggle, onImport, onToggleSelectMode, pageAction, hideCreateButton, onCreateThing, onPeople, createWant, createThing, createButtonLabel, onPadToggle, compact, attentionCount, onInteractSubmit, navigate]);
 
   const hBtns = headerButtons();
   // Stable handle to the current control count for the header-cursor callbacks,
@@ -641,6 +654,7 @@ export const Header: React.FC<HeaderProps> = ({
       'pill-attention': ['TriangleAlert'],
       want: [iconName(CreateIcon, 'Heart'), isAddWantActive],
       thing: ['Circle', isAddThingActive],
+      people: ['Users', isPeopleActive],
       global: ['Globe', showGlobalState],
       import: ['Upload'],
       select: ['ListChecks', showSelectMode],
@@ -1218,6 +1232,32 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
           </>
+          )}
+          {/* People — the characters on this server, listed as the want
+              list's map lists wants; one chosen opens their sheet. In indigo,
+              the Characters page's own colour. On every width: it is not one
+              of the ways of making something, so the create menu is not where
+              it lives. */}
+          {onPeople && (
+            <Tooltip label={isPeopleActive ? 'Close People' : 'People'} below={!isBottom} forceVisible={isHeaderFocused && hBtns[headerFocusIdx]?.id === 'people'}>
+              <button
+                onClick={onPeople}
+                data-header-btn-id="people"
+                onPointerDown={cellTick}
+                data-robot-target="people_btn"
+                aria-pressed={isPeopleActive}
+                className={classNames(
+                  HEADER_CELL,
+                  isPeopleActive
+                    ? "bg-indigo-500 text-white hover:brightness-110 active:opacity-80"
+                    : classNames("text-indigo-500 dark:text-indigo-400", HEADER_CELL_UNLIT),
+                  isHeaderFocused && hBtns[headerFocusIdx]?.id === 'people' && 'ring-2 ring-inset ring-sky-400'
+                )}
+              >
+                <Users className="h-6 w-6 sm:h-8 sm:w-8" />
+                <span className={HEADER_LABEL}>People</span>
+              </button>
+            </Tooltip>
           )}
           {/* One cell for both ways of making something, where the row has no
               space for two.

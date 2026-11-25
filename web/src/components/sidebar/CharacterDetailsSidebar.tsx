@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, X, MousePointer2, Users, UserRound, Palette, Smile, Droplet, Shapes, Sparkles, Image as ImageIcon, BarChart3, Bell } from 'lucide-react';
+import { Check, X, MousePointer2, Users, UserRound, Palette, Smile, Droplet, Shapes, Sparkles, Image as ImageIcon, BarChart3, Bell, MessageSquare } from 'lucide-react';
 import { Character } from '@/types/character';
 import { classNames } from '@/utils/helpers';
 import { AVATAR_PRESETS, COLOR_PRESETS } from '@/components/characters/characterPresets';
@@ -20,6 +20,7 @@ import { CHARACTER_SHAPES, characterShapePath, type CharacterShapeId } from '@/s
 import { CharacterBadge } from '@/components/dashboard/CharacterBadge';
 import { AvatarImagePicker } from '@/components/characters/AvatarImagePicker';
 import { apiClient } from '@/api/client';
+import { CharacterChatTab } from './CharacterChatTab';
 
 interface CharacterDetailsSidebarProps {
   character: Character | null;
@@ -34,6 +35,11 @@ interface CharacterDetailsSidebarProps {
   onDelete?: (id: string) => void;
   /** Persists this character's look-and-feel choices (the Display tab). */
   onSaveDisplay?: (id: string, display: CharacterDisplay) => Promise<void>;
+  /**
+   * The tab the sheet opens on, and again whenever this (or the character)
+   * changes — the board opens it on the chat when it was walked to for a talk.
+   */
+  initialTab?: CharacterSheetTab;
 }
 
 /**
@@ -41,11 +47,12 @@ interface CharacterDetailsSidebarProps {
  * The card triggers edit mode through its overlay grid so the interaction is
  * the same keyboard/gamepad path as every other card action.
  */
-/** The sheet's tabs: who this is, how they like the app, what its story says, and (with an extension) their skills. */
-type SheetTab = 'about' | 'display' | 'story' | 'notices' | 'skills';
+/** The sheet's tabs: who this is, talking to them, how they like the app, what its story says, and (with an extension) their skills. */
+export type CharacterSheetTab = 'about' | 'chat' | 'display' | 'story' | 'notices' | 'skills';
+type SheetTab = CharacterSheetTab;
 
 export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = ({
-  character, isMyCursor, editing, onEditingChange, onSave, onSetAsMyCursor, onDelete, onSaveDisplay,
+  character, isMyCursor, editing, onEditingChange, onSave, onSetAsMyCursor, onDelete, onSaveDisplay, initialTab,
 }) => {
   const [name, setName] = useState('');
   const [avatar, setAvatar] = useState('');
@@ -56,7 +63,10 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
   // Which half of the sheet you are looking at. Two tabs rather than one long
   // scroll: who this character is, and how they like the app — related, but not
   // read at the same time, and the settings half is nine groups deep.
-  const [tab, setTab] = useState<SheetTab>('about');
+  const [tab, setTab] = useState<SheetTab>(initialTab ?? 'about');
+  // Asked for a tab (the board's talk), or another person: open there.
+  const characterId = character?.id;
+  useEffect(() => { setTab(initialTab ?? 'about'); }, [initialTab, characterId]);
   // The 技能 tab only where an extension gives the board skills (characterSkills).
   const hasSkills = extensionSlot('characterSkills').length > 0;
   const isBottom = usePanelAtBottom();
@@ -65,7 +75,7 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
   // that can only be tabbed with a finger is a sheet the gamepad has to be put
   // down for, and the two sheets are read the same way.
   const cycleTab = (dir: 1 | -1) => {
-    const order: SheetTab[] = hasSkills ? ['about', 'display', 'story', 'notices', 'skills'] : ['about', 'display', 'story', 'notices'];
+    const order: SheetTab[] = hasSkills ? ['about', 'chat', 'display', 'story', 'notices', 'skills'] : ['about', 'chat', 'display', 'story', 'notices'];
     setTab(prev => order[(order.indexOf(prev) + dir + order.length) % order.length]);
   };
   useInputActions({
@@ -162,6 +172,7 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
         <SubTabBar<SheetTab>
           tabs={[
             { id: 'about',   label: 'Character', icon: UserRound, hasData: true },
+            { id: 'chat',    label: 'チャット',   icon: MessageSquare, hasData: true },
             { id: 'display', label: 'Display',   icon: Palette,   hasData: true },
             { id: 'story',   label: 'ストーリー', icon: BarChart3, hasData: true },
             { id: 'notices', label: '通知',      icon: Bell,      hasData: true },
@@ -172,7 +183,9 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
           isBottom={isBottom}
         />
         <div className={classNames('flex-1 min-h-0 overflow-y-auto', isBottom && 'order-first')}>
-        {tab === 'notices' ? (
+        {tab === 'chat' ? (
+          <CharacterChatTab character={character} />
+        ) : tab === 'notices' ? (
           <CharacterNotices characterId={character.id} />
         ) : tab === 'story' ? (
           <CharacterStoryStats characterId={character.id} />
