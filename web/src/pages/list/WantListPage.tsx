@@ -1,4 +1,5 @@
 import { CardEmbeddedContext } from '@/components/dashboard/WantCard/plugins/registry';
+import { usePeoplePanel } from '@/components/sidebar/PeoplePanel';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useWantStore } from '@/stores/wantStore';
 import { wantsInListOrder } from '@/utils/wantUtils';
@@ -68,6 +69,7 @@ export const WantListPage: React.FC<{
   const panelThingId = panelId?.startsWith('thing:') ? panelId.slice(6) : null;
   // A constellation's panel on its own page: the extension's (groupDetails).
   const panelGroupName = panelId?.startsWith('group:') ? panelId.slice(6) : null;
+  const peoplePanel = usePeoplePanel();
   const panelGroupColor = useConstellationStore(s => s.constellations.find(c => c.name === panelGroupName)?.color);
   // A panel opened on its own page is told where the character stands (x, y):
   // a thing is pinned there, or lined up from there.
@@ -289,6 +291,8 @@ export const WantListPage: React.FC<{
     sidebar,
     selectedWant,
     cursorThingRecord,
+    // A person's panel: on an app's sheet of its own (people, character:<id>).
+    characterPanel: peoplePanel,
     cursorGroup: panelGroupName ? {
       name: panelGroupName,
       color: panelGroupColor,

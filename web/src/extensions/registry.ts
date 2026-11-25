@@ -122,7 +122,8 @@ export interface ExtensionSlots {
 export type PanelSubject =
   | { kind: 'want'; want: Want }
   | { kind: 'thing'; record: ThingRecord }
-  | { kind: 'group'; name: string; color?: string };
+  | { kind: 'group'; name: string; color?: string }
+  | { kind: 'character'; character: Character };
 
 /** What the header's bubble does with what is typed into it. */
 export interface InteractApi {

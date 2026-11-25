@@ -17,6 +17,7 @@ import { GlobalStateSidebar } from '@/components/sidebar/GlobalStateSidebar';
 import { AddThingSidebar } from '@/components/sidebar/AddThingSidebar';
 import { ThingDetailsSidebar } from '@/components/sidebar/ThingDetailsSidebar';
 import { WantDetailsSidebar } from '@/components/sidebar/WantDetailsSidebar';
+import type { PeoplePanel } from '@/components/sidebar/PeoplePanel';
 
 export type SidebarTab = 'settings' | 'results' | 'wiring' | 'expose' | 'import' | 'history' | 'versions' | 'chat';
 
@@ -56,14 +57,7 @@ export interface WorkspaceSidebarApi {
    * want): it was asked for, or the person is what was walked to. Behind the
    * forms and Global, which were asked for too and are not walked away from.
    */
-  characterPanel?: {
-    id: string;
-    title: string;
-    content: React.ReactNode;
-    onClose: () => void;
-    /** Opened from the People list: it holds the input, and B closes it. */
-    claimsInput?: boolean;
-  } | null;
+  characterPanel?: PeoplePanel | null;
   addingThing: boolean;
   /** The constellation filter is open (the want list's Filter button). */
   filterOpen?: boolean;
@@ -237,7 +231,7 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
       : sidebar.showGlobal ? hostPanelRoute('/dashboard', 'global')
       : addingThing ? hostPanelRoute('/dashboard', 'add-thing', here())
       : editingThing ? hostPanelRoute('/dashboard', `edit-thing:${editingThing.id}`)
-      : person ? undefined
+      : person ? hostPanelRoute('/dashboard', person.hostPanel, person.hostExtra)
       : cursorGroup ? hostPanelRoute('/dashboard', `group:${cursorGroup.name}`)
       : selectedWant ? hostPanelRoute('/dashboard', `want:${selectedWant.metadata?.id || selectedWant.id || ''}`)
       : cursorThingRecord ? hostPanelRoute('/dashboard', `thing:${cursorThingRecord.id}`, here())
@@ -259,7 +253,8 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
       : (cursorThingRecord ? thingDisplayName(cursorThingRecord.value) : ''),
     // The thing under the character, when its panel is the one showing — the
     // identity row's mark (see PanelIdentityRow). The want panel names its own.
-    subject: api.filterOpen || sidebar.showGlobal || addingThing || editingThing || person ? undefined
+    subject: api.filterOpen || sidebar.showGlobal || addingThing || editingThing ? undefined
+      : person ? person.subject
       : cursorGroup ? { kind: 'group', name: cursorGroup.name, color: cursorGroup.color }
       : !selectedWant && cursorThingRecord ? { kind: 'thing', record: cursorThingRecord }
       : undefined,
@@ -285,8 +280,10 @@ export function useWorkspaceSidebar(api: WorkspaceSidebarApi) {
     // sidebar in this layout, so a panel that kept it had its way out in a
     // different place from every panel that had given it up. One row, one
     // place, whichever panel is open; the shell supplies it (see PanelShell).
-    chromeless: !api.filterOpen && !sidebar.showGlobal && !editingThing && !person
-      && (addingThing || !!selectedWant || !!cursorThingRecord || !!cursorGroup),
+    // A person's panel too: the identity row the want's wears (their face
+    // and name, the close), not the frame's older bar.
+    chromeless: !api.filterOpen && !sidebar.showGlobal && !editingThing
+      && (addingThing || !!person || !!selectedWant || !!cursorThingRecord || !!cursorGroup),
     // The want panel builds its own identity row, glued to the card inside the
     // block the phone's bottom sheet re-orders. Everything else — this page's
     // thing detail included — takes the host's. See appSidebarStore.ownIdentity.

@@ -89,6 +89,7 @@ export const PanelIdentityRow: React.FC<{
 function subjectName(subject: PanelSubject): string {
   if (subject.kind === 'want') return subject.want.metadata?.name || '';
   if (subject.kind === 'thing') return subject.record.value;
+  if (subject.kind === 'character') return subject.character.name;
   return subject.name;
 }
 
