@@ -120,6 +120,12 @@ export interface PebbleOpts {
   volume: Volume;
   /** Footsteps only: leave the top end on. */
   bright?: boolean;
+  /**
+   * How much longer it rings than a stone on the floor: 1 (unset) is the
+   * click every pebble is; ~9 lets it sing a moment, as a nut plucked does —
+   * a want answering (canvasSounds' voice) rather than a thing knocked.
+   */
+  ring?: number;
 }
 
 /**
@@ -141,7 +147,9 @@ export function pebble(c: AudioContext, o: PebbleOpts): void {
     [2.76, 0.5, 0.009],
     [5.4, 0.3, 0.005],
   ];
-  for (const [ratio, g0, decay] of modes) {
+  const stretch = o.ring ?? 1;
+  for (const [ratio, g0, d] of modes) {
+    const decay = d * stretch;
     const osc = c.createOscillator();
     const g = c.createGain();
     osc.type = 'sine';
