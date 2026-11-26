@@ -690,8 +690,15 @@ const HostCardFrame: React.FC<{
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+  // The frame never scrolls. The card is laid out 420 wide and shrunk, so the
+  // frame holds more than it shows (a scale is no smaller layout), and a box
+  // that is only overflow-hidden is still scrolled by a focus or by the app's
+  // web view changing size (moved between the corner, a panel, and parked):
+  // the head and the card's top went up out of it, white under them. Clipped,
+  // and put back should anything scroll it all the same.
   return (
-    <div className="fixed inset-0 overflow-hidden bg-white dark:bg-gray-900">
+    <div className="fixed inset-0 overflow-clip bg-white dark:bg-gray-900"
+      onScroll={(e) => { const el = e.currentTarget; if (el.scrollTop || el.scrollLeft) el.scrollTo(0, 0); }}>
       <HostFramedPanel.Provider value={true}>
       {/* 420 wide, shrunk to the page's width, and as tall as the page is at
           that scale: the frame may be another shape (a sheet's card row). */}
