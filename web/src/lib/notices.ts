@@ -19,6 +19,11 @@ export interface WantNotice {
   wantId: string;
   title: string;
   body: string;
+  /** A character's notice (engine character_timings.go): who it is from,
+   *  and how they look — what its picture is drawn as. */
+  character?: string;
+  avatar?: string;
+  color?: string;
 }
 
 let started = false;
@@ -59,7 +64,8 @@ function extensionShowsNotices(): boolean {
 function showInBrowser(notice: WantNotice): void {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   // The tag makes a second tab's the same notification, not another.
-  const n = new Notification(notice.title, { body: notice.body, tag: notice.id });
+  const icon = notice.character ? characterIcon(notice.avatar, notice.color) : undefined;
+  const n = new Notification(notice.title, { body: notice.body, tag: notice.id, ...(icon ? { icon } : {}) });
   n.onclick = () => {
     window.focus();
     window.location.assign(`/w/${encodeURIComponent(notice.wantId)}`);
@@ -75,4 +81,32 @@ function askOnFirstTouch(): void {
     void Notification.requestPermission().catch(() => undefined);
   };
   window.addEventListener('pointerdown', ask, true);
+}
+
+/** A character's emoji on a disc of their colour, as a data: URL — a
+ *  character's notice's picture. Undefined where a canvas cannot be had. */
+function characterIcon(avatar?: string, color?: string): string | undefined {
+  if (!avatar) return undefined;
+  try {
+    const size = 192;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const g = canvas.getContext('2d');
+    if (!g) return undefined;
+    g.fillStyle = color || '#8b5cf6';
+    g.beginPath();
+    g.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    g.arc(size / 2, size / 2, size / 2 - size * 0.07, 0, Math.PI * 2);
+    g.fill();
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = `${Math.round(size * 0.6)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+    g.fillText(avatar, size / 2, size / 2 + size * 0.04);
+    return canvas.toDataURL('image/png');
+  } catch {
+    return undefined;
+  }
 }

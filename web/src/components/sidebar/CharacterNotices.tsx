@@ -16,6 +16,7 @@ import { classNames } from '@/utils/helpers';
 export const CharacterNotices: React.FC<{ characterId: string }> = ({ characterId }) => {
   const [notices, setNotices] = useState<ToldNotice[] | null>(null);
   const [error, setError] = useState('');
+  const [onlyTheirs, setOnlyTheirs] = useState(true);
   const [busy, setBusy] = useState<string>('');
   const characters = useCharacterStore(s => s.characters);
   const nameOf = (id?: string) => characters.find(c => c.id === id)?.name ?? id ?? '';
@@ -52,23 +53,45 @@ export const CharacterNotices: React.FC<{ characterId: string }> = ({ characterI
   if (notices.length === 0) {
     return <TabContent><p className="text-sm text-gray-500 dark:text-gray-400">まだ通知はありません。want が通知するとここに並びます。</p></TabContent>;
   }
-  const rated = notices.filter(n => n.rating).length;
+  // Theirs (from this character's timings) or every notice.
+  const theirs = notices.filter(n => n.character === characterId);
+  const shownList = onlyTheirs && theirs.length > 0 ? theirs : notices;
+  const rated = shownList.filter(n => n.rating).length;
+  const lookOf = (id?: string) => characters.find(c => c.id === id);
 
   return (
     <TabContent>
+      {theirs.length > 0 && (
+        <div className="flex gap-1.5 mb-2" role="tablist">
+          {([true, false] as const).map(mine => (
+            <button key={String(mine)} type="button" role="tab" aria-selected={onlyTheirs === mine} data-free-cursor-item
+              onClick={() => setOnlyTheirs(mine)}
+              className={classNames('rounded-full px-2.5 py-0.5 text-xs border transition-colors',
+                onlyTheirs === mine
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                  : 'border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300')}>
+              {mine ? `${nameOf(characterId)}から（${theirs.length}）` : 'すべて'}
+            </button>
+          ))}
+        </div>
+      )}
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        最近の通知 <span className="tabular-nums">{notices.length}</span> 件 · 評価済み <span className="tabular-nums">{rated}</span> 件
+        最近の通知 <span className="tabular-nums">{shownList.length}</span> 件 · 評価済み <span className="tabular-nums">{rated}</span> 件
       </p>
       {error && <p className="text-xs text-red-600 dark:text-red-400 mb-2">{error}</p>}
       <ul className="space-y-2">
-        {notices.map(n => {
+        {shownList.map(n => {
           const at = new Date(n.at);
           const when = isNaN(at.getTime()) ? '' : at.toLocaleString(undefined, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
           const someoneElse = n.rating && n.ratedBy && n.ratedBy !== characterId;
           return (
             <li key={n.id} className="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3 min-w-0" data-free-cursor-item>
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{n.want}</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {n.character
+                    ? <>{lookOf(n.character)?.avatar} {nameOf(n.character)}{n.want ? <span className="font-normal text-gray-500 dark:text-gray-400"> · {n.want}</span> : null}</>
+                    : n.want}
+                </span>
                 <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400 tabular-nums">{when}</span>
               </div>
               <p className="mt-0.5 text-sm text-gray-700 dark:text-gray-200 break-words">{n.text}</p>

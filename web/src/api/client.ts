@@ -5,6 +5,8 @@ export interface ToldNotice {
   wantId: string;
   want: string;
   wantType?: string;
+  /** From a character (engine character_timings.go), not a want: who. */
+  character?: string;
   text: string;
   moment?: string;
   timings?: string[];
