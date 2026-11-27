@@ -19,7 +19,9 @@ const ROBOT_CHARACTER_ID = 'robot';
  */
 export function chatWantOf(character: Pick<Character, 'id' | 'auraCardWantId'>, wants: Want[]): Want | null {
   const idOf = (w: Want) => w.metadata?.id || w.id;
-  return wants.find(w => w.metadata?.type === 'character_chat'
+  // A character acting as a robot (label robot=true) has a robot want for
+  // its chat, carrying its character_id the same way.
+  return wants.find(w => (w.metadata?.type === 'character_chat' || w.metadata?.type === 'robot')
       && (w.spec?.params as Record<string, unknown> | undefined)?.character_id === character.id)
     ?? (character.id === ROBOT_CHARACTER_ID ? wants.find(w => w.metadata?.type === 'robot') : undefined)
     ?? wants.find(w => idOf(w) === `chat-${character.id}`)

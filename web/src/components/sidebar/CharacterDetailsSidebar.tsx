@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, X, MousePointer2, Users, UserRound, Palette, Smile, Droplet, Shapes, Sparkles, Image as ImageIcon, BarChart3, Bell, MessageSquare } from 'lucide-react';
+import { Check, X, MousePointer2, Users, UserRound, Palette, Smile, Droplet, Shapes, Sparkles, Image as ImageIcon, BarChart3, Bell, MessageSquare, Eye, Bot } from 'lucide-react';
 import { Character } from '@/types/character';
 import { classNames } from '@/utils/helpers';
 import { AVATAR_PRESETS, COLOR_PRESETS } from '@/components/characters/characterPresets';
@@ -21,6 +21,7 @@ import { CharacterBadge } from '@/components/dashboard/CharacterBadge';
 import { AvatarImagePicker } from '@/components/characters/AvatarImagePicker';
 import { apiClient } from '@/api/client';
 import { CharacterChatTab } from './CharacterChatTab';
+import { CharacterMemoryTab } from './CharacterMemoryTab';
 
 interface CharacterDetailsSidebarProps {
   character: Character | null;
@@ -48,7 +49,7 @@ interface CharacterDetailsSidebarProps {
  * the same keyboard/gamepad path as every other card action.
  */
 /** The sheet's tabs: who this is, talking to them, how they like the app, what its story says, and (with an extension) their skills. */
-export type CharacterSheetTab = 'about' | 'chat' | 'display' | 'story' | 'notices' | 'skills';
+export type CharacterSheetTab = 'about' | 'chat' | 'seen' | 'display' | 'story' | 'notices' | 'skills';
 type SheetTab = CharacterSheetTab;
 
 export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = ({
@@ -173,6 +174,7 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
           tabs={[
             { id: 'about',   label: 'Character', icon: UserRound, hasData: true },
             { id: 'chat',    label: 'チャット',   icon: MessageSquare, hasData: true },
+            { id: 'seen',    label: '見たこと',   icon: Eye,       hasData: true },
             { id: 'display', label: 'Display',   icon: Palette,   hasData: true },
             { id: 'story',   label: 'ストーリー', icon: BarChart3, hasData: true },
             { id: 'notices', label: '通知',      icon: Bell,      hasData: true },
@@ -185,6 +187,8 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
         <div className={classNames('flex-1 min-h-0 overflow-y-auto', isBottom && 'order-first')}>
         {tab === 'chat' ? (
           <CharacterChatTab character={character} />
+        ) : tab === 'seen' ? (
+          <CharacterMemoryTab character={character} />
         ) : tab === 'notices' ? (
           <CharacterNotices characterId={character.id} />
         ) : tab === 'story' ? (
@@ -286,6 +290,11 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
                 <p className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 mb-1.5 font-semibold uppercase tracking-wider"><Shapes className="w-3 h-3" />Shape</p>
                 <ShapeRow color={color || character.color} value={shape} onPick={sh => applyIdentity({ shape: sh })} />
               </div>
+
+              {/* A robot: answered by the robot's model with its tools, and
+                  moved by the server to where it goes — not by a device. The
+                  robot itself always is one. */}
+              {character.id !== 'robot' && <RobotToggle character={character} />}
 
               {/* How they appear on a board an extension draws — the
                   canvas's tile, aura and speeds, from mywant-guiex. */}
@@ -442,3 +451,42 @@ const ShapeRow: React.FC<{
     ))}
   </div>
 );
+
+/**
+ * Robot: whether the character acts as a robot (label robot=true). On, the
+ * engine gives them a robot want for their chat and body: asked in their
+ * chat, they answer as the robot does and go where the answer is.
+ */
+const RobotToggle: React.FC<{ character: Character }> = ({ character }) => {
+  const [on, setOn] = useState(character.labels?.robot === 'true');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setOn(character.labels?.robot === 'true'); }, [character.id, character.labels?.robot]);
+  const flip = () => {
+    const next = !on;
+    setOn(next);
+    setBusy(true);
+    (next ? apiClient.setCharacterLabel(character.id, 'robot', 'true') : apiClient.deleteCharacterLabel(character.id, 'robot'))
+      .catch(e => { console.error('[RobotToggle]', e); setOn(!next); })
+      .finally(() => setBusy(false));
+  };
+  return (
+    <div>
+      <p className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 mb-1.5 font-semibold uppercase tracking-wider"><Bot className="w-3 h-3" />Robot</p>
+      <button
+        data-free-cursor-item
+        role="switch"
+        aria-checked={on}
+        disabled={busy}
+        onClick={flip}
+        className={classNames(
+          'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+          on ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+          busy && 'opacity-60',
+        )}
+      >
+        <span className={classNames('h-2 w-2 rounded-full', on ? 'bg-white' : 'bg-gray-400')} aria-hidden />
+        {on ? 'ロボットとして動く' : '人として動く'}
+      </button>
+    </div>
+  );
+};

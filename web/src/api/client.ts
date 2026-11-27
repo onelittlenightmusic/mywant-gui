@@ -13,6 +13,30 @@ export interface ToldNotice {
   ratedAt?: string;
 }
 
+/** One thing a character remembers hearing (character_memory.go). */
+export interface CharacterMemoryItem {
+  wantId: string;
+  wantName?: string;
+  wantType?: string;
+  say: string;
+  mood: string;
+  /** How much it moved them, 0..1. */
+  impact: number;
+  at: string;
+  x: number;
+  y: number;
+}
+
+/** A character's mood and what they remember, newest first. */
+export interface CharacterMemory {
+  character: string;
+  mood: string;
+  /** How strongly, 0..1, faded to now. */
+  intensity: number;
+  moodAt?: string;
+  memories: CharacterMemoryItem[];
+}
+
 /** A character's story in figures (story_stats.go). */
 export interface CharacterStoryStats {
   character: string;
@@ -1511,6 +1535,25 @@ class MyWantApiClient {
   async getCharacterStoryStats(id: string, days = 30): Promise<CharacterStoryStats> {
     const response = await this.client.get<CharacterStoryStats>(
       `/api/v1/characters/${encodeURIComponent(id)}/story/stats`, { params: { days } });
+    return response.data;
+  }
+
+  /** What a character remembers hearing, and their mood
+   *  (GET /api/v1/characters/{id}/memory). */
+  async getCharacterMemory(id: string): Promise<CharacterMemory> {
+    const response = await this.client.get<CharacterMemory>(`/api/v1/characters/${encodeURIComponent(id)}/memory`);
+    return response.data;
+  }
+
+  /** Sets one of a character's labels (POST /api/v1/characters/{id}/labels). */
+  async setCharacterLabel(id: string, key: string, value: string): Promise<Character> {
+    const response = await this.client.post<Character>(`/api/v1/characters/${encodeURIComponent(id)}/labels`, { key, value });
+    return response.data;
+  }
+
+  /** Removes one of a character's labels. */
+  async deleteCharacterLabel(id: string, key: string): Promise<Character> {
+    const response = await this.client.delete<Character>(`/api/v1/characters/${encodeURIComponent(id)}/labels/${encodeURIComponent(key)}`);
     return response.data;
   }
 
