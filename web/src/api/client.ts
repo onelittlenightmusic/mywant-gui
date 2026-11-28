@@ -39,6 +39,28 @@ export interface CharacterMemory {
   memories: CharacterMemoryItem[];
 }
 
+/** The board as one character has seen it today (character_seen.go). */
+export interface CharacterSeen {
+  id: string;
+  since: string;
+  /** How far they see, in cells. */
+  radius: number;
+  /** Where they stand now. */
+  now?: { x: number; y: number };
+  place?: string;
+  near?: boolean;
+  mood: string;
+  /** Each cell seen, with when it was seen last. */
+  seen: { x: number; y: number; at: string }[];
+  /** What is on a seen cell: now — seen from where they stand now; mood and
+   *  say — what they remember hearing from it. */
+  tiles: { id: string; name: string; type?: string; kind: string; x: number; y: number; at: string; now?: boolean; mood?: string; say?: string }[];
+  /** The characters they see now. */
+  others: { id: string; name: string; avatar?: string; color?: string; x: number; y: number }[];
+  tilesSeen: number;
+  tilesAll: number;
+}
+
 /** A character's story in figures (story_stats.go). */
 export interface CharacterStoryStats {
   character: string;
@@ -1544,6 +1566,13 @@ class MyWantApiClient {
    *  (GET /api/v1/characters/{id}/memory). */
   async getCharacterMemory(id: string): Promise<CharacterMemory> {
     const response = await this.client.get<CharacterMemory>(`/api/v1/characters/${encodeURIComponent(id)}/memory`);
+    return response.data;
+  }
+
+  /** The board as a character has seen it today
+   *  (GET /api/v1/characters/{id}/seen). */
+  async getCharacterSeen(id: string): Promise<CharacterSeen> {
+    const response = await this.client.get<CharacterSeen>(`/api/v1/characters/${encodeURIComponent(id)}/seen`);
     return response.data;
   }
 

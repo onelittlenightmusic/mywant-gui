@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Eye } from 'lucide-react';
-import { apiClient, type CharacterMemory } from '@/api/client';
+import { apiClient, type CharacterMemory, type CharacterSeen } from '@/api/client';
+import { CharacterSeenMap } from './CharacterSeenMap';
 import type { Character } from '@/types/character';
 import { TabContent, TabSection } from '@/components/sidebar/DetailsSidebar';
 import { classNames } from '@/utils/helpers';
@@ -44,14 +45,19 @@ function ago(at: string, now: number): string {
 
 export const CharacterMemoryTab: React.FC<{ character: Character }> = ({ character }) => {
   const [memory, setMemory] = useState<CharacterMemory | null>(null);
+  const [seen, setSeen] = useState<CharacterSeen | null>(null);
   const [error, setError] = useState('');
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     let live = true;
     setMemory(null);
+    setSeen(null);
     setError('');
     const read = () => {
+      apiClient.getCharacterSeen(character.id)
+        .then(v => { if (live) setSeen(v); })
+        .catch(() => { /* the map is left as it was */ });
       apiClient.getCharacterMemory(character.id)
         .then(m => { if (live) { setMemory(m); setError(''); setNow(Date.now()); } })
         .catch(e => { if (live) setError(e instanceof Error ? e.message : String(e)); });
@@ -72,6 +78,24 @@ export const CharacterMemoryTab: React.FC<{ character: Character }> = ({ charact
   const items = memory.memories ?? [];
   return (
     <TabContent>
+      {seen && (
+        <TabSection title="見たこと（今日）" className="mb-3">
+          <div className="mb-2 grid grid-cols-2 gap-2 text-xs">
+            <div className="min-w-0 rounded-md bg-gray-50 dark:bg-gray-800/60 px-2 py-1.5">
+              <div className="text-[10px] text-gray-500 dark:text-gray-400">今いる所</div>
+              <div className="truncate font-medium text-gray-800 dark:text-gray-100">
+                {seen.place ? (seen.near ? `${seen.place}の近く` : seen.place) : '—'}
+              </div>
+            </div>
+            <div className="min-w-0 rounded-md bg-gray-50 dark:bg-gray-800/60 px-2 py-1.5">
+              <div className="text-[10px] text-gray-500 dark:text-gray-400">見た want と場所</div>
+              <div className="font-medium text-gray-800 dark:text-gray-100 tabular-nums">{seen.tilesSeen}/{seen.tilesAll}</div>
+            </div>
+          </div>
+          <CharacterSeenMap character={character} seen={seen} />
+        </TabSection>
+      )}
+
       <TabSection title="いまの気分" className="mb-3">
         <div className="flex items-center gap-3">
           <span className={classNames('h-3 w-3 shrink-0 rounded-full', MOOD_DOT[mood] ?? MOOD_DOT.calm)} aria-hidden />
