@@ -4,6 +4,7 @@ import type { Character, CharacterDisplay } from '@/types/character';
 import type { CardAction } from '@/components/dashboard/WantCard/cardActions';
 import type { Want } from '@/types/want';
 import type { ThingRecord } from '@/types/thing';
+import type { CharacterSeenTile } from '@/api/client';
 import { registerOverlayDesign, type OverlayDesign } from '@/components/overlay/design';
 
 /**
@@ -116,6 +117,14 @@ export interface ExtensionSlots {
   /** After the mark: what the subject is saying, in a bubble beside it (a
    *  want's line, said here rather than over its tile while its panel is up). */
   panelIdentitySpeech: ComponentType<{ subject: PanelSubject }>;
+  /**
+   * A character's 見たこと map: the board itself, as the extension that has
+   * one draws it, through a window onto the cells x0..x0+cols, y0..y0+rows,
+   * `step` px a cell from the window's top-left — only the tiles they saw.
+   * The map lays its fog and the characters over it. Unfilled, there is no
+   * board to show and the map is not drawn.
+   */
+  seenBoard: ComponentType<{ x0: number; y0: number; cols: number; rows: number; step: number; tiles: CharacterSeenTile[] }>;
 }
 
 /** What a detail panel is about — see PanelIdentityRow. */

@@ -39,6 +39,14 @@ export interface CharacterMemory {
   memories: CharacterMemoryItem[];
 }
 
+/** A tile a character saw (character_seen.go): rotation and length lie as on
+ *  the board (cells past its anchor: 0 right, 90 down, 180 left, 270 up). */
+export interface CharacterSeenTile {
+  id: string; name: string; type?: string; kind: string; x: number; y: number;
+  color?: string; rotation?: number; length?: number;
+  at: string; now?: boolean; mood?: string; say?: string;
+}
+
 /** The board as one character has seen it today (character_seen.go). */
 export interface CharacterSeen {
   id: string;
@@ -54,7 +62,7 @@ export interface CharacterSeen {
   seen: { x: number; y: number; at: string }[];
   /** What is on a seen cell: now — seen from where they stand now; mood and
    *  say — what they remember hearing from it. */
-  tiles: { id: string; name: string; type?: string; kind: string; x: number; y: number; at: string; now?: boolean; mood?: string; say?: string }[];
+  tiles: CharacterSeenTile[];
   /** The characters they see now. */
   others: { id: string; name: string; avatar?: string; color?: string; x: number; y: number }[];
   tilesSeen: number;
