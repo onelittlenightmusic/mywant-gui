@@ -15,8 +15,9 @@ export type PeopleSheetVia = 'list' | 'talk';
 interface PeopleStore {
   listOpen: boolean;
   setListOpen: (open: boolean) => void;
-  sheet: { characterId: string; via: PeopleSheetVia } | null;
-  openSheet: (characterId: string, via: PeopleSheetVia) => void;
+  /** tab: the sheet's tab to open it at (a link's, /canvas/character/<id>/<tab>). */
+  sheet: { characterId: string; via: PeopleSheetVia; tab?: string } | null;
+  openSheet: (characterId: string, via: PeopleSheetVia, tab?: string) => void;
   closeSheet: () => void;
 }
 
@@ -24,6 +25,6 @@ export const usePeopleStore = create<PeopleStore>()((set) => ({
   listOpen: false,
   setListOpen: (listOpen) => set({ listOpen }),
   sheet: null,
-  openSheet: (characterId, via) => set({ sheet: { characterId, via } }),
+  openSheet: (characterId, via, tab) => set({ sheet: { characterId, via, tab } }),
   closeSheet: () => set({ sheet: null }),
 }));

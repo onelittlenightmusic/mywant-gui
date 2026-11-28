@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Users } from 'lucide-react';
 import { MinimapTile } from '@/components/dashboard/WantMinimap';
 import { CharacterBadge } from '@/components/dashboard/CharacterBadge';
-import { CharacterDetailsSidebar, type CharacterSheetTab } from '@/components/sidebar/CharacterDetailsSidebar';
+import { CharacterDetailsSidebar, CHARACTER_SHEET_TABS, type CharacterSheetTab } from '@/components/sidebar/CharacterDetailsSidebar';
 import { useCharacterStore } from '@/stores/characterStore';
 import { usePeopleStore } from '@/stores/peopleStore';
 import { hostPanelId, nativePanelPage, postToHost, useHostActs } from '@/lib/nativeHost';
@@ -129,12 +129,14 @@ export function usePeoplePanel(): PeoplePanel | null {
   // On a panel page, the address says which.
   const panelId = hostPanelId();
   let sheetId: string | null = sheet?.characterId ?? null;
-  let tab: CharacterSheetTab | undefined = sheet?.via === 'talk' ? 'chat' : undefined;
+  const asTab = (t: string | null | undefined) =>
+    (CHARACTER_SHEET_TABS as readonly string[]).includes(t ?? '') ? t as CharacterSheetTab : undefined;
+  let tab: CharacterSheetTab | undefined = sheet?.via === 'talk' ? 'chat' : asTab(sheet?.tab);
   let list = listOpen;
   if (panelId === PEOPLE_PANEL) { list = true; sheetId = sheet?.characterId ?? null; }
   else if (panelId?.startsWith(CHARACTER_PANEL)) {
     sheetId = panelId.slice(CHARACTER_PANEL.length);
-    tab = new URLSearchParams(location.search).get('tab') === 'chat' ? 'chat' : undefined;
+    tab = asTab(new URLSearchParams(location.search).get('tab'));
   } else if (panelId) return null;
 
   if (sheetId) {

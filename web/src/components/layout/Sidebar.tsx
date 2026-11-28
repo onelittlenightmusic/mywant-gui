@@ -1,3 +1,4 @@
+import { onPage } from '@/utils/pagePath';
 import { useState } from 'react';
 import { X, Heart, Bot, BookOpen, AlertTriangle, Activity, Zap, NotebookPen, ChevronsLeft, ChevronsRight, Settings, Circle, Map } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
@@ -165,7 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <nav className="space-y-2">
                         {menuItems.map((item) => {
                           const Icon = item.icon;
-                          const isActive = location.pathname === item.href;
+                          const isActive = onPage(location.pathname, item.href);
                           return (
                             <Link
                               key={item.id}
@@ -204,7 +205,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <nav className="space-y-2">
                           {getAdvancedItems(location.pathname).map((item) => {
                             const Icon = item.icon;
-                            const isActive = location.pathname === item.href;
+                            const isActive = onPage(location.pathname, item.href);
                             return (
                               <Link
                                 key={item.id}

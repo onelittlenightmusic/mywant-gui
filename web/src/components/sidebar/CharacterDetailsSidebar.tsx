@@ -1,3 +1,4 @@
+import { usePanelTab } from '@/stores/panelTabStore';
 import React, { useState, useEffect, useRef } from 'react';
 import { Check, X, MousePointer2, Users, UserRound, Palette, Smile, Droplet, Shapes, Sparkles, Image as ImageIcon, BarChart3, Bell, MessageSquare, Eye, Bot } from 'lucide-react';
 import { Character } from '@/types/character';
@@ -49,7 +50,8 @@ interface CharacterDetailsSidebarProps {
  * the same keyboard/gamepad path as every other card action.
  */
 /** The sheet's tabs: who this is, talking to them, how they like the app, what its story says, and (with an extension) their skills. */
-export type CharacterSheetTab = 'about' | 'chat' | 'seen' | 'display' | 'story' | 'notices' | 'skills';
+export const CHARACTER_SHEET_TABS = ['about', 'chat', 'seen', 'display', 'story', 'notices', 'skills'] as const;
+export type CharacterSheetTab = typeof CHARACTER_SHEET_TABS[number];
 type SheetTab = CharacterSheetTab;
 
 export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = ({
@@ -68,6 +70,7 @@ export const CharacterDetailsSidebar: React.FC<CharacterDetailsSidebarProps> = (
   // Asked for a tab (the board's talk), or another person: open there.
   const characterId = character?.id;
   useEffect(() => { setTab(initialTab ?? 'about'); }, [initialTab, characterId]);
+  usePanelTab('character', characterId, tab, t => setTab(t as SheetTab), CHARACTER_SHEET_TABS);
   // The 技能 tab only where an extension gives the board skills (characterSkills).
   const hasSkills = extensionSlot('characterSkills').length > 0;
   const isBottom = usePanelAtBottom();

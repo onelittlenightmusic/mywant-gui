@@ -1,3 +1,4 @@
+import { onPage } from '@/utils/pagePath';
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useInputHandedOver } from '@/stores/focusOwner';
@@ -33,7 +34,7 @@ const SELECTED_CARD_SELECTOR = '[data-keyboard-nav-selected="true"]';
  */
 export const HandoverScrim: React.FC = () => {
   const handedOver = useInputHandedOver();
-  const onCanvas = useLocation().pathname === '/canvas';
+  const onCanvas = onPage(useLocation().pathname, '/canvas');
   // Not on a page that is one panel or one card inside an app: there is no
   // grid behind it to dim — the panel is all there is.
   const show = handedOver && !onCanvas && !nativePanelPage && !nativeCardPage;

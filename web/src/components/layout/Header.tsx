@@ -1,3 +1,4 @@
+import { onPage } from '@/utils/pagePath';
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useHeaderAtBottom, useDisplaySettings } from '@/hooks/useDisplaySettings';
@@ -689,7 +690,7 @@ export const Header: React.FC<HeaderProps> = ({
       };
       return {
         id, label: entry.label, icon: iconName(entry.icon, 'Circle'),
-        active: location.pathname === entry.href, href: entry.href ?? undefined,
+        active: onPage(location.pathname, entry.href), href: entry.href ?? undefined,
       };
     });
     const card: HostButton[] = hostCardActions.map(a => {
@@ -973,7 +974,7 @@ export const Header: React.FC<HeaderProps> = ({
                           color={entry.color}
                           to={entry.href!}
                           onClick={chooseEntry}
-                          active={location.pathname === entry.href}
+                          active={onPage(location.pathname, entry.href)}
                           focused={focusedIdx === globalIdx}
                           badge={(navBadges[entry.id] ?? 0) > 0}
                           onMouseEnter={() => setFocusedIdx(globalIdx)}
@@ -1007,7 +1008,7 @@ export const Header: React.FC<HeaderProps> = ({
                               else if (entry.id === 'help') setIsHelpOpen(true);
                               chooseEntry();
                             }}
-                            active={!isModal && location.pathname === entry.href}
+                            active={!isModal && onPage(location.pathname, entry.href)}
                             focused={focusedIdx === globalIdx}
                             badge={(navBadges[entry.id] ?? 0) > 0}
                             onMouseEnter={() => setFocusedIdx(globalIdx)}

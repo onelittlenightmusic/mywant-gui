@@ -37,6 +37,7 @@ import { SidebarTabBar } from '@/components/common/SidebarTabBar';
 import { usePanelTabs } from '@/hooks/usePanelTabs';
 import { playSound } from '@/utils/sounds';
 
+import { usePanelTab } from '@/stores/panelTabStore';
 import { TabType, RequestedTab, normalizeTab, HistorySubTab, HISTORY_SUB_TAB_LIST } from './want-details/shared';
 import { WiringTab } from './want-details/WiringTab';
 import { ChatTab } from './want-details/ChatTab';
@@ -91,6 +92,8 @@ interface WantDetailsSidebarProps {
     fetchWants: () => Promise<void>;
   };
 }
+
+const WANT_TABS: readonly TabType[] = ['settings', 'results', 'wiring', 'history', 'versions', 'chat'];
 
 export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
   want,
@@ -335,6 +338,9 @@ export const WantDetailsSidebar: React.FC<WantDetailsSidebarProps> = ({
       setActiveTab(normalizeTab(initialTab));
     }
   }, [initialTab, initialTabVersion, wantId]);
+  // Which tab it is on, told (a link keeps it); a tab asked of it, taken —
+  // after the effect above, which would put a newly shown want back.
+  usePanelTab('want', wantId, activeTab, t => setActiveTab(t as TabType), WANT_TABS);
   // After the initialTab effect, which sets the tab for a newly shown want and
   // would otherwise put this one back on Settings.
   useEffect(() => {

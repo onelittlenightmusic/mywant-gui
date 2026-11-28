@@ -1,3 +1,4 @@
+import { usePanelTab } from '@/stores/panelTabStore';
 import { TagSideways } from '@/components/common/TagSideways';
 import React, { useEffect, useRef, useState } from 'react';
 import { Type, Clock, Zap, Tag, CreditCard, Bot, Hash, Settings, Folder } from 'lucide-react';
@@ -129,9 +130,11 @@ function sourceIcon(source: string) {
  */
 /** What there is to know about a thing: what it is, what it is labelled, who it belongs with, what it has been used for. */
 type ThingTab = 'settings' | 'labels' | 'constellation' | 'history';
+const THING_TAB_IDS: readonly ThingTab[] = ['settings', 'labels', 'constellation', 'history'];
 
 export const ThingDetailsSidebar: React.FC<MemoDetailsSidebarProps> = ({ record, onAddWant, onDelete, getOrigin, onArranged }) => {
   const [activeTab, setActiveTab] = useState<ThingTab>('settings');
+  usePanelTab('thing', record.id, activeTab, t => setActiveTab(t as ThingTab), THING_TAB_IDS);
   // Its cards come in one after another, on each thing and each tab (useCardsEnter).
   const bodyRef = useRef<HTMLDivElement>(null);
   useCardsEnter(bodyRef, `${record.id}:${activeTab}`);

@@ -3,6 +3,7 @@ import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
 import { usePickStore } from '@/stores/pickStore';
 import { nativeHost, nativePanelPage, postToHost, HOST_PANEL_BAR, HostFramedPanel, useHostPanelStore, iconName, useHostSheet, hostSheetsOn, hostPanelId } from '@/lib/nativeHost';
 import { useLocation } from 'react-router-dom';
+import { pageOf } from '@/utils/pagePath';
 import { LucideIcon } from 'lucide-react';
 import { PanelCloseButton } from '@/components/sidebar/PanelCloseButton';
 import type { AnyIconComponent } from '@/components/dashboard/WantTypeVisuals';
@@ -117,7 +118,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   const effectiveBg = backgroundStyle ?? appBg;
   void effectiveBg; // the panel's own (backgroundStyle) is drawn on its solid ground below
   const location = useLocation();
-  const menuColor = ROUTE_MENU_COLOR[location.pathname];
+  const menuColor = ROUTE_MENU_COLOR[pageOf(location.pathname)];
   const [isAnyDragging, setIsAnyDragging] = useState(false);
   const [isMobileSheet, setIsMobileSheet] = useState(() => window.innerWidth < 640);
   const containerRef = useRef<HTMLDivElement>(null);

@@ -189,7 +189,7 @@ export function getExtensions(): readonly GuiExtension[] {
 
 /** Whether some extension serves this path — for links that lead only there. */
 export function hasExtensionRoute(path: string): boolean {
-  return extensions.some(e => e.routes?.some(r => r.path === path));
+  return extensions.some(e => e.routes?.some(r => r.path === path || r.path === `${path}/*`));
 }
 
 export function extensionRoutes(): Array<{ path: string; element: ReactElement }> {
@@ -213,7 +213,15 @@ export function extensionMenu(): ExtensionMenuItem[] {
 }
 
 export function extensionSlot<K extends keyof ExtensionSlots>(name: K): Array<ExtensionSlots[K]> {
-  return extensions.flatMap(e => (e.slots?.[name] ? [e.slots[name] as ExtensionSlots[K]] : []));
+  // A loop, not flatMap: flatMap's `U | readonly U[]`, U every slot's
+  // component, was related member by member — half the whole type check, and
+  // CI's tsc ran out of memory once there were 26 slots.
+  const parts: Array<ExtensionSlots[K]> = [];
+  for (const e of extensions) {
+    const part = e.slots?.[name];
+    if (part) parts.push(part as ExtensionSlots[K]);
+  }
+  return parts;
 }
 
 /** Calls every registered app hook. Safe: the list is fixed before the first render. */

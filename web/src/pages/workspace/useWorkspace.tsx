@@ -1,3 +1,4 @@
+import { onPage } from '@/utils/pagePath';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useBoardChanged, touchesWants } from '@/api/boardSync';
 import { useHeaderAtBottom } from '@/hooks/useDisplaySettings';
@@ -146,7 +147,7 @@ export function useWorkspace({ board }: { board: BoardLink }) {
   // /dashboard is the list. Keeping it in the address means the menu can link
   // to it, the back button works, and no per-character flag has to be restored
   // before the page knows what it is showing.
-  const canvasMode = location.pathname === '/canvas';
+  const canvasMode = onPage(location.pathname, '/canvas');
   const setCanvasMode = useCallback((next: boolean | ((prev: boolean) => boolean)) => {
     const wanted = typeof next === 'function' ? next(canvasMode) : next;
     // Only to a board that this build has — see extensions/registry.

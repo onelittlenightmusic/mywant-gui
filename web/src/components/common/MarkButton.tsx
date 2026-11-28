@@ -1,3 +1,4 @@
+import { onPage } from '@/utils/pagePath';
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
@@ -102,7 +103,7 @@ export function useMarkJump(): (mark: Mark) => void {
     requestJump({ kind: 'global', key: mark.key });
     // The Global panel is the dashboard's, in either of its two views. From
     // anywhere else, the list is the one that needs no board to be ready.
-    if (location.pathname !== '/canvas' && location.pathname !== '/dashboard') navigate('/dashboard');
+    if (!onPage(location.pathname, '/canvas') && location.pathname !== '/dashboard') navigate('/dashboard');
   };
 }
 
